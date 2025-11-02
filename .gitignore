@@ -75,9 +75,10 @@ BE-QLKT/src/generated/
 BE-QLKT/uploads/
 BE-QLKT/temp/
 
-# Documentation (ignore all .md files except README.md)
+# Documentation (ignore all .md files except README.md and QLKT.md)
 *.md
 !README.md
+!QLKT.md
 
 # Config files
 .prettierrc
