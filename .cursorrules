@@ -1,0 +1,135 @@
+# Cursor Editor Rules - QLKT Project
+
+## Project Overview
+This is **QLKT** (Quản lý Khen thưởng) - Awards Management System for Vietnam Military Science Academy
+- **Frontend**: Next.js 14 + React 18 + TypeScript + TailwindCSS + shadcn/ui
+- **Backend**: Node.js + Express + PostgreSQL + Prisma
+- **Auth**: JWT (Access Token + Refresh Token)
+
+## Quick Reference
+- Full documentation: `.claude/CLAUDE.md`
+- AI assistant guide: `.cursor/CURSOR.md`
+- API documentation: `QLKT.md`
+
+## Code Style & Formatting
+- Always use Prettier for code formatting
+- Follow the .prettierrc configuration
+- Use single quotes for strings
+- Use 2 spaces for indentation
+- Maximum line length: 100 characters
+- Always add semicolons
+- Use trailing commas (ES5 style)
+
+## Best Practices
+- Write clean, readable, and maintainable code
+- Follow DRY (Don't Repeat Yourself) principle
+- Use meaningful variable and function names
+- Add comments for complex logic
+- Handle errors properly with try-catch blocks
+- Validate inputs and sanitize data
+
+## TypeScript/JavaScript/JSX
+- Project uses mix of JSX and TSX files
+- Prefer const over let, avoid var
+- Use arrow functions for callbacks
+- Use async/await instead of promises chains
+- Destructure objects and arrays when appropriate
+- Use optional chaining (?.) and nullish coalescing (??)
+
+## React/Next.js Frontend
+- Project uses Next.js 14 with App Router
+- Use functional components with hooks
+- Keep components small and focused
+- Extract reusable logic into custom hooks
+- Use proper prop types or TypeScript interfaces
+- Handle loading and error states
+- Optimize performance with useMemo and useCallback when needed
+- Use Next.js conventions (app directory, page.jsx/tsx, layout.jsx/tsx)
+- Follow Next.js data fetching patterns
+- JSX files use double quotes for JSX attributes
+
+## Backend/API
+- Follow RESTful API conventions
+- Validate request data with express-validator
+- Return proper HTTP status codes
+- Handle errors with proper error messages
+- Use environment variables for configuration
+- Implement proper authentication and authorization
+- Use Prisma ORM for all database operations (prevents SQL injection)
+
+## Project-Specific Rules
+
+### Role-Based Access Control
+Always check user roles for protected routes:
+- SUPER_ADMIN: Manage accounts + all ADMIN permissions
+- ADMIN: Manage all data (units, positions, personnel, awards)
+- MANAGER: Manage own unit's data only
+- USER: View own profile only
+
+### Database Operations
+- Use Prisma for ALL database operations
+- NEVER use raw SQL queries
+- INPUT tables: LichSuChucVu, ThanhTichKhoaHoc, DanhHieuHangNam
+- OUTPUT tables: HoSoNienHan, HoSoHangNam (don't modify directly, use recalculate endpoint)
+- CCCD is the primary key for Import/Export operations
+
+### API Response Format
+Always use consistent response format:
+```javascript
+// Success
+{ success: true, data: {...}, message?: string }
+
+// Error
+{ success: false, error: string, details?: any }
+```
+
+### Authentication
+- All protected routes require Authorization header: `Bearer <access_token>`
+- Access token expires in 15 minutes
+- Use refresh token to get new access token
+- Store tokens in localStorage (frontend)
+
+### Security Checklist
+- Validate and sanitize all inputs
+- Hash passwords with bcrypt
+- Check user role before allowing operations
+- Don't expose sensitive data in error messages
+- Validate file uploads (type, size)
+
+## Git & Version Control
+- Write clear and descriptive commit messages
+- Keep commits atomic and focused
+- Don't commit sensitive data or credentials
+- Use .gitignore properly
+
+## Common Patterns
+
+### Frontend Component Structure
+```tsx
+export default function ComponentName() {
+  const [loading, setLoading] = useState(true)
+  const [data, setData] = useState(null)
+  const [error, setError] = useState(null)
+
+  useEffect(() => {
+    // Fetch data
+  }, [])
+
+  if (loading) return <LoadingSpinner />
+  if (error) return <ErrorMessage />
+  return <MainContent />
+}
+```
+
+### Backend Controller Pattern
+```javascript
+exports.controllerName = async (req, res) => {
+  try {
+    const { role, userId } = req.user
+    const data = await service.method(role, userId, req.body)
+    res.json({ success: true, data })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+}
+```
