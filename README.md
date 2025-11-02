@@ -4,6 +4,16 @@
 
 **QLKT** (Quản lý Khen thưởng) là hệ thống quản lý khen thưởng toàn diện cho Học viện Khoa học Quân sự, giúp quản lý danh hiệu, thành tích khoa học và tính toán khen thưởng tự động.
 
+## 📖 Repository này chứa gì?
+
+Repository này chứa **tài liệu và cấu hình** cho dự án QLKT:
+- ✅ API Documentation ([QLKT.md](QLKT.md))
+- ✅ AI Assistant Configuration ([.claude/](.claude/), [.cursor/](.cursor/))
+- ✅ Coding Standards ([.cursorrules](.cursorrules))
+- ✅ Project Setup Guide
+
+> **Lưu ý**: Source code không được public trên GitHub. Repository này chỉ phục vụ mục đích documentation và configuration.
+
 ## 🚀 Tech Stack
 
 ### Frontend
@@ -138,58 +148,40 @@ QLKT/
 - Báo cáo khen thưởng theo năm
 - Phân tích dữ liệu
 
-## 🛠️ Cài đặt & Chạy Dự án
+## 🛠️ Sử dụng Documentation
 
-### Yêu cầu Hệ thống
+### Cho Developers
+1. Đọc [QLKT.md](QLKT.md) để hiểu API endpoints
+2. Đọc [.claude/CLAUDE.md](.claude/CLAUDE.md) để hiểu toàn bộ kiến trúc
+3. Tham khảo [.cursorrules](.cursorrules) khi code
+
+### Cho AI Assistants (Claude/Cursor)
+1. Import file `.claude/CLAUDE.md` vào context
+2. Tuân thủ coding standards trong `.cursorrules`
+3. Tham khảo API specs trong `QLKT.md`
+
+### Setup Dự án (Nếu có source code)
+
+#### Yêu cầu Hệ thống
 - Node.js >= 18.x
 - PostgreSQL >= 14.x
 - npm hoặc yarn
 
-### 1. Clone Repository
-```bash
-git clone <repository-url>
-cd QLKT
-```
-
-### 2. Setup Backend
+#### Backend Setup
 ```bash
 cd BE-QLKT
-
-# Install dependencies
 npm install
-
-# Setup environment variables
-cp .env.example .env
-# Edit .env with your database credentials
-
-# Generate Prisma Client
 npx prisma generate
-
-# Run migrations
 npx prisma migrate dev
-
-# Start development server
-npm run dev
+npm run dev  # Port 5000
 ```
 
-Backend sẽ chạy tại: `http://localhost:5000`
-
-### 3. Setup Frontend
+#### Frontend Setup
 ```bash
 cd FE-QLKT
-
-# Install dependencies
 npm install
-
-# Setup environment variables
-cp .env.local.example .env.local
-# Edit .env.local with your API URL
-
-# Start development server
-npm run dev
+npm run dev  # Port 3000
 ```
-
-Frontend sẽ chạy tại: `http://localhost:3000`
 
 ## 📝 Environment Variables
 
