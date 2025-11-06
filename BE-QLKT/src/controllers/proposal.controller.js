@@ -78,10 +78,7 @@ class ProposalController {
 
       // Gửi thông báo cho tất cả ADMIN
       try {
-        await notificationHelper.notifyAdminsOnProposalSubmission(
-          result.proposal,
-          req.user
-        );
+        await notificationHelper.notifyAdminsOnProposalSubmission(result.proposal, req.user);
       } catch (notifError) {
         console.error('Failed to send notifications:', notifError);
       }
@@ -213,10 +210,7 @@ class ProposalController {
 
       // Gửi thông báo cho người gửi đề xuất
       try {
-        await notificationHelper.notifyManagerOnProposalApproval(
-          result.proposal,
-          req.user
-        );
+        await notificationHelper.notifyManagerOnProposalApproval(result.proposal, req.user);
       } catch (notifError) {
         console.error('Failed to send notifications:', notifError);
       }
@@ -284,11 +278,7 @@ class ProposalController {
         });
       }
 
-      const result = await proposalService.rejectProposal(
-        parseInt(id),
-        rejectReason,
-        adminId
-      );
+      const result = await proposalService.rejectProposal(parseInt(id), rejectReason, adminId);
 
       // Gửi thông báo cho người gửi đề xuất
       try {
@@ -506,6 +496,69 @@ class ProposalController {
       return res.status(500).json({
         success: false,
         message: error.message || 'Xuất file Excel thất bại',
+      });
+    }
+  }
+
+  /**
+   * DELETE /api/proposals/:id
+   * Xóa đề xuất (Manager chỉ có thể xóa đề xuất của chính mình, status = PENDING)
+   * @access  MANAGER, ADMIN
+   */
+  async deleteProposal(req, res) {
+    try {
+      const { id } = req.params;
+      const userId = req.user.id;
+      const userRole = req.user.role;
+
+      // Validate id
+      if (!id || isNaN(parseInt(id))) {
+        return res.status(400).json({
+          success: false,
+          message: 'ID đề xuất không hợp lệ',
+        });
+      }
+
+      const result = await proposalService.deleteProposal(parseInt(id), userId, userRole);
+
+      // Ghi log hệ thống
+      try {
+        const { prisma } = require('../models');
+        const ipAddress = req.ip || req.connection.remoteAddress || req.socket.remoteAddress;
+        const userAgent = req.get('User-Agent');
+
+        await prisma.systemLog.create({
+          data: {
+            actor_id: userId,
+            actor_role: userRole,
+            action: 'DELETE',
+            resource: 'proposals',
+            resource_id: parseInt(id),
+            description: `Xóa đề xuất khen thưởng ID ${id} - Đơn vị: ${result.proposal.don_vi}`,
+            payload: {
+              proposal_id: parseInt(id),
+              don_vi: result.proposal.don_vi,
+              status: result.proposal.status,
+            },
+            ip_address: ipAddress,
+            user_agent: userAgent,
+          },
+        });
+      } catch (logError) {
+        console.error('[deleteProposal] Lỗi khi ghi system log:', logError);
+        // Không throw error, tiếp tục trả về response
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: result.message,
+        data: result.proposal,
+      });
+    } catch (error) {
+      console.error('Delete proposal error:', error);
+      return res.status(400).json({
+        success: false,
+        message: error.message || 'Xóa đề xuất thất bại',
       });
     }
   }

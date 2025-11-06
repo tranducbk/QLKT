@@ -24,6 +24,7 @@ const DanhHieuHangNam = require('./DanhHieuHangNam');
 const HoSoNienHan = require('./HoSoNienHan');
 const HoSoHangNam = require('./HoSoHangNam');
 const ThongBao = require('./ThongBao');
+const TheoDoiKhenThuongDonVi = require('./TheoDoiKhenThuongDonVi');
 
 // ============================================
 // SEQUELIZE RELATIONSHIPS
@@ -32,6 +33,7 @@ const ThongBao = require('./ThongBao');
 // DonVi relationships
 DonVi.hasMany(ChucVu, { foreignKey: 'don_vi_id', as: 'chucVu' });
 DonVi.hasMany(QuanNhan, { foreignKey: 'don_vi_id', as: 'quanNhan' });
+DonVi.hasMany(TheoDoiKhenThuongDonVi, { foreignKey: 'don_vi_id', as: 'theoDoiKhenThuong' });
 
 // NhomCongHien relationships
 NhomCongHien.hasMany(ChucVu, { foreignKey: 'nhom_cong_hien_id', as: 'chucVu' });
@@ -75,6 +77,14 @@ HoSoHangNam.belongsTo(QuanNhan, { foreignKey: 'quan_nhan_id', as: 'quanNhan' });
 // ThongBao relationships
 ThongBao.belongsTo(TaiKhoan, { foreignKey: 'recipient_id', as: 'nguoiNhan' });
 
+// TheoDoiKhenThuongDonVi relationships
+TheoDoiKhenThuongDonVi.belongsTo(DonVi, { foreignKey: 'don_vi_id', as: 'donVi' });
+TheoDoiKhenThuongDonVi.belongsTo(TaiKhoan, { foreignKey: 'nguoi_tao_id', as: 'nguoiTao' });
+TaiKhoan.hasMany(TheoDoiKhenThuongDonVi, {
+  foreignKey: 'nguoi_tao_id',
+  as: 'theoDoiKhenThuongTao',
+});
+
 // ============================================
 // EXPORTS
 // ============================================
@@ -97,3 +107,4 @@ module.exports.DanhHieuHangNam = DanhHieuHangNam;
 module.exports.HoSoNienHan = HoSoNienHan;
 module.exports.HoSoHangNam = HoSoHangNam;
 module.exports.ThongBao = ThongBao;
+module.exports.TheoDoiKhenThuongDonVi = TheoDoiKhenThuongDonVi;

@@ -5,6 +5,33 @@ const path = require('path');
 const { v4: uuidv4 } = require('uuid');
 const profileService = require('./profile.service');
 
+// Constants
+const SHEET_NAMES = {
+  QUAN_NHAN: 'QuanNhan',
+  DANH_HIEU_HANG_NAM: 'DanhHieuHangNam',
+  THANH_TICH_KHOA_HOC: 'ThanhTichKhoaHoc',
+  NIEN_HAN: 'NienHan',
+};
+
+const CELL_INDICES = {
+  CCCD: 1,
+  HO_TEN: 2,
+  NAM: 3,
+  CSTDCS: 4,
+  CSTT: 5,
+  BKBQP: 6,
+  SO_QUYET_DINH_BKBQP: 7,
+  CSTDTQ: 8,
+  SO_QUYET_DINH_CSTDTQ: 9,
+  LOAI: 4,
+  MO_TA: 5,
+  STATUS: 6,
+};
+
+const VALID_LOAI_THANH_TICH = ['NCKH', 'SKKH'];
+const VALID_STATUS = ['APPROVED', 'PENDING'];
+const SAMPLE_ROW_KEYWORDS = ['ví dụ', 'example'];
+
 class ProposalService {
   /**
    * Parse CCCD từ Excel cell - hỗ trợ CCCD bắt đầu bằng số 0
@@ -25,6 +52,225 @@ class ProposalService {
     }
 
     return cccd;
+  }
+
+  /**
+   * Parse cell value to string safely
+   * @param {*} cell - Excel cell
+   * @returns {string|null} - Trimmed string or null
+   */
+  parseCellToString(cell) {
+    return cell?.value ? String(cell.value).trim() : null;
+  }
+
+  /**
+   * Parse cell value to integer safely
+   * @param {*} cell - Excel cell
+   * @returns {number|null} - Parsed integer or null
+   */
+  parseCellToInt(cell) {
+    const value = cell?.value ?? null;
+    if (value === null || value === undefined) return null;
+    const parsed = parseInt(value);
+    return !isNaN(parsed) ? parsed : null;
+  }
+
+  /**
+   * Check if cell value is checked (X)
+   * @param {*} cell - Excel cell
+   * @returns {boolean} - True if checked
+   */
+  isCellChecked(cell) {
+    return cell?.value ? String(cell.value).toUpperCase().trim() === 'X' : false;
+  }
+
+  /**
+   * Check if row is a sample row (contains example keywords)
+   * @param {string} text - Text to check
+   * @returns {boolean} - True if sample row
+   */
+  isSampleRow(text) {
+    if (!text) return false;
+    const lowerText = text.toLowerCase();
+    return SAMPLE_ROW_KEYWORDS.some(keyword => lowerText.includes(keyword));
+  }
+
+  /**
+   * Log sheet information for debugging
+   * @param {Worksheet} sheet - Excel worksheet
+   * @param {string} sheetName - Name of the sheet
+   */
+  logSheetInfo(sheet, sheetName) {
+    // Removed console.log for production
+  }
+
+  /**
+   * Parse danh hiệu hàng năm từ Excel row
+   * @param {Row} row - Excel row
+   * @param {number} rowNumber - Row number
+   * @returns {Object|null} - Parsed data or null if invalid
+   */
+  parseDanhHieuRow(row, rowNumber) {
+    const cccdCell = row.getCell(CELL_INDICES.CCCD);
+    const hoTenCell = row.getCell(CELL_INDICES.HO_TEN);
+    const namCell = row.getCell(CELL_INDICES.NAM);
+
+    const cccdValue = cccdCell?.value ?? null;
+    const cccd = cccdValue !== null && cccdValue !== undefined ? this.parseCCCD(cccdValue) : null;
+    const ho_ten = this.parseCellToString(hoTenCell);
+    const nam = this.parseCellToInt(namCell);
+
+    // Validate required fields
+    if (!cccd || !nam || isNaN(nam)) {
+      return null;
+    }
+
+    // Skip sample rows
+    if (this.isSampleRow(ho_ten)) {
+      return null;
+    }
+
+    // Parse checkboxes and decision numbers
+    const cstdcs_checked = this.isCellChecked(row.getCell(CELL_INDICES.CSTDCS));
+    const cstt_checked = this.isCellChecked(row.getCell(CELL_INDICES.CSTT));
+    const bkbqp_checked = this.isCellChecked(row.getCell(CELL_INDICES.BKBQP));
+    const so_quyet_dinh_bkbqp = this.parseCellToString(
+      row.getCell(CELL_INDICES.SO_QUYET_DINH_BKBQP)
+    );
+    const cstdtq_checked = this.isCellChecked(row.getCell(CELL_INDICES.CSTDTQ));
+    const so_quyet_dinh_cstdtq = this.parseCellToString(
+      row.getCell(CELL_INDICES.SO_QUYET_DINH_CSTDTQ)
+    );
+
+    // Determine main danh hieu
+    let danh_hieu = null;
+    if (cstdcs_checked) danh_hieu = 'CSTDCS';
+    else if (cstt_checked) danh_hieu = 'CSTT';
+
+    return {
+      cccd,
+      ho_ten: ho_ten || '',
+      nam,
+      danh_hieu,
+      nhan_bkbqp: bkbqp_checked,
+      so_quyet_dinh_bkbqp,
+      nhan_cstdtq: cstdtq_checked,
+      so_quyet_dinh_cstdtq,
+    };
+  }
+
+  /**
+   * Parse thành tích khoa học từ Excel row
+   * @param {Row} row - Excel row
+   * @param {number} rowNumber - Row number
+   * @returns {Object|null} - Parsed data or null if invalid
+   */
+  parseThanhTichRow(row, rowNumber) {
+    const cccdCell = row.getCell(CELL_INDICES.CCCD);
+    const hoTenCell = row.getCell(CELL_INDICES.HO_TEN);
+    const namCell = row.getCell(CELL_INDICES.NAM);
+    const loaiCell = row.getCell(CELL_INDICES.LOAI);
+    const moTaCell = row.getCell(CELL_INDICES.MO_TA);
+    const statusCell = row.getCell(CELL_INDICES.STATUS);
+
+    const cccdValue = cccdCell?.value ?? null;
+    const cccd = cccdValue !== null && cccdValue !== undefined ? this.parseCCCD(cccdValue) : null;
+    const ho_ten = this.parseCellToString(hoTenCell);
+    const nam = this.parseCellToInt(namCell);
+    const loai = this.parseCellToString(loaiCell);
+    const mo_ta = this.parseCellToString(moTaCell);
+    const status = this.parseCellToString(statusCell) || 'PENDING';
+
+    // Validate required fields
+    if (!cccd || !nam || isNaN(nam) || !loai || !mo_ta) {
+      return null;
+    }
+
+    // Skip sample rows
+    if (this.isSampleRow(mo_ta)) {
+      return null;
+    }
+
+    // Validate loại
+    if (!VALID_LOAI_THANH_TICH.includes(loai)) {
+      throw new Error(
+        `Loại thành tích không hợp lệ: ${loai} (chỉ chấp nhận ${VALID_LOAI_THANH_TICH.join(
+          ' hoặc '
+        )})`
+      );
+    }
+
+    // Validate status
+    if (!VALID_STATUS.includes(status)) {
+      throw new Error(
+        `Trạng thái không hợp lệ: ${status} (chỉ chấp nhận ${VALID_STATUS.join(' hoặc ')})`
+      );
+    }
+
+    return {
+      cccd,
+      ho_ten: ho_ten || '',
+      nam,
+      loai,
+      mo_ta,
+      status,
+    };
+  }
+
+  /**
+   * Parse danh hiệu hàng năm từ Excel sheet
+   * @param {Worksheet} sheet - Excel worksheet
+   * @returns {Array} - Array of parsed danh hiệu data
+   */
+  parseDanhHieuSheet(sheet) {
+    this.logSheetInfo(sheet, SHEET_NAMES.DANH_HIEU_HANG_NAM);
+
+    const danhHieuData = [];
+    let rowCount = 0;
+    let skippedCount = 0;
+
+    sheet.eachRow((row, rowNumber) => {
+      if (rowNumber <= 1) return; // Skip header
+
+      rowCount++;
+      const parsed = this.parseDanhHieuRow(row, rowNumber);
+
+      if (parsed) {
+        danhHieuData.push(parsed);
+      } else {
+        skippedCount++;
+      }
+    });
+
+    return danhHieuData;
+  }
+
+  /**
+   * Parse thành tích khoa học từ Excel sheet
+   * @param {Worksheet} sheet - Excel worksheet
+   * @returns {Array} - Array of parsed thành tích data
+   */
+  parseThanhTichSheet(sheet) {
+    this.logSheetInfo(sheet, SHEET_NAMES.THANH_TICH_KHOA_HOC);
+
+    const thanhTichData = [];
+    let rowCount = 0;
+    let skippedCount = 0;
+
+    sheet.eachRow((row, rowNumber) => {
+      if (rowNumber <= 1) return; // Skip header
+
+      rowCount++;
+      const parsed = this.parseThanhTichRow(row, rowNumber);
+
+      if (parsed) {
+        thanhTichData.push(parsed);
+      } else {
+        skippedCount++;
+      }
+    });
+
+    return thanhTichData;
   }
 
   /**
@@ -153,7 +399,7 @@ class ProposalService {
       sheetQuanNhan.getColumn(1).numFmt = '@';
 
       // Thêm dữ liệu quân nhân
-      quanNhanList.forEach((qn) => {
+      quanNhanList.forEach(qn => {
         sheetQuanNhan.addRow({
           cccd: qn.cccd,
           ho_ten: qn.ho_ten,
@@ -242,7 +488,8 @@ class ProposalService {
 
       // Thêm data validation cho cột Loại (D) - từ row 2 trở đi
       sheetThanhTich.getColumn(4).eachCell({ includeEmpty: true }, (cell, rowNumber) => {
-        if (rowNumber > 1) { // Skip header
+        if (rowNumber > 1) {
+          // Skip header
           cell.dataValidation = {
             type: 'list',
             allowBlank: false,
@@ -257,7 +504,8 @@ class ProposalService {
 
       // Thêm data validation cho cột Trạng thái (F) - từ row 2 trở đi
       sheetThanhTich.getColumn(6).eachCell({ includeEmpty: true }, (cell, rowNumber) => {
-        if (rowNumber > 1) { // Skip header
+        if (rowNumber > 1) {
+          // Skip header
           cell.dataValidation = {
             type: 'list',
             allowBlank: false,
@@ -308,11 +556,13 @@ class ProposalService {
     sheetQuanNhan.getRow(1).alignment = { horizontal: 'center', vertical: 'middle' };
     sheetQuanNhan.getColumn(1).numFmt = '@';
 
-    quanNhanList.forEach((qn) => {
+    quanNhanList.forEach(qn => {
       sheetQuanNhan.addRow({
         cccd: qn.cccd,
         ho_ten: qn.ho_ten,
-        ngay_nhap_ngu: qn.ngay_nhap_ngu ? new Date(qn.ngay_nhap_ngu).toLocaleDateString('vi-VN') : '',
+        ngay_nhap_ngu: qn.ngay_nhap_ngu
+          ? new Date(qn.ngay_nhap_ngu).toLocaleDateString('vi-VN')
+          : '',
         ma_don_vi: qn.DonVi.ma_don_vi,
         ten_chuc_vu: qn.ChucVu.ten_chuc_vu,
       });
@@ -406,7 +656,6 @@ class ProposalService {
 
         // Lưu file
         await fs.writeFile(filePath, pdfFile.buffer);
-        console.log(`✅ Đã lưu PDF: ${savedPdfFilename}`);
       }
 
       // ============================================
@@ -420,95 +669,25 @@ class ProposalService {
       let nienHanData = [];
 
       if (type === 'HANG_NAM') {
-        // ============================================
-        // ĐỌC TAB 2: DanhHieuHangNam
-        // ============================================
-        const sheetDanhHieu = workbook.getWorksheet('DanhHieuHangNam');
+        // Parse danh hiệu hàng năm
+        const sheetDanhHieu = workbook.getWorksheet(SHEET_NAMES.DANH_HIEU_HANG_NAM);
         if (!sheetDanhHieu) {
-          throw new Error('Không tìm thấy sheet "DanhHieuHangNam" trong file Excel');
+          throw new Error(
+            `Không tìm thấy sheet "${SHEET_NAMES.DANH_HIEU_HANG_NAM}" trong file Excel`
+          );
         }
+        danhHieuData = this.parseDanhHieuSheet(sheetDanhHieu);
 
-        sheetDanhHieu.eachRow((row, rowNumber) => {
-          // Bỏ qua header (row 1) và row mẫu (row 2)
-          if (rowNumber <= 2) return;
-
-          const cccd = this.parseCCCD(row.getCell(1).value);
-          const ho_ten = row.getCell(2).value?.toString().trim();
-          const nam = parseInt(row.getCell(3).value);
-
-          // Bỏ qua row trống
-          if (!cccd || !nam) return;
-
-          const cstdcs_checked = row.getCell(4).value?.toString().toUpperCase() === 'X';
-          const cstt_checked = row.getCell(5).value?.toString().toUpperCase() === 'X';
-          const bkbqp_checked = row.getCell(6).value?.toString().toUpperCase() === 'X';
-          const so_quyet_dinh_bkbqp = row.getCell(7).value?.toString().trim() || null;
-          const cstdtq_checked = row.getCell(8).value?.toString().toUpperCase() === 'X';
-          const so_quyet_dinh_cstdtq = row.getCell(9).value?.toString().trim() || null;
-
-          // Xác định danh hiệu chính
-          let danh_hieu = null;
-          if (cstdcs_checked) danh_hieu = 'CSTDCS';
-          else if (cstt_checked) danh_hieu = 'CSTT';
-
-          danhHieuData.push({
-            cccd,
-            ho_ten,
-            nam,
-            danh_hieu,
-            nhan_bkbqp: bkbqp_checked,
-            so_quyet_dinh_bkbqp,
-            nhan_cstdtq: cstdtq_checked,
-            so_quyet_dinh_cstdtq,
-          });
-        });
-
-        // ============================================
-        // ĐỌC TAB 3: ThanhTichKhoaHoc
-        // ============================================
-        const sheetThanhTich = workbook.getWorksheet('ThanhTichKhoaHoc');
+        // Parse thành tích khoa học
+        const sheetThanhTich = workbook.getWorksheet(SHEET_NAMES.THANH_TICH_KHOA_HOC);
         if (!sheetThanhTich) {
-          throw new Error('Không tìm thấy sheet "ThanhTichKhoaHoc" trong file Excel');
+          throw new Error(
+            `Không tìm thấy sheet "${SHEET_NAMES.THANH_TICH_KHOA_HOC}" trong file Excel`
+          );
         }
-
-        sheetThanhTich.eachRow((row, rowNumber) => {
-          // Bỏ qua header (row 1) và row mẫu (row 2)
-          if (rowNumber <= 2) return;
-
-          const cccd = this.parseCCCD(row.getCell(1).value);
-          const ho_ten = row.getCell(2).value?.toString().trim();
-          const nam = parseInt(row.getCell(3).value);
-          const loai = row.getCell(4).value?.toString().trim();
-          const mo_ta = row.getCell(5).value?.toString().trim();
-          const status = row.getCell(6).value?.toString().trim() || 'PENDING';
-
-          // Bỏ qua row trống
-          if (!cccd || !nam || !loai || !mo_ta) return;
-
-          // Validate loại
-          if (!['NCKH', 'SKKH'].includes(loai)) {
-            throw new Error(`Loại thành tích không hợp lệ: ${loai} (chỉ chấp nhận NCKH hoặc SKKH)`);
-          }
-
-          // Validate status
-          if (!['APPROVED', 'PENDING'].includes(status)) {
-            throw new Error(`Trạng thái không hợp lệ: ${status} (chỉ chấp nhận APPROVED hoặc PENDING)`);
-          }
-
-          thanhTichData.push({
-            cccd,
-            ho_ten,
-            nam,
-            loai,
-            mo_ta,
-            status,
-          });
-        });
+        thanhTichData = this.parseThanhTichSheet(sheetThanhTich);
       } else if (type === 'NIEN_HAN') {
-        // ============================================
-        // ĐỌC TAB: NienHan
-        // ============================================
-        const sheetNienHan = workbook.getWorksheet('NienHan');
+        const sheetNienHan = workbook.getWorksheet(SHEET_NAMES.NIEN_HAN);
         if (!sheetNienHan) {
           throw new Error('Không tìm thấy sheet "NienHan" trong file Excel');
         }
@@ -555,17 +734,20 @@ class ProposalService {
               where: { cccd: item.cccd },
               include: {
                 DanhHieuHangNam: {
-                  orderBy: { nam: 'asc' }
+                  orderBy: { nam: 'asc' },
                 },
                 ThanhTichKhoaHoc: {
-                  where: { status: 'APPROVED' }
-                }
-              }
+                  where: { status: 'APPROVED' },
+                },
+              },
             });
 
             if (quanNhan) {
               // Tính số năm CSTDCS liên tục
-              const cstdcsLienTuc = this.calculateContinuousCSTDCS(quanNhan.DanhHieuHangNam, item.nam);
+              const cstdcsLienTuc = this.calculateContinuousCSTDCS(
+                quanNhan.DanhHieuHangNam,
+                item.nam
+              );
               const nckhCount = quanNhan.ThanhTichKhoaHoc.length;
 
               // Kiểm tra BKBQP
@@ -574,7 +756,9 @@ class ProposalService {
                   cccd: item.cccd,
                   ho_ten: item.ho_ten,
                   nam: item.nam,
-                  warning: `Đề xuất BKBQP nhưng chỉ có ${cstdcsLienTuc}/5 năm CSTDCS liên tục. Thiếu ${5 - cstdcsLienTuc} năm.`
+                  warning: `Đề xuất BKBQP nhưng chỉ có ${cstdcsLienTuc}/5 năm CSTDCS liên tục. Thiếu ${
+                    5 - cstdcsLienTuc
+                  } năm.`,
                 });
               }
 
@@ -585,14 +769,16 @@ class ProposalService {
                     cccd: item.cccd,
                     ho_ten: item.ho_ten,
                     nam: item.nam,
-                    warning: `Đề xuất CSTDTQ nhưng chỉ có ${cstdcsLienTuc}/10 năm CSTDCS liên tục. Thiếu ${10 - cstdcsLienTuc} năm.`
+                    warning: `Đề xuất CSTDTQ nhưng chỉ có ${cstdcsLienTuc}/10 năm CSTDCS liên tục. Thiếu ${
+                      10 - cstdcsLienTuc
+                    } năm.`,
                   });
                 } else if (nckhCount === 0) {
                   warnings.push({
                     cccd: item.cccd,
                     ho_ten: item.ho_ten,
                     nam: item.nam,
-                    warning: `Đề xuất CSTDTQ nhưng chưa có NCKH/SKKH được duyệt.`
+                    warning: `Đề xuất CSTDTQ nhưng chưa có NCKH/SKKH được duyệt.`,
                   });
                 }
               }
@@ -604,22 +790,62 @@ class ProposalService {
       }
 
       // ============================================
+      // VALIDATION: Kiểm tra dữ liệu sau khi parse
+      // ============================================
+      if (type === 'HANG_NAM') {
+        // Chỉ cảnh báo nếu cả hai đều rỗng, không throw error
+        // Vì có thể Manager chỉ muốn submit danh hiệu hoặc chỉ thành tích
+        if (danhHieuData.length === 0 && thanhTichData.length === 0) {
+          console.warn(
+            '[submitProposal] WARNING: Không có dữ liệu nào được parse từ Excel. Cả danh hiệu và thành tích đều rỗng.'
+          );
+          // Vẫn cho phép submit, nhưng sẽ có warning trong ghi_chu
+        } else {
+          if (danhHieuData.length === 0) {
+            console.warn(
+              '[submitProposal] WARNING: Không có dữ liệu danh hiệu nào được parse từ Excel'
+            );
+          }
+          if (thanhTichData.length === 0) {
+            console.warn(
+              '[submitProposal] WARNING: Không có dữ liệu thành tích nào được parse từ Excel'
+            );
+          }
+        }
+      } else if (type === 'NIEN_HAN') {
+        if (nienHanData.length === 0) {
+          throw new Error(
+            'File Excel không có dữ liệu hợp lệ. Vui lòng kiểm tra:\n' +
+              '- Sheet "NienHan" có dữ liệu từ row 3 trở đi\n' +
+              '- Đảm bảo cột CCCD đã được điền đầy đủ'
+          );
+        }
+      }
+
+      // ============================================
       // LƯU VÀO CSDL
       // ============================================
+      // Đảm bảo dữ liệu là array hợp lệ (không phải null/undefined)
+      const dataDanhHieu = type === 'HANG_NAM' && Array.isArray(danhHieuData) ? danhHieuData : null;
+      const dataThanhTich =
+        type === 'HANG_NAM' && Array.isArray(thanhTichData) ? thanhTichData : null;
+      const dataNienHan = type === 'NIEN_HAN' && Array.isArray(nienHanData) ? nienHanData : null;
+
       const proposal = await prisma.bangDeXuat.create({
         data: {
           don_vi_id: donViId,
           nguoi_de_xuat_id: userId,
           loai_de_xuat: type,
           status: 'PENDING',
-          data_danh_hieu: type === 'HANG_NAM' ? danhHieuData : null,
-          data_thanh_tich: type === 'HANG_NAM' ? thanhTichData : null,
-          data_nien_han: type === 'NIEN_HAN' ? nienHanData : null,
+          data_danh_hieu: dataDanhHieu,
+          data_thanh_tich: dataThanhTich,
+          data_nien_han: dataNienHan,
           so_quyet_dinh_goc: soQuyetDinh || null,
           ten_file_pdf: savedPdfFilename,
-          ghi_chu: warnings.length > 0
-            ? `⚠️ Có ${warnings.length} cảnh báo về điều kiện khen thưởng. Vui lòng kiểm tra kỹ.`
-            : null,
+          ghi_chu:
+            warnings.length > 0
+              ? `⚠️ Có ${warnings.length} cảnh báo về điều kiện khen thưởng. Vui lòng kiểm tra kỹ.`
+              : null,
         },
         include: {
           DonVi: true,
@@ -632,9 +858,10 @@ class ProposalService {
       });
 
       return {
-        message: warnings.length > 0
-          ? `Đã gửi đề xuất thành công nhưng có ${warnings.length} cảnh báo về điều kiện khen thưởng.`
-          : 'Đã gửi đề xuất khen thưởng thành công',
+        message:
+          warnings.length > 0
+            ? `Đã gửi đề xuất thành công nhưng có ${warnings.length} cảnh báo về điều kiện khen thưởng.`
+            : 'Đã gửi đề xuất khen thưởng thành công',
         proposal: {
           id: proposal.id,
           loai_de_xuat: proposal.loai_de_xuat,
@@ -710,7 +937,7 @@ class ProposalService {
       ]);
 
       return {
-        proposals: proposals.map((p) => ({
+        proposals: proposals.map(p => ({
           id: p.id,
           don_vi: p.DonVi.ten_don_vi,
           nguoi_de_xuat: p.NguoiDeXuat.QuanNhan?.ho_ten || p.NguoiDeXuat.username,
@@ -777,6 +1004,19 @@ class ProposalService {
         }
       }
 
+      // Đảm bảo data_danh_hieu và data_thanh_tich luôn là array
+      const dataDanhHieu = Array.isArray(proposal.data_danh_hieu)
+        ? proposal.data_danh_hieu
+        : proposal.data_danh_hieu
+        ? [proposal.data_danh_hieu]
+        : [];
+
+      const dataThanhTich = Array.isArray(proposal.data_thanh_tich)
+        ? proposal.data_thanh_tich
+        : proposal.data_thanh_tich
+        ? [proposal.data_thanh_tich]
+        : [];
+
       return {
         id: proposal.id,
         don_vi: {
@@ -790,8 +1030,8 @@ class ProposalService {
           ho_ten: proposal.NguoiDeXuat.QuanNhan?.ho_ten,
         },
         status: proposal.status,
-        data_danh_hieu: proposal.data_danh_hieu,
-        data_thanh_tich: proposal.data_thanh_tich,
+        data_danh_hieu: dataDanhHieu,
+        data_thanh_tich: dataThanhTich,
         ghi_chu: proposal.ghi_chu,
         nguoi_duyet: proposal.NguoiDuyet
           ? {
@@ -803,6 +1043,7 @@ class ProposalService {
         ngay_duyet: proposal.ngay_duyet,
         createdAt: proposal.createdAt,
         updatedAt: proposal.updatedAt,
+        ten_file_pdf: proposal.ten_file_pdf,
       };
     } catch (error) {
       console.error('Get proposal by id error:', error);
@@ -817,7 +1058,14 @@ class ProposalService {
    * @param {number} adminId - ID của Admin phê duyệt
    * @returns {Promise<Object>} - Kết quả phê duyệt
    */
-  async approveProposal(proposalId, editedData, adminId, decisions = {}, pdfFiles = {}, ghiChu = null) {
+  async approveProposal(
+    proposalId,
+    editedData,
+    adminId,
+    decisions = {},
+    pdfFiles = {},
+    ghiChu = null
+  ) {
     const fs = require('fs').promises;
     const path = require('path');
 
@@ -1028,7 +1276,6 @@ class ProposalService {
       // ============================================
       // TÍNH TOÁN LẠI HỒ SƠ HẰNG NĂM CHO CÁC QUÂN NHÂN BỊ ẢNH HƯỞNG
       // ============================================
-      console.log(`✅ Bắt đầu tính toán lại hồ sơ cho ${affectedPersonnelIds.size} quân nhân...`);
       let recalculateSuccess = 0;
       let recalculateErrors = 0;
 
@@ -1036,14 +1283,14 @@ class ProposalService {
         try {
           await profileService.recalculateAnnualProfile(personnelId);
           recalculateSuccess++;
-          console.log(`✅ Đã tính toán lại hồ sơ cho quân nhân ID: ${personnelId}`);
         } catch (recalcError) {
           recalculateErrors++;
-          console.error(`❌ Lỗi tính toán hồ sơ cho quân nhân ID ${personnelId}:`, recalcError.message);
+          console.error(
+            `❌ Lỗi tính toán hồ sơ cho quân nhân ID ${personnelId}:`,
+            recalcError.message
+          );
         }
       }
-
-      console.log(`✅ Hoàn tất tính toán: ${recalculateSuccess} thành công, ${recalculateErrors} lỗi`);
 
       return {
         message: 'Phê duyệt và import dữ liệu thành công',
@@ -1199,7 +1446,7 @@ class ProposalService {
       sheetDanhHieu.getColumn(1).numFmt = '@';
 
       const danhHieuData = proposal.data_danh_hieu || [];
-      danhHieuData.forEach((item) => {
+      danhHieuData.forEach(item => {
         sheetDanhHieu.addRow({
           cccd: item.cccd,
           ho_ten: item.ho_ten,
@@ -1234,7 +1481,7 @@ class ProposalService {
       sheetThanhTich.getColumn(1).numFmt = '@';
 
       const thanhTichData = proposal.data_thanh_tich || [];
-      thanhTichData.forEach((item) => {
+      thanhTichData.forEach(item => {
         sheetThanhTich.addRow({
           cccd: item.cccd,
           ho_ten: item.ho_ten,
@@ -1289,12 +1536,12 @@ class ProposalService {
       // Lọc theo đơn vị nếu có
       let filteredAwards = awards;
       if (don_vi_id) {
-        filteredAwards = awards.filter((a) => a.QuanNhan.don_vi_id === parseInt(don_vi_id));
+        filteredAwards = awards.filter(a => a.QuanNhan.don_vi_id === parseInt(don_vi_id));
       }
 
       // Lấy thông tin NCKH cho từng quân nhân trong năm đó
       const awardsWithNCKH = await Promise.all(
-        filteredAwards.map(async (a) => {
+        filteredAwards.map(async a => {
           // Lấy NCKH của quân nhân trong năm này
           const thanhTichList = await prisma.thanhTichKhoaHoc.findMany({
             where: {
@@ -1368,7 +1615,7 @@ class ProposalService {
 
       let filteredAwards = awards;
       if (don_vi_id) {
-        filteredAwards = awards.filter((a) => a.QuanNhan.don_vi_id === parseInt(don_vi_id));
+        filteredAwards = awards.filter(a => a.QuanNhan.don_vi_id === parseInt(don_vi_id));
       }
 
       const workbook = new ExcelJS.Workbook();
@@ -1538,11 +1785,11 @@ class ProposalService {
             include: {
               DonVi: true,
               DanhHieuHangNam: {
-                orderBy: { nam: 'asc' }
+                orderBy: { nam: 'asc' },
               },
               ThanhTichKhoaHoc: {
-                where: { status: 'APPROVED' }
-              }
+                where: { status: 'APPROVED' },
+              },
             },
           });
 
@@ -1560,7 +1807,11 @@ class ProposalService {
           // Kiểm tra BKBQP
           if (award.nhan_bkbqp && cstdcsLienTuc < 5) {
             importWarnings.push(
-              `CCCD ${award.cccd}: Đề xuất BKBQP nhưng chỉ có ${cstdcsLienTuc}/5 năm CSTDCS liên tục. Thiếu ${5 - cstdcsLienTuc} năm.`
+              `CCCD ${
+                award.cccd
+              }: Đề xuất BKBQP nhưng chỉ có ${cstdcsLienTuc}/5 năm CSTDCS liên tục. Thiếu ${
+                5 - cstdcsLienTuc
+              } năm.`
             );
           }
 
@@ -1568,7 +1819,11 @@ class ProposalService {
           if (award.nhan_cstdtq) {
             if (cstdcsLienTuc < 10) {
               importWarnings.push(
-                `CCCD ${award.cccd}: Đề xuất CSTDTQ nhưng chỉ có ${cstdcsLienTuc}/10 năm CSTDCS liên tục. Thiếu ${10 - cstdcsLienTuc} năm.`
+                `CCCD ${
+                  award.cccd
+                }: Đề xuất CSTDTQ nhưng chỉ có ${cstdcsLienTuc}/10 năm CSTDCS liên tục. Thiếu ${
+                  10 - cstdcsLienTuc
+                } năm.`
               );
             } else if (nckhCount === 0) {
               importWarnings.push(
@@ -1624,7 +1879,6 @@ class ProposalService {
       // ============================================
       // TÍNH TOÁN LẠI HỒ SƠ HẰNG NĂM CHO CÁC QUÂN NHÂN BỊ ẢNH HƯỞNG
       // ============================================
-      console.log(`✅ Bắt đầu tính toán lại hồ sơ cho ${affectedPersonnelIds.size} quân nhân...`);
       let recalculateSuccess = 0;
       let recalculateErrors = 0;
 
@@ -1632,19 +1886,20 @@ class ProposalService {
         try {
           await profileService.recalculateAnnualProfile(personnelId);
           recalculateSuccess++;
-          console.log(`✅ Đã tính toán lại hồ sơ cho quân nhân ID: ${personnelId}`);
         } catch (recalcError) {
           recalculateErrors++;
-          console.error(`❌ Lỗi tính toán hồ sơ cho quân nhân ID ${personnelId}:`, recalcError.message);
+          console.error(
+            `❌ Lỗi tính toán hồ sơ cho quân nhân ID ${personnelId}:`,
+            recalcError.message
+          );
         }
       }
 
-      console.log(`✅ Hoàn tất tính toán: ${recalculateSuccess} thành công, ${recalculateErrors} lỗi`);
-
       return {
-        message: importWarnings.length > 0
-          ? `Import thành công ${imported} bản ghi nhưng có ${importWarnings.length} cảnh báo về điều kiện khen thưởng.`
-          : 'Import khen thưởng thành công',
+        message:
+          importWarnings.length > 0
+            ? `Import thành công ${imported} bản ghi nhưng có ${importWarnings.length} cảnh báo về điều kiện khen thưởng.`
+            : 'Import khen thưởng thành công',
         importedUnits: Array.from(importedUnitsMap.values()), // Danh sách đơn vị để gửi thông báo
         result: {
           total: awards.length,
@@ -1658,6 +1913,75 @@ class ProposalService {
       };
     } catch (error) {
       console.error('Import awards error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Xóa đề xuất (chỉ Manager có thể xóa đề xuất của chính mình, và chỉ khi status = PENDING)
+   * @param {number} proposalId - ID của đề xuất
+   * @param {number} userId - ID của tài khoản
+   * @param {string} userRole - Role của user
+   * @returns {Promise<Object>} - Kết quả xóa
+   */
+  async deleteProposal(proposalId, userId, userRole) {
+    try {
+      const proposal = await prisma.bangDeXuat.findUnique({
+        where: { id: parseInt(proposalId) },
+        include: {
+          DonVi: true,
+          NguoiDeXuat: {
+            include: {
+              QuanNhan: true,
+            },
+          },
+        },
+      });
+
+      if (!proposal) {
+        throw new Error('Không tìm thấy đề xuất');
+      }
+
+      // Kiểm tra quyền: Manager chỉ có thể xóa đề xuất của chính mình
+      if (userRole === 'MANAGER') {
+        if (proposal.nguoi_de_xuat_id !== userId) {
+          throw new Error('Bạn chỉ có thể xóa đề xuất của chính mình');
+        }
+        // Manager chỉ có thể xóa đề xuất chưa được duyệt
+        if (proposal.status !== 'PENDING') {
+          throw new Error('Chỉ có thể xóa đề xuất đang chờ duyệt (PENDING)');
+        }
+      }
+      // ADMIN có thể xóa bất kỳ đề xuất nào
+
+      // Xóa file PDF nếu có
+      if (proposal.ten_file_pdf) {
+        try {
+          const fs = require('fs').promises;
+          const path = require('path');
+          const filePath = path.join(__dirname, '../../storage/proposals', proposal.ten_file_pdf);
+          await fs.unlink(filePath);
+        } catch (fileError) {
+          console.warn(`[deleteProposal] Không thể xóa file PDF: ${fileError.message}`);
+          // Không throw error, tiếp tục xóa proposal
+        }
+      }
+
+      // Xóa proposal
+      await prisma.bangDeXuat.delete({
+        where: { id: parseInt(proposalId) },
+      });
+
+      return {
+        message: 'Đã xóa đề xuất thành công',
+        proposal: {
+          id: proposal.id,
+          don_vi: proposal.DonVi.ten_don_vi,
+          status: proposal.status,
+        },
+      };
+    } catch (error) {
+      console.error('Delete proposal error:', error);
       throw error;
     }
   }

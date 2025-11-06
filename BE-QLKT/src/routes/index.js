@@ -17,6 +17,7 @@ const personnelNestedRoute = require('./personnelNested.route');
 const proposalRoute = require('./proposal.route');
 const awardsRoute = require('./awards.route');
 const notificationRoute = require('./notification.route');
+const unitAnnualAwardRoute = require('./unitAnnualAward.routes');
 
 // API Routes
 // 1. Authentication
@@ -47,6 +48,8 @@ router.use('/api/proposals', proposalRoute);
 
 // 5.2. Awards Management (Quản lý khen thưởng tổng hợp)
 router.use('/api/awards', awardsRoute);
+// 5.3. Unit Annual Awards (Khen thưởng đơn vị hằng năm)
+router.use('/api/awards/units/annual', unitAnnualAwardRoute);
 
 // 6. Profile & Calculation (Output)
 router.use('/api/profiles', profileRoute);

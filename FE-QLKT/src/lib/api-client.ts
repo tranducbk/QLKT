@@ -4,6 +4,25 @@ type ApiResponse<T = any> = { success: boolean; data?: T; message?: string };
 
 export const apiClient = {
   // Auth
+  async login(username: string, password: string): Promise<ApiResponse> {
+    try {
+      const res = await axiosInstance.post('/api/auth/login', {
+        username,
+        password,
+      });
+      return {
+        success: true,
+        data: res.data?.data || res.data,
+        message: res.data?.message,
+      };
+    } catch (e: any) {
+      return {
+        success: false,
+        message: e?.response?.data?.message || e?.response?.data?.error || e.message,
+      };
+    }
+  },
+
   async changePassword(oldPassword: string, newPassword: string): Promise<ApiResponse> {
     try {
       const res = await axiosInstance.post('/api/auth/change-password', {
@@ -313,7 +332,7 @@ export const apiClient = {
         formData.append('file_quyet_dinh', body.file_quyet_dinh);
 
         const res = await axiosInstance.post('/api/annual-rewards/bulk', formData, {
-          headers: { 'Content-Type': 'multipart/form-data' }
+          headers: { 'Content-Type': 'multipart/form-data' },
         });
         return { success: true, data: res.data?.data || res.data, message: res.data?.message };
       }
@@ -485,18 +504,20 @@ export const apiClient = {
     }
   },
 
-  async approveProposal(id: string, data: any): Promise<ApiResponse> {
+  async approveProposal(id: string, formData: FormData): Promise<ApiResponse> {
     try {
-      const res = await axiosInstance.post(`/api/proposals/${id}/approve`, data);
+      const res = await axiosInstance.post(`/api/proposals/${id}/approve`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
       return { success: true, data: res.data?.data || res.data, message: res.data?.message };
     } catch (e: any) {
       return { success: false, message: e?.response?.data?.message || e.message };
     }
   },
 
-  async rejectProposal(id: string, ly_do: string): Promise<ApiResponse> {
+  async rejectProposal(id: string, ghi_chu: string): Promise<ApiResponse> {
     try {
-      const res = await axiosInstance.post(`/api/proposals/${id}/reject`, { ly_do });
+      const res = await axiosInstance.post(`/api/proposals/${id}/reject`, { ghi_chu });
       return { success: true, data: res.data?.data || res.data, message: res.data?.message };
     } catch (e: any) {
       return { success: false, message: e?.response?.data?.message || e.message };
@@ -511,6 +532,15 @@ export const apiClient = {
       return res.data;
     } catch (e: any) {
       throw new Error(e?.response?.data?.message || e.message);
+    }
+  },
+
+  async deleteProposal(id: string): Promise<ApiResponse> {
+    try {
+      const res = await axiosInstance.delete(`/api/proposals/${id}`);
+      return { success: true, data: res.data?.data || res.data, message: res.data?.message };
+    } catch (e: any) {
+      return { success: false, message: e?.response?.data?.message || e.message };
     }
   },
 

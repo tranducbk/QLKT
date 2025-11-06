@@ -5,8 +5,7 @@ import { Form, Input, Button, Alert, Typography } from 'antd';
 import { UserOutlined, LockOutlined, LoginOutlined } from '@ant-design/icons';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import axios from 'axios';
-import { BASE_URL } from '@/configs';
+import { apiClient } from '@/lib/api-client';
 import Image from 'next/image';
 import './login-form.css';
 
@@ -23,38 +22,34 @@ export function LoginForm() {
     setError('');
 
     try {
-      const response = await axios.post(`${BASE_URL}/api/auth/login`, {
-        username: values.username,
-        password: values.password,
-      });
+      const response = await apiClient.login(values.username, values.password);
 
-      const payload = response.data?.data || {};
-      const accessToken = payload.accessToken || payload.token;
-      const refreshToken = payload.refreshToken;
-      const user = payload.user || {};
-      const role = user.role;
+      if (response.success && response.data) {
+        const payload = response.data;
+        const accessToken = payload.accessToken || payload.token;
+        const refreshToken = payload.refreshToken;
+        const user = payload.user || {};
+        const role = user.role;
 
-      localStorage.setItem('accessToken', accessToken || '');
-      if (refreshToken) localStorage.setItem('refreshToken', refreshToken);
-      localStorage.setItem('role', role);
-      localStorage.setItem('user', JSON.stringify(user));
+        localStorage.setItem('accessToken', accessToken || '');
+        if (refreshToken) localStorage.setItem('refreshToken', refreshToken);
+        localStorage.setItem('role', role);
+        localStorage.setItem('user', JSON.stringify(user));
 
-      if (role === 'SUPER_ADMIN') {
-        router.push('/super-admin/dashboard');
-      } else if (role === 'ADMIN') {
-        router.push('/admin/dashboard');
-      } else if (role === 'MANAGER') {
-        router.push('/manager/dashboard');
-      } else if (role === 'USER') {
-        router.push('/user/dashboard');
+        if (role === 'SUPER_ADMIN') {
+          router.push('/super-admin/dashboard');
+        } else if (role === 'ADMIN') {
+          router.push('/admin/dashboard');
+        } else if (role === 'MANAGER') {
+          router.push('/manager/dashboard');
+        } else if (role === 'USER') {
+          router.push('/user/dashboard');
+        }
+      } else {
+        setError(response.message || 'Đăng nhập thất bại. Vui lòng thử lại.');
       }
     } catch (err: any) {
-      // Hiển thị lỗi chi tiết từ backend
-      const errorMessage = err?.response?.data?.message
-        || err?.response?.data?.error
-        || err?.message
-        || 'Đăng nhập thất bại. Vui lòng thử lại.';
-      setError(errorMessage);
+      setError(err?.message || 'Đăng nhập thất bại. Vui lòng thử lại.');
     } finally {
       setLoading(false);
     }
@@ -66,7 +61,10 @@ export function LoginForm() {
       <header className="fixed top-0 w-full z-50 bg-gradient-to-r from-slate-900 via-blue-900 to-indigo-900 backdrop-blur-md border-b-2 border-white/30 shadow-lg">
         <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <Link href="/" className="flex items-center space-x-2 hover:cursor-pointer transition-all duration-300 hover:opacity-80">
+            <Link
+              href="/"
+              className="flex items-center space-x-2 hover:cursor-pointer transition-all duration-300 hover:opacity-80"
+            >
               <Image
                 src="/logo-msa.png"
                 alt="Logo"

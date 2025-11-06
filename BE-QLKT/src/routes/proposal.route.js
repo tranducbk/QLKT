@@ -34,7 +34,12 @@ const upload = multer({
  * @desc    Xuất file mẫu Excel
  * @access  MANAGER, ADMIN
  */
-router.get('/template', verifyToken, checkRole(['MANAGER', 'ADMIN']), proposalController.exportTemplate);
+router.get(
+  '/template',
+  verifyToken,
+  checkRole(['MANAGER', 'ADMIN']),
+  proposalController.exportTemplate
+);
 
 /**
  * @route   POST /api/proposals
@@ -64,7 +69,12 @@ router.get('/', verifyToken, checkRole(['MANAGER', 'ADMIN']), proposalController
  * @desc    Lấy chi tiết 1 đề xuất
  * @access  MANAGER, ADMIN
  */
-router.get('/:id', verifyToken, checkRole(['MANAGER', 'ADMIN']), proposalController.getProposalById);
+router.get(
+  '/:id',
+  verifyToken,
+  checkRole(['MANAGER', 'ADMIN']),
+  proposalController.getProposalById
+);
 
 /**
  * @route   POST /api/proposals/:id/approve
@@ -96,13 +106,35 @@ router.post('/:id/reject', verifyToken, checkRole(['ADMIN']), proposalController
  * @desc    Tải file Excel của đề xuất
  * @access  MANAGER, ADMIN
  */
-router.get('/:id/download-excel', verifyToken, checkRole(['MANAGER', 'ADMIN']), proposalController.downloadProposalExcel);
+router.get(
+  '/:id/download-excel',
+  verifyToken,
+  checkRole(['MANAGER', 'ADMIN']),
+  proposalController.downloadProposalExcel
+);
 
 /**
  * @route   GET /api/proposals/uploads/:filename
  * @desc    Lấy file PDF đã upload
  * @access  MANAGER, ADMIN
  */
-router.get('/uploads/:filename', verifyToken, checkRole(['MANAGER', 'ADMIN']), proposalController.getPdfFile);
+router.get(
+  '/uploads/:filename',
+  verifyToken,
+  checkRole(['MANAGER', 'ADMIN']),
+  proposalController.getPdfFile
+);
+
+/**
+ * @route   DELETE /api/proposals/:id
+ * @desc    Xóa đề xuất (Manager chỉ có thể xóa đề xuất của chính mình, status = PENDING)
+ * @access  MANAGER, ADMIN
+ */
+router.delete(
+  '/:id',
+  verifyToken,
+  checkRole(['MANAGER', 'ADMIN']),
+  proposalController.deleteProposal
+);
 
 module.exports = router;

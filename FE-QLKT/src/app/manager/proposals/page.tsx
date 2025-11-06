@@ -15,6 +15,7 @@ import {
   Tag,
   Tooltip,
   Empty,
+  Popconfirm,
 } from 'antd';
 import {
   HomeOutlined,
@@ -24,6 +25,7 @@ import {
   CloseCircleOutlined,
   DownloadOutlined,
   PlusOutlined,
+  DeleteOutlined,
 } from '@ant-design/icons';
 import { format } from 'date-fns';
 import Link from 'next/link';
@@ -52,6 +54,7 @@ export default function ManagerProposalsPage() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('all');
   const [downloadingId, setDownloadingId] = useState<number | null>(null);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
 
   useEffect(() => {
     fetchProposals();
@@ -96,6 +99,26 @@ export default function ManagerProposalsPage() {
       console.error('Download error:', error);
     } finally {
       setDownloadingId(null);
+    }
+  };
+
+  const handleDeleteProposal = async (proposalId: number) => {
+    try {
+      setDeletingId(proposalId);
+      const response = await apiClient.deleteProposal(proposalId.toString());
+
+      if (response.success) {
+        message.success(response.message || 'Đã xóa đề xuất thành công');
+        // Refresh danh sách
+        await fetchProposals();
+      } else {
+        message.error(response.message || 'Lỗi khi xóa đề xuất');
+      }
+    } catch (error: any) {
+      message.error(error.message || 'Lỗi khi xóa đề xuất');
+      console.error('Delete error:', error);
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -181,9 +204,7 @@ export default function ManagerProposalsPage() {
         }
         if (record.status === 'APPROVED' && record.ngay_duyet) {
           return (
-            <Text type="secondary">
-              Duyệt: {format(new Date(record.ngay_duyet), 'dd/MM/yyyy')}
-            </Text>
+            <Text type="secondary">Duyệt: {format(new Date(record.ngay_duyet), 'dd/MM/yyyy')}</Text>
           );
         }
         return <Text type="secondary">-</Text>;
@@ -193,7 +214,7 @@ export default function ManagerProposalsPage() {
       title: 'Hành động',
       key: 'action',
       align: 'right' as const,
-      width: 200,
+      width: 250,
       render: (_: any, record: Proposal) => (
         <Space>
           <Tooltip title="Tải file Excel">
@@ -214,6 +235,25 @@ export default function ManagerProposalsPage() {
           >
             Chi tiết
           </Button>
+          {record.status === 'PENDING' && (
+            <Popconfirm
+              title="Xóa đề xuất"
+              description="Bạn có chắc chắn muốn xóa đề xuất này? Hành động này không thể hoàn tác."
+              onConfirm={() => handleDeleteProposal(record.id)}
+              okText="Xóa"
+              cancelText="Hủy"
+              okButtonProps={{ danger: true }}
+            >
+              <Button
+                danger
+                icon={<DeleteOutlined />}
+                loading={deletingId === record.id}
+                size="small"
+              >
+                Xóa
+              </Button>
+            </Popconfirm>
+          )}
         </Space>
       ),
     },
@@ -232,8 +272,7 @@ export default function ManagerProposalsPage() {
       key: 'pending',
       label: (
         <span>
-          <ClockCircleOutlined /> Chờ duyệt (
-          {proposals.filter(p => p.status === 'PENDING').length})
+          <ClockCircleOutlined /> Chờ duyệt ({proposals.filter(p => p.status === 'PENDING').length})
         </span>
       ),
     },
@@ -241,8 +280,7 @@ export default function ManagerProposalsPage() {
       key: 'approved',
       label: (
         <span>
-          <CheckCircleOutlined /> Đã duyệt (
-          {proposals.filter(p => p.status === 'APPROVED').length})
+          <CheckCircleOutlined /> Đã duyệt ({proposals.filter(p => p.status === 'APPROVED').length})
         </span>
       ),
     },
@@ -250,8 +288,7 @@ export default function ManagerProposalsPage() {
       key: 'rejected',
       label: (
         <span>
-          <CloseCircleOutlined /> Từ chối (
-          {proposals.filter(p => p.status === 'REJECTED').length})
+          <CloseCircleOutlined /> Từ chối ({proposals.filter(p => p.status === 'REJECTED').length})
         </span>
       ),
     },
@@ -287,8 +324,11 @@ export default function ManagerProposalsPage() {
           <Text strong>📋 Hướng dẫn:</Text>
           <Text>• Tại đây bạn có thể theo dõi trạng thái các đề xuất đã gửi</Text>
           <Text>
-            • Nếu đề xuất bị <Text type="danger" strong>từ chối</Text>, bạn có thể tải file về để
-            xem lý do và chỉnh sửa lại
+            • Nếu đề xuất bị{' '}
+            <Text type="danger" strong>
+              từ chối
+            </Text>
+            , bạn có thể tải file về để xem lý do và chỉnh sửa lại
           </Text>
           <Text>• Sau khi sửa xong, tạo đề xuất mới với file đã chỉnh sửa</Text>
         </Space>
