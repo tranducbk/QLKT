@@ -3,18 +3,29 @@ const sequelize = require('./database');
 
 const ChucVu = sequelize.define('ChucVu', {
   id: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.UUID,
     primaryKey: true,
-    autoIncrement: true
+    defaultValue: DataTypes.UUIDV4,
   },
-  don_vi_id: {
-    type: DataTypes.INTEGER,
-    allowNull: false,
+  co_quan_don_vi_id: {
+    type: DataTypes.UUID,
+    allowNull: true,
     references: {
-      model: 'don_vi',
+      model: 'co_quan_don_vi',
       key: 'id'
     },
-    onDelete: 'CASCADE'
+    onDelete: 'CASCADE',
+    field: 'co_quan_don_vi_id'
+  },
+  don_vi_truc_thuoc_id: {
+    type: DataTypes.UUID,
+    allowNull: true,
+    references: {
+      model: 'don_vi_truc_thuoc',
+      key: 'id'
+    },
+    onDelete: 'CASCADE',
+    field: 'don_vi_truc_thuoc_id'
   },
   ten_chuc_vu: {
     type: DataTypes.STRING(255),
@@ -24,34 +35,26 @@ const ChucVu = sequelize.define('ChucVu', {
     type: DataTypes.BOOLEAN,
     defaultValue: false
   },
-  nhom_cong_hien_id: {
-    type: DataTypes.INTEGER,
+  he_so_luong: {
+    type: DataTypes.DECIMAL(10, 2),
     allowNull: true,
-    references: {
-      model: 'nhom_cong_hien',
-      key: 'id'
-    },
-    onDelete: 'SET NULL'
+    comment: 'Hệ số lương'
   },
   createdAt: {
     type: DataTypes.DATE,
     defaultValue: DataTypes.NOW,
-    field: 'createdat'
+    field: 'createdAt'
   },
   updatedAt: {
     type: DataTypes.DATE,
     defaultValue: DataTypes.NOW,
-    field: 'updatedat'
+    field: 'updatedAt'
   }
 }, {
   tableName: 'chuc_vu',
   timestamps: true,
-  indexes: [
-    {
-      unique: true,
-      fields: ['don_vi_id', 'ten_chuc_vu']
-    }
-  ]
+  // Unique constraints đã được tạo ở database level trong migration script
+  // Sequelize không hỗ trợ partial unique indexes với WHERE clause
 });
 
 module.exports = ChucVu;

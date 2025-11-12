@@ -1,27 +1,27 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Button, Breadcrumb, Card, Tabs, Select, Modal, Typography, Spin, message } from 'antd';
-import { PlusOutlined, HomeOutlined, LoadingOutlined } from '@ant-design/icons';
+import { Button, Breadcrumb, Card, Tabs, Select, Modal, Typography, message, ConfigProvider, theme as antdTheme, Space } from 'antd';
+import { PlusOutlined, HomeOutlined } from '@ant-design/icons';
 import { UnitForm } from '@/components/categories/unit-form';
 import { UnitsTable } from '@/components/categories/units-table';
 import { PositionForm } from '@/components/categories/position-form';
 import { PositionsTable } from '@/components/categories/positions-table';
-import { ContributionGroupForm } from '@/components/categories/contribution-group-form';
-import { ContributionGroupsTable } from '@/components/categories/contribution-groups-table';
 import { apiClient } from '@/lib/api-client';
+import { useTheme } from '@/components/theme-provider';
+import { Loading } from '@/components/ui/loading';
 import Link from 'next/link';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
 
 export default function CategoriesPage() {
+  const { theme } = useTheme();
   const [units, setUnits] = useState([]);
   const [positions, setPositions] = useState([]);
-  const [contributionGroups, setContributionGroups] = useState([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [dialogType, setDialogType] = useState<'unit' | 'position' | 'group'>('unit');
+  const [dialogType, setDialogType] = useState<'unit' | 'position'>('unit');
   const [editingItem, setEditingItem] = useState<any>(null);
   const [selectedUnit, setSelectedUnit] = useState('ALL');
   const [activeTab, setActiveTab] = useState('units');
@@ -33,24 +33,29 @@ export default function CategoriesPage() {
   async function loadData() {
     try {
       setLoading(true);
-      const [unitsRes, positionsRes, groupsRes] = await Promise.all([
-        apiClient.getUnits(),
+      // Gọi API với hierarchy=true để chỉ lấy các "Cơ quan đơn vị" cấp cao nhất
+      const [unitsRes, positionsRes] = await Promise.all([
+        apiClient.getUnits({ hierarchy: true }), // Chỉ lấy cơ quan đơn vị cấp cao nhất
         apiClient.getPositions(),
-        apiClient.getContributionGroups(),
       ]);
       setUnits(unitsRes.data || []);
       setPositions(positionsRes.data || []);
-      setContributionGroups(groupsRes.data || []);
     } catch (error) {
+      console.error('Load data error:', error);
       message.error('Không thể tải dữ liệu');
     } finally {
       setLoading(false);
     }
   }
 
-  const handleOpenDialog = (type: 'unit' | 'position' | 'group', item?: any) => {
+  const handleOpenDialog = (type: 'unit' | 'position', item?: any) => {
     setDialogType(type);
-    setEditingItem(item || null);
+    // Khi tạo mới đơn vị ở trang categories, không set co_quan_don_vi_id (chỉ tạo cơ quan đơn vị)
+    if (type === 'unit' && !item) {
+      setEditingItem(null); // Tạo cơ quan đơn vị mới (không có co_quan_don_vi_id)
+    } else {
+      setEditingItem(item || null);
+    }
     setDialogOpen(true);
   };
 
@@ -62,42 +67,62 @@ export default function CategoriesPage() {
   const filteredPositions =
     selectedUnit === 'ALL' ? positions : positions.filter(p => p.don_vi_id?.toString() === selectedUnit);
 
+  if (loading) {
+    return (
+      <ConfigProvider
+        theme={{
+          algorithm: theme === 'dark' ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm,
+        }}
+      >
+        <Loading message="Đang tải dữ liệu danh mục..." size="large" />
+      </ConfigProvider>
+    );
+  }
+
   return (
-    <div style={{ padding: '24px' }}>
-      {/* Breadcrumb */}
-      <Breadcrumb style={{ marginBottom: '24px' }}>
-        <Breadcrumb.Item>
-          <Link href="/admin/dashboard">
-            <HomeOutlined />
-          </Link>
-        </Breadcrumb.Item>
-        <Breadcrumb.Item>Quản lý Danh mục</Breadcrumb.Item>
-      </Breadcrumb>
+    <ConfigProvider
+      theme={{
+        algorithm: theme === 'dark' ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm,
+      }}
+    >
+      <div style={{ padding: '24px' }}>
+        {/* Breadcrumb */}
+        <Breadcrumb
+          style={{ marginBottom: 16 }}
+          items={[
+            {
+              title: (
+                <Link href="/admin/dashboard">
+                  <HomeOutlined />
+                </Link>
+              ),
+            },
+            {
+              title: 'Quản lý Cơ quan Đơn vị',
+            },
+          ]}
+        />
 
-      {/* Header */}
-      <div style={{ marginBottom: '24px', paddingBottom: '16px', borderBottom: '2px solid #9333ea' }}>
-        <Title level={1} style={{
-          margin: 0,
-          background: 'linear-gradient(to right, #9333ea, #db2777)',
-          WebkitBackgroundClip: 'text',
-          WebkitTextFillColor: 'transparent',
-          backgroundClip: 'text'
-        }}>
-          Quản lý Danh mục
-        </Title>
-        <Text type="secondary" style={{ fontSize: '16px', marginTop: '8px', display: 'block' }}>
-          Quản lý đơn vị ({units.length}), chức vụ ({positions.length}) và nhóm công hiến ({contributionGroups.length})
-        </Text>
-      </div>
-
-      {loading ? (
-        <Card style={{ padding: '48px', textAlign: 'center' }}>
-          <Spin indicator={<LoadingOutlined style={{ fontSize: 48 }} spin />} />
-          <div style={{ marginTop: '16px' }}>
-            <Text style={{ fontSize: '18px', fontWeight: 500 }}>Đang tải dữ liệu danh mục...</Text>
+        {/* Header */}
+        <div
+          style={{
+            marginBottom: 24,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: 16,
+          }}
+        >
+          <div>
+            <Title level={2} style={{ margin: 0, marginBottom: 8 }}>
+              Quản lý Cơ quan Đơn vị
+            </Title>
+            <Text type="secondary">
+              Quản lý cơ quan đơn vị ({units.length}) và chức vụ ({positions.length})
+            </Text>
           </div>
-        </Card>
-      ) : (
+        </div>
         <Tabs
           activeKey={activeTab}
           onChange={setActiveTab}
@@ -106,130 +131,115 @@ export default function CategoriesPage() {
               key: 'units',
               label: `Đơn vị (${units.length})`,
               children: (
-                <div style={{ marginTop: '24px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                    <Title level={2} style={{ margin: 0, color: '#9333ea' }}>Danh sách Đơn vị</Title>
+                <>
+                  <div
+                    style={{
+                      marginBottom: 24,
+                      display: 'flex',
+                      justifyContent: 'flex-end',
+                      alignItems: 'center',
+                    }}
+                  >
                     <Button
                       type="primary"
+                      size="large"
                       icon={<PlusOutlined />}
                       onClick={() => handleOpenDialog('unit')}
                     >
-                      Thêm Đơn vị
+                      Thêm Cơ quan đơn vị
                     </Button>
                   </div>
-                  <Card style={{ padding: 0, borderTop: '4px solid #9333ea' }}>
+                  <Card>
                     <UnitsTable
                       units={units}
                       onEdit={unit => handleOpenDialog('unit', unit)}
                       onRefresh={loadData}
                     />
                   </Card>
-                </div>
+                </>
               ),
             },
             {
               key: 'positions',
               label: `Chức vụ (${positions.length})`,
               children: (
-                <div style={{ marginTop: '24px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '16px' }}>
-                    <Title level={2} style={{ margin: 0, color: '#9333ea' }}>Danh sách Chức vụ</Title>
-                    <div style={{ display: 'flex', gap: '12px' }}>
-                      <Select
-                        value={selectedUnit}
-                        onChange={setSelectedUnit}
-                        style={{ width: 288 }}
-                        placeholder="Chọn Đơn vị"
-                      >
-                        <Option value="ALL">Tất cả Đơn vị ({units.length})</Option>
-                        {units.map(unit => (
-                          <Option key={unit.id} value={unit.id.toString()}>
-                            {unit.ten_don_vi}
-                          </Option>
-                        ))}
-                      </Select>
-                      <Button
-                        type="primary"
-                        icon={<PlusOutlined />}
-                        onClick={() => handleOpenDialog('position')}
-                      >
-                        Thêm
-                      </Button>
-                    </div>
-                  </div>
-                  <Card style={{ padding: 0, borderTop: '4px solid #9333ea' }}>
+                <>
+                  {/* Filters */}
+                  <Card style={{ marginBottom: 24 }}>
+                    <Space direction="vertical" style={{ width: '100%' }} size="middle">
+                      <Space wrap style={{ width: '100%', justifyContent: 'space-between' }} size="middle">
+                        <div style={{ flex: 1, minWidth: 300 }}>
+                          <Text type="secondary" style={{ marginBottom: 8, display: 'block' }}>
+                            Đơn vị
+                          </Text>
+                          <Select
+                            value={selectedUnit}
+                            onChange={setSelectedUnit}
+                            style={{ width: '100%' }}
+                            size="large"
+                            placeholder="Chọn Đơn vị"
+                          >
+                            <Option value="ALL">Tất cả Đơn vị ({units.length})</Option>
+                            {units.map(unit => (
+                              <Option key={unit.id} value={unit.id.toString()}>
+                                {unit.ten_don_vi}
+                              </Option>
+                            ))}
+                          </Select>
+                        </div>
+                        <div style={{ alignSelf: 'flex-end' }}>
+                          <Button
+                            type="primary"
+                            size="large"
+                            icon={<PlusOutlined />}
+                            onClick={() => handleOpenDialog('position')}
+                          >
+                            Thêm Chức vụ
+                          </Button>
+                        </div>
+                      </Space>
+                    </Space>
+                  </Card>
+
+                  {/* Table */}
+                  <Card>
                     <PositionsTable
                       positions={filteredPositions}
                       onEdit={pos => handleOpenDialog('position', pos)}
                       onRefresh={loadData}
                     />
                   </Card>
-                </div>
-              ),
-            },
-            {
-              key: 'groups',
-              label: `Nhóm Công hiến (${contributionGroups.length})`,
-              children: (
-                <div style={{ marginTop: '24px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                    <Title level={2} style={{ margin: 0, color: '#9333ea' }}>Danh sách Nhóm Công hiến</Title>
-                    <Button
-                      type="primary"
-                      icon={<PlusOutlined />}
-                      onClick={() => handleOpenDialog('group')}
-                    >
-                      Thêm Nhóm
-                    </Button>
-                  </div>
-                  <Card style={{ padding: 0, borderTop: '4px solid #9333ea' }}>
-                    <ContributionGroupsTable
-                      groups={contributionGroups}
-                      onEdit={group => handleOpenDialog('group', group)}
-                      onRefresh={loadData}
-                    />
-                  </Card>
-                </div>
+                </>
               ),
             },
           ]}
         />
-      )}
 
-      <Modal
-        open={dialogOpen}
-        onCancel={handleCloseDialog}
-        footer={null}
-        width={800}
-        style={{ maxHeight: '90vh' }}
-        title={
-          dialogType === 'unit' ? (editingItem ? 'Sửa Đơn vị' : 'Thêm Đơn vị mới') :
-          dialogType === 'position' ? (editingItem ? 'Sửa Chức vụ' : 'Thêm Chức vụ mới') :
-          (editingItem ? 'Sửa Nhóm Công hiến' : 'Thêm Nhóm mới')
-        }
-      >
-        {dialogType === 'unit' && (
-          <UnitForm unit={editingItem} onSuccess={loadData} onClose={handleCloseDialog} />
-        )}
+        <Modal
+          open={dialogOpen}
+          onCancel={handleCloseDialog}
+          footer={null}
+          width={800}
+          style={{ maxHeight: '90vh' }}
+          title={
+            dialogType === 'unit' ? (editingItem ? 'Sửa Đơn vị' : 'Thêm Cơ quan đơn vị mới') :
+            (editingItem ? 'Sửa Chức vụ' : 'Thêm Chức vụ mới')
+          }
+        >
+          {dialogType === 'unit' && (
+            <UnitForm unit={editingItem} units={units} onSuccess={loadData} onClose={handleCloseDialog} />
+          )}
 
-        {dialogType === 'position' && (
-          <PositionForm
-            position={editingItem}
-            contributionGroups={contributionGroups}
-            units={units}
-            onSuccess={loadData}
-            onClose={handleCloseDialog}
-          />
-        )}
-
-        {dialogType === 'group' && (
-          <ContributionGroupForm
-            group={editingItem}
-            onSuccess={loadData}
-            onClose={handleCloseDialog}
-          />
-        )}
-      </Modal>
-    </div>
+          {dialogType === 'position' && (
+            <PositionForm
+              position={editingItem}
+              units={units}
+              onSuccess={loadData}
+              onClose={handleCloseDialog}
+            />
+          )}
+        </Modal>
+      </div>
+    </ConfigProvider>
   );
 }

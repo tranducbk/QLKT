@@ -21,6 +21,10 @@ import {
   ClearOutlined,
   TrophyOutlined,
   StarOutlined,
+  TeamOutlined,
+  ClockCircleOutlined,
+  HeartOutlined,
+  ExperimentOutlined,
 } from "@ant-design/icons";
 import Link from "next/link";
 import type { UploadFile } from "antd/es/upload/interface";
@@ -28,14 +32,15 @@ import { apiClient } from "@/lib/api-client";
 
 const { Title, Paragraph, Text } = Typography;
 
-type ProposalType = 'HANG_NAM' | 'NIEN_HAN';
+type ProposalType = 'CA_NHAN_HANG_NAM' | 'DON_VI_HANG_NAM' | 'NIEN_HAN' | 'CONG_HIEN' | 'DOT_XUAT' | 'NCKH';
 
 export default function CreateProposalPage() {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [fileExcel, setFileExcel] = useState<UploadFile[]>([]);
-  const [proposalType, setProposalType] = useState<ProposalType>('HANG_NAM');
+  const [proposalType, setProposalType] = useState<ProposalType>('CA_NHAN_HANG_NAM');
+  const [showForm, setShowForm] = useState(false); // Thêm state để kiểm soát hiển thị form
 
   // Tải file mẫu Excel
   const handleDownloadTemplate = async () => {
@@ -44,7 +49,15 @@ export default function CreateProposalPage() {
       const blob = await apiClient.getProposalTemplate(proposalType);
 
       // Download file
-      const typeName = proposalType === 'HANG_NAM' ? 'hang_nam' : 'nien_han';
+      const typeNames: Record<ProposalType, string> = {
+        CA_NHAN_HANG_NAM: 'ca_nhan_hang_nam',
+        DON_VI_HANG_NAM: 'don_vi_hang_nam',
+        NIEN_HAN: 'nien_han',
+        CONG_HIEN: 'cong_hien',
+        DOT_XUAT: 'dot_xuat',
+        NCKH: 'nckh',
+      };
+      const typeName = typeNames[proposalType];
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -120,52 +133,47 @@ export default function CreateProposalPage() {
       <div style={{ marginBottom: 24 }}>
         <Title level={2}>Tạo Phiếu Đề Xuất Khen Thưởng</Title>
         <Paragraph type="secondary">
-          Tải file mẫu, điền đề xuất và nộp lên hệ thống để chờ phê duyệt
+          Chọn loại khen thưởng và điền thông tin đề xuất
         </Paragraph>
       </div>
 
-      {/* Bước 0: Chọn loại đề xuất */}
+      {/* Chọn loại đề xuất */}
       <Card
         style={{ marginBottom: 24 }}
-        title={
-          <Space>
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: 32,
-              height: 32,
-              borderRadius: '50%',
-              backgroundColor: '#f0f5ff',
-              color: '#1890ff',
-              fontWeight: 'bold',
-              fontSize: 14,
-            }}>
-              0
-            </div>
-            <span>Chọn loại đề xuất khen thưởng</span>
-          </Space>
-        }
+        title="Chọn loại đề xuất khen thưởng"
       >
         <Radio.Group
           value={proposalType}
           onChange={(e) => {
             setProposalType(e.target.value);
-            // Reset file khi đổi loại đề xuất
+            // Reset file và ẩn form khi đổi loại đề xuất
             setFileExcel([]);
+            setShowForm(false);
           }}
           size="large"
           style={{ width: '100%' }}
         >
           <Space direction="vertical" size="middle" style={{ width: '100%' }}>
-            <Radio.Button value="HANG_NAM" style={{ width: '100%', height: 'auto', padding: '16px' }}>
+            <Radio.Button value="CA_NHAN_HANG_NAM" style={{ width: '100%', height: 'auto', padding: '16px' }}>
               <Space direction="vertical" size="small">
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <TrophyOutlined style={{ fontSize: 20, color: proposalType === 'HANG_NAM' ? '#1890ff' : '#8c8c8c' }} />
-                  <Text strong style={{ fontSize: 16 }}>Đề xuất Khen thưởng Hằng năm</Text>
+                  <TrophyOutlined style={{ fontSize: 20, color: proposalType === 'CA_NHAN_HANG_NAM' ? '#1890ff' : '#8c8c8c' }} />
+                  <Text strong style={{ fontSize: 16 }}>Cá nhân Hằng năm</Text>
                 </div>
                 <Text type="secondary" style={{ fontSize: 13, display: 'block', marginLeft: 28 }}>
-                  Đề xuất danh hiệu CSTDCS, CSTT, BKBQP, CSTDTQ và thành tích khoa học (NCKH, SKKH)
+                  Danh hiệu CSTT-CS, CSTĐ-CS, BK-BQP, CSTĐ-TQ (4 loại)
+                </Text>
+              </Space>
+            </Radio.Button>
+
+            <Radio.Button value="DON_VI_HANG_NAM" style={{ width: '100%', height: 'auto', padding: '16px' }}>
+              <Space direction="vertical" size="small">
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <TeamOutlined style={{ fontSize: 20, color: proposalType === 'DON_VI_HANG_NAM' ? '#1890ff' : '#8c8c8c' }} />
+                  <Text strong style={{ fontSize: 16 }}>Đơn vị Hằng năm</Text>
+                </div>
+                <Text type="secondary" style={{ fontSize: 13, display: 'block', marginLeft: 28 }}>
+                  ĐVTT, ĐVQT, BK-BQP, BK-TTCP (4 loại)
                 </Text>
               </Space>
             </Radio.Button>
@@ -173,22 +181,56 @@ export default function CreateProposalPage() {
             <Radio.Button value="NIEN_HAN" style={{ width: '100%', height: 'auto', padding: '16px' }}>
               <Space direction="vertical" size="small">
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <StarOutlined style={{ fontSize: 20, color: proposalType === 'NIEN_HAN' ? '#1890ff' : '#8c8c8c' }} />
-                  <Text strong style={{ fontSize: 16 }}>Đề xuất Khen thưởng Niên hạn</Text>
+                  <ClockCircleOutlined style={{ fontSize: 20, color: proposalType === 'NIEN_HAN' ? '#1890ff' : '#8c8c8c' }} />
+                  <Text strong style={{ fontSize: 16 }}>Niên hạn</Text>
                 </div>
                 <Text type="secondary" style={{ fontSize: 13, display: 'block', marginLeft: 28 }}>
-                  Đề xuất Huân chương Chiến sĩ vẻ vang (HCCSVV) và Huân chương Bảo vệ Tổ quốc (HCBVTQ) các hạng
+                  HCCSVV 3 hạng, HC Quân kỳ, Kỷ niệm chương (6 loại)
+                </Text>
+              </Space>
+            </Radio.Button>
+
+            <Radio.Button value="CONG_HIEN" style={{ width: '100%', height: 'auto', padding: '16px' }}>
+              <Space direction="vertical" size="small">
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <HeartOutlined style={{ fontSize: 20, color: proposalType === 'CONG_HIEN' ? '#1890ff' : '#8c8c8c' }} />
+                  <Text strong style={{ fontSize: 16 }}>Cống hiến</Text>
+                </div>
+                <Text type="secondary" style={{ fontSize: 13, display: 'block', marginLeft: 28 }}>
+                  HC BVTQ hạng Nhất, Nhì, Ba (3 loại)
+                </Text>
+              </Space>
+            </Radio.Button>
+
+            <Radio.Button value="NCKH" style={{ width: '100%', height: 'auto', padding: '16px' }}>
+              <Space direction="vertical" size="small">
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <ExperimentOutlined style={{ fontSize: 20, color: proposalType === 'NCKH' ? '#1890ff' : '#8c8c8c' }} />
+                  <Text strong style={{ fontSize: 16 }}>NCKH/SKKH</Text>
+                </div>
+                <Text type="secondary" style={{ fontSize: 13, display: 'block', marginLeft: 28 }}>
+                  Thành tích Nghiên cứu Khoa học và Sáng kiến Kinh nghiệm (2 loại)
                 </Text>
               </Space>
             </Radio.Button>
           </Space>
         </Radio.Group>
 
-        {proposalType === 'HANG_NAM' && (
+        {proposalType === 'CA_NHAN_HANG_NAM' && (
           <Alert
             style={{ marginTop: 16 }}
-            message="Đề xuất hằng năm"
-            description="Áp dụng cho khen thưởng theo năm: danh hiệu thi đua, bằng khen, chiến sĩ thi đua toàn quân và thành tích khoa học."
+            message="Đề xuất Cá nhân Hằng năm"
+            description="Áp dụng cho khen thưởng cá nhân hằng năm: Chiến sĩ thi đua cơ sở (CSTT-CS), Chiến sĩ tiên đến cơ sở (CSTĐ-CS), Bằng khen BQP (BK-BQP), Chiến sĩ tiên đến toàn quân (CSTĐ-TQ)."
+            type="info"
+            showIcon
+          />
+        )}
+
+        {proposalType === 'DON_VI_HANG_NAM' && (
+          <Alert
+            style={{ marginTop: 16 }}
+            message="Đề xuất Đơn vị Hằng năm"
+            description="Áp dụng cho khen thưởng đơn vị hằng năm: Đơn vị tiên tiến (ĐVTT), Đơn vị quyết thắng (ĐVQT), Bằng khen BQP (BK-BQP), Bằng khen Thủ tướng Chính phủ (BK-TTCP)."
             type="info"
             showIcon
           />
@@ -197,143 +239,164 @@ export default function CreateProposalPage() {
         {proposalType === 'NIEN_HAN' && (
           <Alert
             style={{ marginTop: 16 }}
-            message="Đề xuất niên hạn"
-            description="Áp dụng cho khen thưởng theo thâm niên phục vụ: Huân chương Chiến sĩ vẻ vang và Huân chương Bảo vệ Tổ quốc."
+            message="Đề xuất Niên hạn"
+            description="Áp dụng cho khen thưởng theo thâm niên phục vụ: Huân chương Chiến sĩ vẻ vang hạng Nhất, Nhì, Ba (HCCSVV), Huân chương Quân kỳ, Kỷ niệm chương các hạng."
             type="info"
             showIcon
           />
         )}
-      </Card>
 
-      {/* Bước 1: Tải file mẫu */}
-      <Card
-        style={{ marginBottom: 24 }}
-        title={
-          <Space>
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: 32,
-              height: 32,
-              borderRadius: '50%',
-              backgroundColor: '#e6f7ff',
-              color: '#1890ff',
-              fontWeight: 'bold',
-              fontSize: 14,
-            }}>
-              1
-            </div>
-            <span>Tải file Excel mẫu</span>
-          </Space>
-        }
-      >
-        <Space direction="vertical" size="middle" style={{ width: '100%' }}>
-          <Text type="secondary">
-            Tải về file mẫu có sẵn danh sách quân nhân thuộc đơn vị của bạn
-          </Text>
-          <Button
-            icon={<DownloadOutlined />}
-            onClick={handleDownloadTemplate}
-            loading={downloading}
-            type="default"
-          >
-            {downloading ? "Đang tải..." : "Tải file Excel mẫu"}
-          </Button>
-          {proposalType === 'HANG_NAM' ? (
-            <Text type="secondary" style={{ fontSize: 12 }}>
-              File mẫu bao gồm 3 tab: <strong>QuanNhan</strong> (danh sách), <strong>DanhHieuHangNam</strong>, <strong>ThanhTichKhoaHoc</strong>
-            </Text>
-          ) : (
-            <Text type="secondary" style={{ fontSize: 12 }}>
-              File mẫu bao gồm 2 tab: <strong>QuanNhan</strong> (danh sách + ngày nhập ngũ), <strong>NienHan</strong> (HCCSVV, HCBVTQ)
-            </Text>
-          )}
-        </Space>
-      </Card>
+        {proposalType === 'CONG_HIEN' && (
+          <Alert
+            style={{ marginTop: 16 }}
+            message="Đề xuất Cống hiến"
+            description="Áp dụng cho khen thưởng theo cống hiến: Huân chương Bảo vệ Tổ quốc hạng Nhất, Nhì, Ba (HC BVTQ)."
+            type="info"
+            showIcon
+          />
+        )}
 
-      {/* Bước 2: Nộp đề xuất */}
-      <Card
-        title={
-          <Space>
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: 32,
-              height: 32,
-              borderRadius: '50%',
-              backgroundColor: '#e6f7ff',
-              color: '#1890ff',
-              fontWeight: 'bold',
-              fontSize: 14,
-            }}>
-              2
-            </div>
-            <span>Nộp đề xuất khen thưởng</span>
-          </Space>
-        }
-      >
-        <Paragraph type="secondary" style={{ marginBottom: 24 }}>
-          Upload file Excel đã điền đề xuất khen thưởng cho các quân nhân trong đơn vị
-        </Paragraph>
+        {proposalType === 'DOT_XUAT' && (
+          <Alert
+            style={{ marginTop: 16 }}
+            message="Đề xuất Đột xuất"
+            description="Áp dụng cho khen thưởng đột xuất: Khen thưởng cá nhân hoặc đơn vị có thành tích đột xuất, xuất sắc theo quyết định của cấp có thẩm quyền."
+            type="warning"
+            showIcon
+          />
+        )}
 
-        <Form
-          form={form}
-          layout="vertical"
-          onFinish={handleSubmit}
-          autoComplete="off"
-        >
-          {/* File Excel */}
-          <Form.Item
-            label="File Excel Đề xuất (.xlsx)"
-            required
-          >
-            <Upload
-              accept=".xlsx,.xls"
-              maxCount={1}
-              fileList={fileExcel}
-              beforeUpload={() => false}
-              onChange={({ fileList }) => setFileExcel(fileList)}
-              disabled={loading}
+        {proposalType === 'NCKH' && (
+          <Alert
+            style={{ marginTop: 16 }}
+            message="Đề xuất NCKH/SKKH"
+            description="Áp dụng cho khen thưởng thành tích khoa học: Nghiên cứu Khoa học (NCKH) và Sáng kiến Kinh nghiệm (SKKH)."
+            type="success"
+            showIcon
+          />
+        )}
+
+        {/* Nút Tạo đề xuất */}
+        {!showForm && (
+          <div style={{ marginTop: 24, textAlign: 'center' }}>
+            <Button
+              type="primary"
+              size="large"
+              icon={<FileExcelOutlined />}
+              onClick={() => setShowForm(true)}
+              style={{ minWidth: 200 }}
             >
-              <Button icon={<FileExcelOutlined />} disabled={loading} size="large">
-                Chọn file Excel
-              </Button>
-            </Upload>
-            <Text type="secondary" style={{ fontSize: 12, display: 'block', marginTop: 8 }}>
-              Tải lên file Excel đã điền đề xuất (đánh dấu "X" trong các cột tương ứng)
-            </Text>
-            <Text type="secondary" style={{ fontSize: 12, display: 'block', marginTop: 4 }}>
-              <strong>Lưu ý:</strong> Số quyết định và file PDF sẽ được Admin bổ sung sau khi phê duyệt
-            </Text>
-          </Form.Item>
+              Tạo đề xuất
+            </Button>
+          </div>
+        )}
+      </Card>
 
-          {/* Submit Buttons */}
-          <Form.Item style={{ marginTop: 24 }}>
-            <Space>
+      {/* Form nhập thông tin đề xuất - Hiển thị sau khi bấm "Tạo đề xuất" */}
+      {showForm && (
+        <>
+          {/* Cá nhân Hằng năm */}
+          {proposalType === 'CA_NHAN_HANG_NAM' && (
+            <Card title="Thông tin đề xuất - Cá nhân Hằng năm" style={{ marginBottom: 24 }}>
+              <Alert
+                message="Form đề xuất Cá nhân Hằng năm"
+                description="Nhập danh sách cá nhân đề xuất CSTT-CS, CSTĐ-CS, BK-BQP, CSTĐ-TQ."
+                type="info"
+                showIcon
+                style={{ marginBottom: 16 }}
+              />
+              {/* TODO: Thêm form fields ở đây */}
+              <Paragraph>Form đang được phát triển...</Paragraph>
+            </Card>
+          )}
+
+          {/* Đơn vị Hằng năm */}
+          {proposalType === 'DON_VI_HANG_NAM' && (
+            <Card title="Thông tin đề xuất - Đơn vị Hằng năm" style={{ marginBottom: 24 }}>
+              <Alert
+                message="Form đề xuất Đơn vị Hằng năm"
+                description="Nhập thông tin đơn vị đề xuất ĐVTT, ĐVQT, BK-BQP, BK-TTCP."
+                type="info"
+                showIcon
+                style={{ marginBottom: 16 }}
+              />
+              {/* TODO: Thêm form fields ở đây */}
+              <Paragraph>Form đang được phát triển...</Paragraph>
+            </Card>
+          )}
+
+          {/* Niên hạn */}
+          {proposalType === 'NIEN_HAN' && (
+            <Card title="Thông tin đề xuất - Niên hạn" style={{ marginBottom: 24 }}>
+              <Alert
+                message="Form đề xuất Niên hạn"
+                description="Nhập danh sách cá nhân đề xuất HCCSVV, HC Quân kỳ, Kỷ niệm chương."
+                type="info"
+                showIcon
+                style={{ marginBottom: 16 }}
+              />
+              {/* TODO: Thêm form fields ở đây */}
+              <Paragraph>Form đang được phát triển...</Paragraph>
+            </Card>
+          )}
+
+          {/* Cống hiến */}
+          {proposalType === 'CONG_HIEN' && (
+            <Card title="Thông tin đề xuất - Cống hiến" style={{ marginBottom: 24 }}>
+              <Alert
+                message="Form đề xuất Cống hiến"
+                description="Nhập danh sách cá nhân đề xuất HC BVTQ hạng Nhất, Nhì, Ba."
+                type="info"
+                showIcon
+                style={{ marginBottom: 16 }}
+              />
+              {/* TODO: Thêm form fields ở đây */}
+              <Paragraph>Form đang được phát triển...</Paragraph>
+            </Card>
+          )}
+
+          {/* NCKH/SKKH */}
+          {proposalType === 'NCKH' && (
+            <Card title="Thông tin đề xuất - NCKH/SKKH" style={{ marginBottom: 24 }}>
+              <Alert
+                message="Form đề xuất NCKH/SKKH"
+                description="Nhập thông tin đề xuất khen thưởng thành tích NCKH và SKKH."
+                type="success"
+                showIcon
+                style={{ marginBottom: 16 }}
+              />
+              {/* TODO: Thêm form fields ở đây */}
+              <Paragraph>Form đang được phát triển...</Paragraph>
+            </Card>
+          )}
+
+          {/* Nút hành động */}
+          <Card>
+            <Space size="middle" style={{ width: '100%', justifyContent: 'flex-end' }}>
+              <Button
+                size="large"
+                icon={<ClearOutlined />}
+                onClick={() => {
+                  setShowForm(false);
+                  form.resetFields();
+                  setFileExcel([]);
+                }}
+              >
+                Hủy
+              </Button>
               <Button
                 type="primary"
-                htmlType="submit"
-                loading={loading}
+                size="large"
                 icon={<UploadOutlined />}
-                size="large"
+                loading={loading}
+                onClick={handleSubmit}
               >
-                {loading ? "Đang gửi..." : "Gửi Đề xuất"}
-              </Button>
-              <Button
-                type="default"
-                onClick={handleReset}
-                disabled={loading}
-                icon={<ClearOutlined />}
-                size="large"
-              >
-                Xóa Form
+                Gửi đề xuất
               </Button>
             </Space>
-          </Form.Item>
-        </Form>
-      </Card>
+          </Card>
+        </>
+      )}
     </div>
   );
 }

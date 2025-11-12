@@ -31,9 +31,6 @@ const actionLabels: Record<string, string> = {
   CREATE_POSITIONS: 'Tạo chức vụ',
   UPDATE_POSITIONS: 'Cập nhật chức vụ',
   DELETE_POSITIONS: 'Xóa chức vụ',
-  CREATE_CONTRIBUTION_GROUPS: 'Tạo nhóm công hiến',
-  UPDATE_CONTRIBUTION_GROUPS: 'Cập nhật nhóm công hiến',
-  DELETE_CONTRIBUTION_GROUPS: 'Xóa nhóm công hiến',
 };
 
 const actionColors: Record<string, string> = {

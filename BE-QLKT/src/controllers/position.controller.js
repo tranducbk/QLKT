@@ -1,26 +1,31 @@
-const positionService = require('../services/position.service');
+const positionService = require("../services/position.service");
 
 class PositionController {
   /**
-   * GET /api/positions?unit_id={id}
+   * GET /api/positions?unit_id={id}&include_children=true
    * Lấy chức vụ (lọc theo đơn vị, nếu không có unit_id thì trả về tất cả)
+   * include_children=true: Lấy cả chức vụ của đơn vị con
    */
   async getPositions(req, res) {
     try {
-      const { unit_id } = req.query;
+      const { unit_id, include_children } = req.query;
+      const includeChildren = include_children === "true";
 
-      const result = await positionService.getPositions(unit_id);
+      const result = await positionService.getPositions(
+        unit_id,
+        includeChildren
+      );
 
       return res.status(200).json({
         success: true,
-        message: 'Lấy danh sách chức vụ thành công',
+        message: "Lấy danh sách chức vụ thành công",
         data: result,
       });
     } catch (error) {
-      console.error('Get positions error:', error);
+      console.error("Get positions error:", error);
       return res.status(500).json({
         success: false,
-        message: error.message || 'Lấy danh sách chức vụ thất bại',
+        message: error.message || "Lấy danh sách chức vụ thất bại",
       });
     }
   }
@@ -31,13 +36,13 @@ class PositionController {
    */
   async createPosition(req, res) {
     try {
-      const { unit_id, ten_chuc_vu, is_manager, nhom_cong_hien_id } = req.body;
+      const { unit_id, ten_chuc_vu, is_manager, he_so_luong } = req.body;
 
       // Validate input
       if (!unit_id || !ten_chuc_vu) {
         return res.status(400).json({
           success: false,
-          message: 'Vui lòng nhập đầy đủ thông tin: unit_id, ten_chuc_vu',
+          message: "Vui lòng nhập đầy đủ thông tin: unit_id, ten_chuc_vu",
         });
       }
 
@@ -45,19 +50,19 @@ class PositionController {
         unit_id,
         ten_chuc_vu,
         is_manager,
-        nhom_cong_hien_id,
+        he_so_luong,
       });
 
       return res.status(201).json({
         success: true,
-        message: 'Tạo chức vụ thành công',
+        message: "Tạo chức vụ thành công",
         data: result,
       });
     } catch (error) {
-      console.error('Create position error:', error);
+      console.error("Create position error:", error);
       return res.status(400).json({
         success: false,
-        message: error.message || 'Tạo chức vụ thất bại',
+        message: error.message || "Tạo chức vụ thất bại",
       });
     }
   }
@@ -69,24 +74,24 @@ class PositionController {
   async updatePosition(req, res) {
     try {
       const { id } = req.params;
-      const { ten_chuc_vu, is_manager, nhom_cong_hien_id } = req.body;
+      const { ten_chuc_vu, is_manager, he_so_luong } = req.body;
 
-      const result = await positionService.updatePosition(parseInt(id), {
+      const result = await positionService.updatePosition(id, {
         ten_chuc_vu,
         is_manager,
-        nhom_cong_hien_id,
+        he_so_luong,
       });
 
       return res.status(200).json({
         success: true,
-        message: 'Cập nhật chức vụ thành công',
+        message: "Cập nhật chức vụ thành công",
         data: result,
       });
     } catch (error) {
-      console.error('Update position error:', error);
+      console.error("Update position error:", error);
       return res.status(400).json({
         success: false,
-        message: error.message || 'Cập nhật chức vụ thất bại',
+        message: error.message || "Cập nhật chức vụ thất bại",
       });
     }
   }
@@ -99,17 +104,17 @@ class PositionController {
     try {
       const { id } = req.params;
 
-      const result = await positionService.deletePosition(parseInt(id));
+      const result = await positionService.deletePosition(id);
 
       return res.status(200).json({
         success: true,
         message: result.message,
       });
     } catch (error) {
-      console.error('Delete position error:', error);
+      console.error("Delete position error:", error);
       return res.status(400).json({
         success: false,
-        message: error.message || 'Xóa chức vụ thất bại',
+        message: error.message || "Xóa chức vụ thất bại",
       });
     }
   }

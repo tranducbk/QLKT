@@ -1,9 +1,10 @@
 "use client"
 
 import { useState } from "react"
-import { Table, Button, Space, Popconfirm, message } from "antd"
+import { Table, Button, Space, Popconfirm, message, Tag } from "antd"
 import type { ColumnsType } from 'antd/es/table'
-import { EditOutlined, DeleteOutlined } from "@ant-design/icons"
+import { EditOutlined, DeleteOutlined, EyeOutlined } from "@ant-design/icons"
+import { useRouter } from "next/navigation"
 import { apiClient } from "@/lib/api-client"
 
 interface UnitsTableProps {
@@ -13,6 +14,7 @@ interface UnitsTableProps {
 }
 
 export function UnitsTable({ units, onEdit, onRefresh }: UnitsTableProps) {
+  const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
 
@@ -36,32 +38,48 @@ export function UnitsTable({ units, onEdit, onRefresh }: UnitsTableProps) {
       title: 'Mã Đơn vị',
       dataIndex: 'ma_don_vi',
       key: 'ma_don_vi',
-      width: 150,
+      width: 120,
       align: 'center',
-      render: (text) => <strong>{text}</strong>,
+      render: (text) => text,
     },
     {
       title: 'Tên Đơn vị',
       dataIndex: 'ten_don_vi',
       key: 'ten_don_vi',
-      width: 300,
+      width: 250,
       align: 'left',
+      render: (text) => <strong>{text}</strong>,
     },
     {
       title: 'Quân số',
       dataIndex: 'so_luong',
       key: 'so_luong',
-      width: 120,
+      width: 100,
       align: 'center',
       render: (val) => val ?? 0,
     },
     {
+      title: 'Đơn vị trực thuộc',
+      dataIndex: 'DonViTrucThuoc',
+      key: 'children',
+      width: 150,
+      align: 'center',
+      render: (children) => children?.length ?? 0,
+    },
+    {
       title: 'Hành động',
       key: 'action',
-      width: 200,
+      width: 280,
       align: 'center',
       render: (_, record) => (
         <Space size="small">
+          <Button
+            type="primary"
+            icon={<EyeOutlined />}
+            onClick={() => router.push(`/admin/categories/units/${record.id}`)}
+          >
+            Chi tiết
+          </Button>
           <Button
             type="default"
             icon={<EditOutlined />}

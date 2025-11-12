@@ -47,7 +47,7 @@ class AccountController {
   async getAccountById(req, res) {
     try {
       const { id } = req.params;
-      const result = await accountService.getAccountById(parseInt(id));
+      const result = await accountService.getAccountById(id); // UUID string
 
       return res.status(200).json({
         success: true,
@@ -113,8 +113,8 @@ class AccountController {
         username,
         password,
         role,
-        don_vi_id: don_vi_id ? parseInt(don_vi_id) : undefined,
-        chuc_vu_id: chuc_vu_id ? parseInt(chuc_vu_id) : undefined,
+        don_vi_id: don_vi_id || undefined, // Giữ nguyên UUID string
+        chuc_vu_id: chuc_vu_id || undefined, // Giữ nguyên UUID string
       });
 
       return res.status(201).json({

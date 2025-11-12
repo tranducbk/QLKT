@@ -218,19 +218,9 @@ export default function MainLayout({ children, role = 'ADMIN' }: MainLayoutProps
           label: <Link href="/admin/personnel">Quản lý Quân nhân</Link>,
         },
         {
-          key: 'units',
+          key: 'categories',
           icon: <ApartmentOutlined />,
-          label: <Link href="/admin/units">Quản lý Đơn vị</Link>,
-        },
-        {
-          key: 'positions',
-          icon: <FileTextOutlined />,
-          label: <Link href="/admin/positions">Quản lý Chức vụ</Link>,
-        },
-        {
-          key: 'contribution-groups',
-          icon: <FileTextOutlined />,
-          label: <Link href="/admin/contribution-groups">Nhóm Công hiến</Link>,
+          label: <Link href="/admin/categories">Quản lý Cơ quan Đơn vị</Link>,
         },
         {
           key: 'proposals',

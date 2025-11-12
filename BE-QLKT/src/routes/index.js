@@ -4,7 +4,6 @@ const router = require('express').Router();
 const authRoute = require('./auth.route');
 const accountRoute = require('./account.route');
 const unitRoute = require('./unit.route');
-const contributionGroupRoute = require('./contributionGroup.route');
 const positionRoute = require('./position.route');
 const personnelRoute = require('./personnel.route');
 const annualRewardRoute = require('./annualReward.route');
@@ -28,7 +27,6 @@ router.use('/api/accounts', accountRoute);
 
 // 3. Master Data Management (ADMIN)
 router.use('/api/units', unitRoute);
-router.use('/api/contribution-groups', contributionGroupRoute);
 router.use('/api/positions', positionRoute);
 
 // 3.1 Categories (alias routes for frontend compatibility)

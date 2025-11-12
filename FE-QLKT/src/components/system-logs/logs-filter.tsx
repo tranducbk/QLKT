@@ -30,7 +30,7 @@ export function LogsFilter({ onFilterChange }: LogsFilterProps) {
     // Common actions
     setActions(['CREATE', 'UPDATE', 'DELETE', 'LOGIN', 'LOGOUT', 'RESET_PASSWORD']);
     // Common resources
-    setResources(['accounts', 'personnel', 'positions', 'units', 'contribution_groups']);
+    setResources(['accounts', 'personnel', 'positions', 'units']);
   }, []);
 
   const handleSearch = (value: string) => {

@@ -20,15 +20,15 @@ class NotificationService {
 
       const notification = await prisma.thongBao.create({
         data: {
-          recipient_id,
+          nguoi_nhan_id: recipient_id,
           recipient_role,
           type,
           title,
           message,
           resource,
-          resource_id,
+          tai_nguyen_id: resource_id ? parseInt(resource_id) : null,
           link,
-          system_log_id,
+          nhat_ky_he_thong_id: system_log_id,
         },
       });
 
@@ -62,7 +62,7 @@ class NotificationService {
       const skip = (page - 1) * limit;
 
       const where = {
-        recipient_id: userId,
+        nguoi_nhan_id: userId,
       };
 
       if (isRead !== undefined) {
@@ -79,7 +79,7 @@ class NotificationService {
           take: parseInt(limit),
           where,
           include: {
-            SystemLog: {
+            NhatKyHeThong: {
               select: {
                 action: true,
                 resource: true,

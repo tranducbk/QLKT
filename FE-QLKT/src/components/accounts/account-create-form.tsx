@@ -52,12 +52,38 @@ export function AccountCreateForm() {
   const fetchUnitsAndPositions = async () => {
     try {
       const [unitsRes, positionsRes] = await Promise.all([
-        apiClient.getUnits(),
+        apiClient.getUnits(), // Lấy tất cả đơn vị (cả cơ quan đơn vị và đơn vị trực thuộc)
         apiClient.getPositions(),
       ]);
 
       if (unitsRes.success) {
-        setUnits(unitsRes.data || []);
+        // Backend trả về mảng phẳng gồm cả cơ quan đơn vị và đơn vị trực thuộc
+        const unitsData = unitsRes.data || [];
+        
+        // Chuẩn hóa dữ liệu đơn vị
+        const normalizedUnits = unitsData.map((unit: any) => {
+          // Nếu có co_quan_don_vi_id thì là đơn vị trực thuộc
+          if (unit.co_quan_don_vi_id || unit.CoQuanDonVi) {
+            return {
+              id: unit.id,
+              ten_don_vi: unit.ten_don_vi,
+              ma_don_vi: unit.ma_don_vi,
+              type: 'don_vi_truc_thuoc',
+              CoQuanDonVi: unit.CoQuanDonVi || null,
+            };
+          } else {
+            // Không có co_quan_don_vi_id thì là cơ quan đơn vị
+            return {
+              id: unit.id,
+              ten_don_vi: unit.ten_don_vi,
+              ma_don_vi: unit.ma_don_vi,
+              type: 'co_quan_don_vi',
+              CoQuanDonVi: null,
+            };
+          }
+        });
+        
+        setUnits(normalizedUnits);
       }
 
       if (positionsRes.success) {
@@ -78,13 +104,19 @@ export function AccountCreateForm() {
     },
   });
 
-  // Watch role và don_vi_id để hiển thị/ẩn và filter chức vụ
+  // Watch role và don_vi_id để filter chức vụ
   const selectedRole = form.watch('role');
   const selectedDonViId = form.watch('don_vi_id');
 
   // Lọc chức vụ theo đơn vị được chọn
   const filteredPositions = selectedDonViId
-    ? positions.filter((p) => p.don_vi_id === selectedDonViId)
+    ? positions.filter((p) => {
+        // Chức vụ có thể thuộc cơ quan đơn vị hoặc đơn vị trực thuộc
+        return (
+          p.co_quan_don_vi_id === selectedDonViId ||
+          p.don_vi_truc_thuoc_id === selectedDonViId
+        );
+      })
     : [];
 
   // Reset chức vụ khi đổi đơn vị
@@ -128,9 +160,10 @@ export function AccountCreateForm() {
           title: 'Thành công',
           description: 'Tạo tài khoản thành công',
         });
-        router.push('/super-admin/accounts');
+        router.push('/admin/accounts');
       } else {
         // Hiển thị lỗi từ backend
+        console.error('Create account error:', response);
         toast({
           title: 'Lỗi',
           description: response.message || 'Có lỗi xảy ra khi tạo tài khoản',
@@ -265,7 +298,7 @@ export function AccountCreateForm() {
           />
         </div>
 
-        {/* Unit and Position - Only show for MANAGER and USER */}
+        {/* Unit and Position - For MANAGER and USER */}
         {(selectedRole === 'MANAGER' || selectedRole === 'USER') && (
           <div className="space-y-4 border-t pt-4">
             <h3 className="text-lg font-semibold">Thông tin đơn vị và chức vụ</h3>
@@ -273,30 +306,39 @@ export function AccountCreateForm() {
             <FormField
               control={form.control}
               name="don_vi_id"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Đơn vị *</FormLabel>
-                  <Select
-                    onValueChange={(value) => field.onChange(parseInt(value))}
-                    value={field.value?.toString()}
-                    disabled={loading}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Chọn đơn vị" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {units.map((unit) => (
-                        <SelectItem key={unit.id} value={unit.id.toString()}>
-                          {unit.ten_don_vi}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
+              render={({ field }) => {
+                // Lọc đơn vị theo role
+                const availableUnits = selectedRole === 'MANAGER'
+                  ? units.filter((u) => u.type === 'co_quan_don_vi') // MANAGER chỉ chọn cơ quan đơn vị
+                  : units; // USER có thể chọn cả cơ quan đơn vị và đơn vị trực thuộc
+
+                return (
+                  <FormItem>
+                    <FormLabel>{selectedRole === 'MANAGER' ? 'Cơ quan đơn vị' : 'Đơn vị'} *</FormLabel>
+                    <Select
+                      onValueChange={(value) => field.onChange(value)}
+                      value={field.value}
+                      disabled={loading}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder={selectedRole === 'MANAGER' ? 'Chọn cơ quan đơn vị' : 'Chọn đơn vị'} />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {availableUnits.map((unit) => (
+                          <SelectItem key={unit.id} value={unit.id}>
+                            {unit.type === 'don_vi_truc_thuoc' && unit.CoQuanDonVi
+                              ? `${unit.ten_don_vi} (${unit.CoQuanDonVi.ten_don_vi})`
+                              : unit.ten_don_vi}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                );
+              }}
             />
 
             <FormField
@@ -306,8 +348,8 @@ export function AccountCreateForm() {
                 <FormItem>
                   <FormLabel>Chức vụ *</FormLabel>
                   <Select
-                    onValueChange={(value) => field.onChange(parseInt(value))}
-                    value={field.value?.toString()}
+                    onValueChange={(value) => field.onChange(value)}
+                    value={field.value}
                     disabled={loading || !selectedDonViId}
                   >
                     <FormControl>
@@ -324,7 +366,7 @@ export function AccountCreateForm() {
                     <SelectContent>
                       {filteredPositions.length > 0 ? (
                         filteredPositions.map((position) => (
-                          <SelectItem key={position.id} value={position.id.toString()}>
+                          <SelectItem key={position.id} value={position.id}>
                             {position.ten_chuc_vu}
                           </SelectItem>
                         ))

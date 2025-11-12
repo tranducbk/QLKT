@@ -40,7 +40,7 @@ class UnitAnnualAwardService {
   /** Manager đề xuất (status=PENDING) */
   async propose({ don_vi_id, nam, tong_so_quan_nhan = 0, chi_tiet, ghi_chu, nguoi_tao_id }) {
     const year = Number(nam);
-    const unitId = Number(don_vi_id);
+    const unitId = don_vi_id; // Giữ nguyên UUID string
 
     const base = {
       don_vi_id: unitId,
@@ -196,7 +196,7 @@ class UnitAnnualAwardService {
     nguoi_tao_id,
   }) {
     const year = Number(nam);
-    const unitId = Number(don_vi_id);
+    const unitId = don_vi_id; // Giữ nguyên UUID string
 
     // Tạm thời set 0, sẽ cập nhật lại sau khi upsert
     const dataBase = {
@@ -240,7 +240,7 @@ class UnitAnnualAwardService {
    */
   async recalculate({ don_vi_id, nam }) {
     const where = {};
-    if (don_vi_id) where.don_vi_id = Number(don_vi_id);
+    if (don_vi_id) where.don_vi_id = don_vi_id; // Giữ nguyên UUID string
     if (nam) where.nam = Number(nam);
 
     const records = await prisma.theoDoiKhenThuongDonVi.findMany({ where });

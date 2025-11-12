@@ -20,13 +20,13 @@ class NotificationHelper {
 
       // Tạo thông báo cho từng admin
       const notifications = admins.map(admin => ({
-        recipient_id: admin.id,
+        nguoi_nhan_id: admin.id,
         recipient_role: admin.role,
         type: 'PROPOSAL_SUBMITTED',
         title: 'Đề xuất khen thưởng mới',
         message: `${submitter.username} đã gửi đề xuất khen thưởng #${proposal.id}`,
         resource: 'proposals',
-        resource_id: proposal.id,
+        tai_nguyen_id: null, // proposal.id là UUID, không thể lưu vào tai_nguyen_id (Int)
         link: `/admin/proposals/${proposal.id}`,
       }));
 
@@ -51,13 +51,13 @@ class NotificationHelper {
     try {
       const notification = await prisma.thongBao.create({
         data: {
-          recipient_id: proposal.nguoi_de_xuat_id,
+          nguoi_nhan_id: proposal.nguoi_de_xuat_id,
           recipient_role: 'MANAGER',
           type: 'PROPOSAL_APPROVED',
           title: 'Đề xuất đã được phê duyệt',
           message: `Đề xuất khen thưởng #${proposal.id} của bạn đã được ${approver.username} phê duyệt`,
           resource: 'proposals',
-          resource_id: proposal.id,
+          tai_nguyen_id: null, // proposal.id là UUID, không thể lưu vào tai_nguyen_id (Int)
           link: `/manager/proposals/${proposal.id}`,
         },
       });
@@ -77,13 +77,13 @@ class NotificationHelper {
     try {
       const notification = await prisma.thongBao.create({
         data: {
-          recipient_id: proposal.nguoi_de_xuat_id,
+          nguoi_nhan_id: proposal.nguoi_de_xuat_id,
           recipient_role: 'MANAGER',
           type: 'PROPOSAL_REJECTED',
           title: 'Đề xuất bị từ chối',
           message: `Đề xuất khen thưởng #${proposal.id} của bạn đã bị từ chối. Lý do: ${reason}`,
           resource: 'proposals',
-          resource_id: proposal.id,
+          tai_nguyen_id: null, // proposal.id là UUID, không thể lưu vào tai_nguyen_id (Int)
           link: `/manager/proposals/${proposal.id}`,
         },
       });
@@ -121,13 +121,13 @@ class NotificationHelper {
 
       // Tạo thông báo cho từng manager
       const notifications = managers.map(manager => ({
-        recipient_id: manager.id,
+        nguoi_nhan_id: manager.id,
         recipient_role: manager.role,
         type: 'AWARD_ADDED',
         title: 'Khen thưởng mới đã được thêm',
         message: `${adminUsername} đã thêm danh sách khen thưởng ${awardType} năm ${year} cho đơn vị ${donViName}`,
         resource: 'awards',
-        resource_id: donViId,
+        tai_nguyen_id: null, // donViId là UUID, không thể lưu vào tai_nguyen_id (Int)
         link: `/manager/awards?don_vi_id=${donViId}&nam=${year}`,
       }));
 
@@ -168,13 +168,13 @@ class NotificationHelper {
 
       // Tạo thông báo cho từng manager
       const notifications = managers.map(manager => ({
-        recipient_id: manager.id,
+        nguoi_nhan_id: manager.id,
         recipient_role: manager.role,
         type: 'PERSONNEL_ADDED',
         title: 'Quân nhân mới được thêm',
         message: `${adminUsername} đã thêm quân nhân mới: ${personnel.ho_ten} (CCCD: ${personnel.cccd})`,
         resource: 'personnel',
-        resource_id: personnel.id,
+        tai_nguyen_id: null, // personnel.id là UUID, không thể lưu vào tai_nguyen_id (Int)
         link: `/manager/personnel/${personnel.id}`,
       }));
 
@@ -212,13 +212,13 @@ class NotificationHelper {
 
       const notification = await prisma.thongBao.create({
         data: {
-          recipient_id: account.id,
+          nguoi_nhan_id: account.id,
           recipient_role: account.role,
           type: 'ACHIEVEMENT_APPROVED',
           title: 'Thành tích khoa học đã được phê duyệt',
           message: `Thành tích khoa học ${achievement.loai} năm ${achievement.nam} của bạn đã được ${approverUsername} phê duyệt`,
           resource: 'achievements',
-          resource_id: achievement.id,
+          tai_nguyen_id: null, // achievement.id là UUID, không thể lưu vào tai_nguyen_id (Int)
           link: `/user/achievements`,
         },
       });
@@ -236,13 +236,13 @@ class NotificationHelper {
   async sendSystemNotification(recipients, type, title, message, resource = null, resourceId = null, link = null) {
     try {
       const notifications = recipients.map(recipient => ({
-        recipient_id: recipient.id,
+        nguoi_nhan_id: recipient.id,
         recipient_role: recipient.role,
         type,
         title,
         message,
         resource,
-        resource_id: resourceId,
+        tai_nguyen_id: typeof resourceId === 'number' ? resourceId : null, // Chỉ lưu nếu là Int
         link,
       }));
 

@@ -16,7 +16,7 @@ import { useTheme } from '@/components/theme-provider';
 
 const { Title } = Typography;
 
-export default function PersonnelCreatePage() {
+export default function AdminCreateAccountPage() {
   const { theme } = useTheme();
 
   return (
@@ -35,12 +35,12 @@ export default function PersonnelCreatePage() {
                 </Link>
               ),
             },
-            { title: <Link href="/admin/personnel">Quân nhân</Link> },
+            { title: <Link href="/admin/accounts">Tài khoản</Link> },
             { title: 'Tạo mới' },
           ]}
         />
         <div className="flex items-center gap-4">
-          <Link href="/admin/personnel">
+          <Link href="/admin/accounts">
             <Button icon={<ArrowLeftOutlined />}>Quay lại</Button>
           </Link>
           <Title level={2} className="!mb-0">
@@ -51,8 +51,8 @@ export default function PersonnelCreatePage() {
         <Alert
           type="info"
           showIcon
-          message="Tạo tài khoản"
-          description="Nhập username, password, vai trò, đơn vị và chức vụ để tạo tài khoản mới."
+          message="Tạo tài khoản trực tiếp"
+          description="Tạo tài khoản MANAGER hoặc USER với username và password tùy chỉnh. Tài khoản sẽ được liên kết với đơn vị và chức vụ được chọn."
         />
 
         <Card bordered className="shadow-sm">

@@ -37,6 +37,7 @@ interface Proposal {
   id: number;
   don_vi: string;
   nguoi_de_xuat: string;
+  loai_de_xuat: 'CA_NHAN_HANG_NAM' | 'DON_VI_HANG_NAM' | 'NIEN_HAN' | 'CONG_HIEN' | 'DOT_XUAT' | 'NCKH';
   status: 'PENDING' | 'APPROVED' | 'REJECTED';
   so_danh_hieu: number;
   so_thanh_tich: number;
@@ -129,6 +130,24 @@ export default function ManagerProposalsPage() {
     return true;
   });
 
+  const getProposalTypeTag = (type: string) => {
+    const typeConfig = {
+      CA_NHAN_HANG_NAM: { color: 'blue', text: 'Cá nhân hằng năm' },
+      DON_VI_HANG_NAM: { color: 'purple', text: 'Đơn vị hằng năm' },
+      NIEN_HAN: { color: 'cyan', text: 'Niên hạn' },
+      CONG_HIEN: { color: 'geekblue', text: 'Cống hiến' },
+      DOT_XUAT: { color: 'orange', text: 'Đột xuất' },
+      NCKH: { color: 'magenta', text: 'NCKH/SKKH' },
+    };
+
+    const config = typeConfig[type as keyof typeof typeConfig];
+    return config ? (
+      <Tag color={config.color}>{config.text}</Tag>
+    ) : (
+      <Tag>{type}</Tag>
+    );
+  };
+
   const getStatusTag = (status: string) => {
     const statusConfig = {
       PENDING: { color: 'gold', icon: <ClockCircleOutlined />, text: 'Chờ duyệt' },
@@ -156,21 +175,28 @@ export default function ManagerProposalsPage() {
       title: 'Ngày gửi',
       dataIndex: 'createdAt',
       key: 'createdAt',
-      width: 150,
+      width: 120,
       render: (date: string) => format(new Date(date), 'dd/MM/yyyy HH:mm'),
+    },
+    {
+      title: 'Loại đề xuất',
+      dataIndex: 'loai_de_xuat',
+      key: 'loai_de_xuat',
+      width: 150,
+      render: (type: string) => getProposalTypeTag(type),
     },
     {
       title: 'Đơn vị',
       dataIndex: 'don_vi',
       key: 'don_vi',
-      width: 150,
+      width: 130,
     },
     {
       title: 'Danh hiệu',
       dataIndex: 'so_danh_hieu',
       key: 'so_danh_hieu',
       align: 'center' as const,
-      width: 110,
+      width: 100,
       render: (count: number) => <Badge count={count} showZero color="blue" />,
     },
     {
@@ -178,14 +204,14 @@ export default function ManagerProposalsPage() {
       dataIndex: 'so_thanh_tich',
       key: 'so_thanh_tich',
       align: 'center' as const,
-      width: 110,
+      width: 100,
       render: (count: number) => <Badge count={count} showZero color="cyan" />,
     },
     {
       title: 'Trạng thái',
       dataIndex: 'status',
       key: 'status',
-      width: 130,
+      width: 120,
       render: (status: string) => getStatusTag(status),
     },
     {

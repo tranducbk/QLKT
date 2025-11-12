@@ -68,26 +68,28 @@ class PersonnelController {
 
   /**
    * POST /api/personnel
-   * Thêm quân nhân mới
+   * Thêm quân nhân mới - tự động tạo tài khoản
+   * Chỉ cần: cccd, unit_id, position_id
+   * Hệ thống tự động:
+   * - Tạo username = cccd
+   * - Họ tên mặc định = cccd
+   * - Password mặc định = 123456
+   * - Các trường khác để trống, admin có thể cập nhật sau
    */
   async createPersonnel(req, res) {
     try {
-      const { cccd, ho_ten, ngay_sinh, ngay_nhap_ngu, unit_id, position_id, role } = req.body;
+      const { cccd, unit_id, position_id, role } = req.body;
 
-      // Validate input
-      if (!cccd || !ho_ten || !ngay_nhap_ngu || !unit_id || !position_id) {
+      // Validate input - chỉ cần cccd, unit_id, position_id
+      if (!cccd || !unit_id || !position_id) {
         return res.status(400).json({
           success: false,
-          message:
-            'Vui lòng nhập đầy đủ thông tin: cccd, ho_ten, ngay_nhap_ngu, unit_id, position_id',
+          message: 'Vui lòng nhập đầy đủ thông tin: cccd, unit_id, position_id',
         });
       }
 
       const result = await personnelService.createPersonnel({
         cccd,
-        ho_ten,
-        ngay_sinh,
-        ngay_nhap_ngu,
         unit_id,
         position_id,
         role, // Truyền role (optional, mặc định USER trong service)
@@ -95,7 +97,7 @@ class PersonnelController {
 
       return res.status(201).json({
         success: true,
-        message: 'Thêm quân nhân thành công',
+        message: 'Thêm quân nhân và tạo tài khoản thành công. Username: ' + cccd + ', Password: 123456',
         data: result,
       });
     } catch (error) {

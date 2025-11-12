@@ -1,6 +1,6 @@
-const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
-const { prisma } = require('../models');
+const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
+const { prisma } = require("../models");
 
 class AuthService {
   /**
@@ -14,7 +14,12 @@ class AuthService {
         include: {
           QuanNhan: {
             include: {
-              DonVi: true,
+              CoQuanDonVi: true,
+              DonViTrucThuoc: {
+                include: {
+                  CoQuanDonVi: true,
+                },
+              },
               ChucVu: true,
             },
           },
@@ -22,13 +27,16 @@ class AuthService {
       });
 
       if (!account) {
-        throw new Error('Tên đăng nhập hoặc mật khẩu không đúng');
+        throw new Error("Tên đăng nhập hoặc mật khẩu không đúng");
       }
 
       // Kiểm tra mật khẩu
-      const isPasswordValid = await bcrypt.compare(password, account.password_hash);
+      const isPasswordValid = await bcrypt.compare(
+        password,
+        account.password_hash
+      );
       if (!isPasswordValid) {
-        throw new Error('Tên đăng nhập hoặc mật khẩu không đúng');
+        throw new Error("Tên đăng nhập hoặc mật khẩu không đúng");
       }
 
       // Tạo access token (thời hạn ngắn - 15 phút)
@@ -40,7 +48,7 @@ class AuthService {
           quan_nhan_id: account.quan_nhan_id,
         },
         process.env.JWT_SECRET,
-        { expiresIn: '15m' }
+        { expiresIn: "15m" }
       );
 
       // Tạo refresh token (thời hạn dài - 7 ngày)
@@ -50,7 +58,7 @@ class AuthService {
           username: account.username,
         },
         process.env.JWT_REFRESH_SECRET,
-        { expiresIn: '7d' }
+        { expiresIn: "7d" }
       );
 
       // Lưu refresh token vào database
@@ -60,15 +68,20 @@ class AuthService {
       });
 
       // Chuẩn bị thông tin user trả về
+      const quanNhan = account.QuanNhan;
+      const donVi = quanNhan?.DonViTrucThuoc || quanNhan?.CoQuanDonVi;
+      const donViId =
+        quanNhan?.don_vi_truc_thuoc_id || quanNhan?.co_quan_don_vi_id;
+
       const userInfo = {
         id: account.id,
         username: account.username,
         role: account.role,
-        quan_nhan_id: account.quan_nhan_id, // ← THÊM ĐỂ FRONTEND LẤY ĐƠN VỊ
-        ho_ten: account.QuanNhan?.ho_ten || null,
-        don_vi: account.QuanNhan?.DonVi?.ten_don_vi || null,
-        don_vi_id: account.QuanNhan?.DonVi?.id || null, // ← THÊM ID ĐƠN VỊ
-        chuc_vu: account.QuanNhan?.ChucVu?.ten_chuc_vu || null,
+        quan_nhan_id: account.quan_nhan_id,
+        ho_ten: quanNhan?.ho_ten || null,
+        don_vi: donVi?.ten_don_vi || null,
+        don_vi_id: donViId || null,
+        chuc_vu: quanNhan?.ChucVu?.ten_chuc_vu || null,
       };
 
       return {
@@ -87,7 +100,7 @@ class AuthService {
   async refreshAccessToken(refreshToken) {
     try {
       if (!refreshToken) {
-        throw new Error('Refresh token không được cung cấp');
+        throw new Error("Refresh token không được cung cấp");
       }
 
       // Verify refresh token
@@ -99,7 +112,7 @@ class AuthService {
       });
 
       if (!account || account.refreshToken !== refreshToken) {
-        throw new Error('Refresh token không hợp lệ');
+        throw new Error("Refresh token không hợp lệ");
       }
 
       // Tạo access token mới
@@ -111,13 +124,13 @@ class AuthService {
           quan_nhan_id: account.quan_nhan_id,
         },
         process.env.JWT_SECRET,
-        { expiresIn: '15m' }
+        { expiresIn: "15m" }
       );
 
       return { accessToken: newAccessToken };
     } catch (error) {
-      if (error.name === 'TokenExpiredError') {
-        throw new Error('Refresh token đã hết hạn. Vui lòng đăng nhập lại.');
+      if (error.name === "TokenExpiredError") {
+        throw new Error("Refresh token đã hết hạn. Vui lòng đăng nhập lại.");
       }
       throw error;
     }
@@ -129,7 +142,7 @@ class AuthService {
   async logout(refreshToken) {
     try {
       if (!refreshToken) {
-        throw new Error('Refresh token không được cung cấp');
+        throw new Error("Refresh token không được cung cấp");
       }
 
       // Xóa refresh token khỏi database
@@ -138,7 +151,7 @@ class AuthService {
         data: { refreshToken: null },
       });
 
-      return { message: 'Đăng xuất thành công' };
+      return { message: "Đăng xuất thành công" };
     } catch (error) {
       throw error;
     }
@@ -155,13 +168,16 @@ class AuthService {
       });
 
       if (!account) {
-        throw new Error('Tài khoản không tồn tại');
+        throw new Error("Tài khoản không tồn tại");
       }
 
       // Kiểm tra mật khẩu cũ
-      const isOldPasswordValid = await bcrypt.compare(oldPassword, account.password_hash);
+      const isOldPasswordValid = await bcrypt.compare(
+        oldPassword,
+        account.password_hash
+      );
       if (!isOldPasswordValid) {
-        throw new Error('Mật khẩu cũ không đúng');
+        throw new Error("Mật khẩu cũ không đúng");
       }
 
       // Mã hóa mật khẩu mới
@@ -173,7 +189,7 @@ class AuthService {
         data: { password_hash: hashedPassword },
       });
 
-      return { message: 'Đổi mật khẩu thành công' };
+      return { message: "Đổi mật khẩu thành công" };
     } catch (error) {
       throw error;
     }

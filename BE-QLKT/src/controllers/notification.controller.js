@@ -19,7 +19,7 @@ class NotificationController {
 
       const skip = (page - 1) * limit;
       const where = {
-        recipient_id: currentUser.id,
+        nguoi_nhan_id: currentUser.id,
       };
 
       // Lọc theo trạng thái đọc
@@ -38,7 +38,7 @@ class NotificationController {
           take: parseInt(limit),
           where,
           include: {
-            SystemLog: {
+            NhatKyHeThong: {
               select: {
                 action: true,
                 resource: true,
@@ -85,7 +85,7 @@ class NotificationController {
 
       const count = await prisma.thongBao.count({
         where: {
-          recipient_id: currentUser.id,
+          nguoi_nhan_id: currentUser.id,
           is_read: false,
         },
       });
@@ -117,7 +117,7 @@ class NotificationController {
       const notification = await prisma.thongBao.findFirst({
         where: {
           id: parseInt(id),
-          recipient_id: currentUser.id,
+          nguoi_nhan_id: currentUser.id,
         },
       });
 
@@ -160,7 +160,7 @@ class NotificationController {
 
       const result = await prisma.thongBao.updateMany({
         where: {
-          recipient_id: currentUser.id,
+          nguoi_nhan_id: currentUser.id,
           is_read: false,
         },
         data: {
@@ -196,7 +196,7 @@ class NotificationController {
       const notification = await prisma.thongBao.findFirst({
         where: {
           id: parseInt(id),
-          recipient_id: currentUser.id,
+          nguoi_nhan_id: currentUser.id,
         },
       });
 

@@ -2,7 +2,6 @@ const express = require('express');
 const router = express.Router();
 const unitController = require('../controllers/unit.controller');
 const positionController = require('../controllers/position.controller');
-const contributionGroupController = require('../controllers/contributionGroup.controller');
 const { verifyToken, requireAdmin, requireManager } = require('../middlewares/auth');
 const { auditLog, createDescription, getResourceId } = require('../middlewares/auditLog');
 
@@ -129,34 +128,5 @@ router.delete(
   }),
   positionController.deletePosition
 );
-
-// ===== CONTRIBUTION GROUPS =====
-/**
- * @route   GET /api/categories/contribution-groups
- * @desc    Lấy tất cả nhóm cống hiến (alias for /api/contribution-groups)
- * @access  Private - ADMIN and above
- */
-router.get('/contribution-groups', verifyToken, requireAdmin, contributionGroupController.getAllGroups);
-
-/**
- * @route   POST /api/categories/contribution-groups
- * @desc    Tạo nhóm mới (alias for /api/contribution-groups)
- * @access  Private - ADMIN and above
- */
-router.post('/contribution-groups', verifyToken, requireAdmin, contributionGroupController.createGroup);
-
-/**
- * @route   PUT /api/categories/contribution-groups/:id
- * @desc    Sửa nhóm (alias for /api/contribution-groups/:id)
- * @access  Private - ADMIN and above
- */
-router.put('/contribution-groups/:id', verifyToken, requireAdmin, contributionGroupController.updateGroup);
-
-/**
- * @route   DELETE /api/categories/contribution-groups/:id
- * @desc    Xóa nhóm (alias for /api/contribution-groups/:id)
- * @access  Private - ADMIN and above
- */
-router.delete('/contribution-groups/:id', verifyToken, requireAdmin, contributionGroupController.deleteGroup);
 
 module.exports = router;

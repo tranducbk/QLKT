@@ -14,8 +14,8 @@ export const accountCreateSchema = z.object({
   password: z.string().min(6, "Mật khẩu phải có ít nhất 6 ký tự"),
   confirmPassword: z.string().min(6, "Mật khẩu xác nhận phải có ít nhất 6 ký tự"),
   role: z.enum(["SUPER_ADMIN", "ADMIN", "MANAGER", "USER"]),
-  don_vi_id: z.number().optional(),
-  chuc_vu_id: z.number().optional(),
+  don_vi_id: z.string().optional(), // Đơn vị/Cơ quan đơn vị (UUID)
+  chuc_vu_id: z.string().optional(), // Chức vụ (UUID)
 }).refine(
   (data) => data.password === data.confirmPassword,
   {
@@ -62,11 +62,5 @@ export const positionFormSchema = z.object({
   don_vi_id: z.string().optional(), // Optional vì khi edit không cần
   ten_chuc_vu: z.string().min(1, "Tên chức vụ là bắt buộc"),
   is_manager: z.boolean().default(false),
-  nhom_cong_hien_id: z.string().optional(),
-})
-
-// Contribution Group schemas
-export const contributionGroupFormSchema = z.object({
-  ten_nhom: z.string().min(1, "Tên nhóm là bắt buộc"),
-  mo_ta: z.string().optional(),
+  he_so_luong: z.number().optional(),
 })

@@ -1,6 +1,6 @@
-const { prisma } = require('../models');
-const ExcelJS = require('exceljs');
-const bcrypt = require('bcryptjs');
+const { prisma } = require("../models");
+const ExcelJS = require("exceljs");
+const bcrypt = require("bcryptjs");
 
 class PersonnelService {
   /**
@@ -10,7 +10,7 @@ class PersonnelService {
    * @returns {string} - CCCD đã được format đúng
    */
   parseCCCD(value) {
-    if (!value) return '';
+    if (!value) return "";
 
     // Chuyển về string và trim
     let cccd = value.toString().trim();
@@ -18,7 +18,7 @@ class PersonnelService {
     // Nếu CCCD có độ dài < 12 (bị mất số 0 đầu), padding thêm số 0
     // CCCD Việt Nam chuẩn là 12 số
     if (/^\d+$/.test(cccd) && cccd.length < 12) {
-      cccd = cccd.padStart(12, '0');
+      cccd = cccd.padStart(12, "0");
     }
 
     return cccd;
@@ -35,14 +35,17 @@ class PersonnelService {
       let whereCondition = {};
 
       // Nếu là MANAGER, chỉ lấy quân nhân trong đơn vị của mình
-      if (userRole === 'MANAGER' && userQuanNhanId) {
+      if (userRole === "MANAGER" && userQuanNhanId) {
         const manager = await prisma.quanNhan.findUnique({
-          where: { id: parseInt(userQuanNhanId) },
-          select: { don_vi_id: true },
+          where: { id: userQuanNhanId },
+          select: { co_quan_don_vi_id: true, don_vi_truc_thuoc_id: true },
         });
 
         if (manager) {
-          whereCondition.don_vi_id = manager.don_vi_id;
+          // MANAGER thuộc cơ quan đơn vị, lấy tất cả quân nhân trong cơ quan đơn vị đó
+          if (manager.co_quan_don_vi_id) {
+            whereCondition.co_quan_don_vi_id = manager.co_quan_don_vi_id;
+          }
         }
       }
 
@@ -52,11 +55,16 @@ class PersonnelService {
           skip,
           take: parseInt(limit),
           include: {
-            DonVi: true,
+            CoQuanDonVi: true,
+            DonViTrucThuoc: {
+              include: {
+                CoQuanDonVi: true,
+              },
+            },
             ChucVu: true,
           },
           orderBy: {
-            createdAt: 'desc',
+            createdAt: "desc",
           },
         }),
         prisma.quanNhan.count({ where: whereCondition }),
@@ -82,14 +90,15 @@ class PersonnelService {
   async getPersonnelById(id, userRole, userQuanNhanId) {
     try {
       const personnel = await prisma.quanNhan.findUnique({
-        where: { id: parseInt(id) },
+        where: { id: String(id) },
         include: {
-          DonVi: true,
-          ChucVu: {
+          CoQuanDonVi: true,
+          DonViTrucThuoc: {
             include: {
-              NhomCongHien: true,
+              CoQuanDonVi: true,
             },
           },
+          ChucVu: true,
           TaiKhoan: {
             select: {
               id: true,
@@ -101,24 +110,31 @@ class PersonnelService {
       });
 
       if (!personnel) {
-        throw new Error('Quân nhân không tồn tại');
+        throw new Error("Quân nhân không tồn tại");
       }
 
       // Kiểm tra quyền truy cập
       // USER chỉ xem được thông tin của chính mình
-      if (userRole === 'USER' && parseInt(userQuanNhanId) !== parseInt(id)) {
-        throw new Error('Bạn không có quyền xem thông tin này');
+      if (userRole === "USER" && userQuanNhanId !== id) {
+        throw new Error("Bạn không có quyền xem thông tin này");
       }
 
       // MANAGER chỉ xem được quân nhân trong đơn vị của mình
-      if (userRole === 'MANAGER' && userQuanNhanId) {
+      if (userRole === "MANAGER" && userQuanNhanId) {
         const manager = await prisma.quanNhan.findUnique({
-          where: { id: parseInt(userQuanNhanId) },
-          select: { don_vi_id: true },
+          where: { id: userQuanNhanId },
+          select: { co_quan_don_vi_id: true, don_vi_truc_thuoc_id: true },
         });
 
-        if (manager && personnel.don_vi_id !== manager.don_vi_id) {
-          throw new Error('Bạn không có quyền xem thông tin quân nhân ngoài đơn vị');
+        if (manager) {
+          // MANAGER thuộc cơ quan đơn vị, chỉ xem được quân nhân trong cùng cơ quan đơn vị
+          if (manager.co_quan_don_vi_id) {
+            if (personnel.co_quan_don_vi_id !== manager.co_quan_don_vi_id) {
+              throw new Error(
+                "Bạn không có quyền xem thông tin quân nhân ngoài đơn vị"
+              );
+            }
+          }
         }
       }
 
@@ -129,11 +145,11 @@ class PersonnelService {
   }
 
   /**
-   * Thêm quân nhân mới
+   * Thêm quân nhân mới - tự động tạo tài khoản
    */
   async createPersonnel(data) {
     try {
-      const { cccd, ho_ten, ngay_sinh, ngay_nhap_ngu, unit_id, position_id, role = 'USER' } = data;
+      const { cccd, unit_id, position_id, role = "USER" } = data;
 
       // Kiểm tra CCCD đã tồn tại chưa
       const existingPersonnel = await prisma.quanNhan.findUnique({
@@ -141,16 +157,17 @@ class PersonnelService {
       });
 
       if (existingPersonnel) {
-        throw new Error('CCCD đã tồn tại trong hệ thống');
+        throw new Error("CCCD đã tồn tại trong hệ thống");
       }
 
-      // Kiểm tra đơn vị có tồn tại không
-      const unit = await prisma.donVi.findUnique({
-        where: { id: unit_id },
-      });
+      // Kiểm tra đơn vị có tồn tại không (có thể là CoQuanDonVi hoặc DonViTrucThuoc)
+      const [coQuanDonVi, donViTrucThuoc] = await Promise.all([
+        prisma.coQuanDonVi.findUnique({ where: { id: unit_id } }),
+        prisma.donViTrucThuoc.findUnique({ where: { id: unit_id } }),
+      ]);
 
-      if (!unit) {
-        throw new Error('Đơn vị không tồn tại');
+      if (!coQuanDonVi && !donViTrucThuoc) {
+        throw new Error("Đơn vị không tồn tại");
       }
 
       // Kiểm tra chức vụ có tồn tại không
@@ -159,21 +176,49 @@ class PersonnelService {
       });
 
       if (!position) {
-        throw new Error('Chức vụ không tồn tại');
+        throw new Error("Chức vụ không tồn tại");
       }
 
-      // Tạo quân nhân mới
+      // Tạo username từ CCCD
+      const username = cccd;
+
+      // Kiểm tra username đã tồn tại chưa
+      const existingAccount = await prisma.taiKhoan.findUnique({
+        where: { username },
+      });
+
+      if (existingAccount) {
+        throw new Error("Username (CCCD) đã tồn tại trong hệ thống tài khoản");
+      }
+
+      // Xác định loại đơn vị và set đúng foreign key
+      const isCoQuanDonVi = !!coQuanDonVi;
+      const personnelData = {
+        cccd,
+        ho_ten: username, // Họ tên mặc định = username (CCCD)
+        ngay_sinh: null,
+        ngay_nhap_ngu: new Date(), // Ngày nhập ngũ mặc định = hôm nay
+        chuc_vu_id: position_id,
+      };
+
+      if (isCoQuanDonVi) {
+        personnelData.co_quan_don_vi_id = unit_id;
+        personnelData.don_vi_truc_thuoc_id = null;
+      } else {
+        personnelData.co_quan_don_vi_id = null;
+        personnelData.don_vi_truc_thuoc_id = unit_id;
+      }
+
+      // Tạo quân nhân mới với họ tên mặc định = username (CCCD)
       const newPersonnel = await prisma.quanNhan.create({
-        data: {
-          cccd,
-          ho_ten,
-          ngay_sinh: ngay_sinh ? new Date(ngay_sinh) : null,
-          ngay_nhap_ngu: new Date(ngay_nhap_ngu),
-          don_vi_id: unit_id,
-          chuc_vu_id: position_id,
-        },
+        data: personnelData,
         include: {
-          DonVi: true,
+          CoQuanDonVi: true,
+          DonViTrucThuoc: {
+            include: {
+              CoQuanDonVi: true,
+            },
+          },
           ChucVu: true,
         },
       });
@@ -183,45 +228,54 @@ class PersonnelService {
         data: {
           quan_nhan_id: newPersonnel.id,
           chuc_vu_id: position_id,
-          ngay_bat_dau: new Date(ngay_nhap_ngu), // Bắt đầu từ ngày nhập ngũ
+          ngay_bat_dau: new Date(), // Bắt đầu từ ngày tạo
           ngay_ket_thuc: null, // Chức vụ hiện tại
         },
       });
 
-      // Tự động tạo tài khoản với role được chỉ định (mặc định USER)
-      const defaultPassword = '123456'; // Mật khẩu mặc định
+      // Tự động tạo tài khoản
+      const defaultPassword = "123456"; // Mật khẩu mặc định
       const hashedPassword = await bcrypt.hash(defaultPassword, 10);
 
-      // Tạo username từ CCCD (QN + CCCD)
-      const username = `QN${cccd}`;
-
-      // Kiểm tra username đã tồn tại chưa
-      const existingAccount = await prisma.taiKhoan.findUnique({
-        where: { username },
+      const account = await prisma.taiKhoan.create({
+        data: {
+          username,
+          password_hash: hashedPassword,
+          role: role,
+          quan_nhan_id: newPersonnel.id,
+        },
       });
 
-      if (!existingAccount) {
-        await prisma.taiKhoan.create({
+      // Cập nhật số lượng quân nhân trong đơn vị
+      if (isCoQuanDonVi) {
+        await prisma.coQuanDonVi.update({
+          where: { id: unit_id },
           data: {
-            username,
-            password: hashedPassword,
-            role: role,
-            quan_nhan_id: newPersonnel.id,
+            so_luong: {
+              increment: 1,
+            },
+          },
+        });
+      } else {
+        await prisma.donViTrucThuoc.update({
+          where: { id: unit_id },
+          data: {
+            so_luong: {
+              increment: 1,
+            },
           },
         });
       }
 
-      // Cập nhật số lượng quân nhân trong đơn vị
-      await prisma.donVi.update({
-        where: { id: unit_id },
-        data: {
-          so_luong: {
-            increment: 1,
-          },
+      // Trả về kèm thông tin tài khoản
+      return {
+        ...newPersonnel,
+        TaiKhoan: {
+          id: account.id,
+          username: account.username,
+          role: account.role,
         },
-      });
-
-      return newPersonnel;
+      };
     } catch (error) {
       throw error;
     }
@@ -232,39 +286,47 @@ class PersonnelService {
    */
   async updatePersonnel(id, data, userRole, userQuanNhanId) {
     try {
-      const { unit_id, position_id, ho_ten, ngay_sinh, cccd, ngay_nhap_ngu } = data;
+      const { unit_id, position_id, ho_ten, ngay_sinh, cccd, ngay_nhap_ngu } =
+        data;
 
       // Kiểm tra quân nhân có tồn tại không
       const personnel = await prisma.quanNhan.findUnique({
-        where: { id: parseInt(id) },
+        where: { id: String(id) },
       });
 
       if (!personnel) {
-        throw new Error('Quân nhân không tồn tại');
+        throw new Error("Quân nhân không tồn tại");
       }
 
       // Kiểm tra quyền truy cập
       // USER chỉ sửa được thông tin của chính mình
-      if (userRole === 'USER') {
-        if (parseInt(userQuanNhanId) !== parseInt(id)) {
-          throw new Error('Bạn không có quyền sửa thông tin của người khác');
+      if (userRole === "USER") {
+        if (userQuanNhanId !== id) {
+          throw new Error("Bạn không có quyền sửa thông tin của người khác");
         }
 
         // USER không được phép đổi unit_id và position_id
         if (unit_id || position_id) {
-          throw new Error('Bạn không có quyền thay đổi đơn vị hoặc chức vụ');
+          throw new Error("Bạn không có quyền thay đổi đơn vị hoặc chức vụ");
         }
       }
 
       // Kiểm tra quyền: MANAGER chỉ sửa được quân nhân trong đơn vị của mình
-      if (userRole === 'MANAGER' && userQuanNhanId) {
+      if (userRole === "MANAGER" && userQuanNhanId) {
         const manager = await prisma.quanNhan.findUnique({
-          where: { id: parseInt(userQuanNhanId) },
-          select: { don_vi_id: true },
+          where: { id: userQuanNhanId },
+          select: { co_quan_don_vi_id: true, don_vi_truc_thuoc_id: true },
         });
 
-        if (manager && personnel.don_vi_id !== manager.don_vi_id) {
-          throw new Error('Bạn không có quyền sửa thông tin quân nhân ngoài đơn vị');
+        if (manager) {
+          // MANAGER thuộc cơ quan đơn vị, chỉ sửa được quân nhân trong cùng cơ quan đơn vị
+          if (manager.co_quan_don_vi_id) {
+            if (personnel.co_quan_don_vi_id !== manager.co_quan_don_vi_id) {
+              throw new Error(
+                "Bạn không có quyền sửa thông tin quân nhân ngoài đơn vị"
+              );
+            }
+          }
         }
       }
 
@@ -275,18 +337,21 @@ class PersonnelService {
         });
 
         if (existingPersonnel) {
-          throw new Error('CCCD đã tồn tại trong hệ thống');
+          throw new Error("CCCD đã tồn tại trong hệ thống");
         }
       }
 
       // Kiểm tra đơn vị mới nếu có
-      if (unit_id && unit_id !== personnel.don_vi_id) {
-        const unit = await prisma.donVi.findUnique({
-          where: { id: unit_id },
-        });
+      const currentUnitId =
+        personnel.co_quan_don_vi_id || personnel.don_vi_truc_thuoc_id;
+      if (unit_id && unit_id !== currentUnitId) {
+        const [coQuanDonVi, donViTrucThuoc] = await Promise.all([
+          prisma.coQuanDonVi.findUnique({ where: { id: unit_id } }),
+          prisma.donViTrucThuoc.findUnique({ where: { id: unit_id } }),
+        ]);
 
-        if (!unit) {
-          throw new Error('Đơn vị không tồn tại');
+        if (!coQuanDonVi && !donViTrucThuoc) {
+          throw new Error("Đơn vị không tồn tại");
         }
       }
 
@@ -297,7 +362,7 @@ class PersonnelService {
         });
 
         if (!position) {
-          throw new Error('Chức vụ không tồn tại');
+          throw new Error("Chức vụ không tồn tại");
         }
       }
 
@@ -306,17 +371,43 @@ class PersonnelService {
         ho_ten: ho_ten || personnel.ho_ten,
         ngay_sinh: ngay_sinh ? new Date(ngay_sinh) : personnel.ngay_sinh,
         cccd: cccd || personnel.cccd,
-        ngay_nhap_ngu: ngay_nhap_ngu ? new Date(ngay_nhap_ngu) : personnel.ngay_nhap_ngu,
-        don_vi_id: unit_id || personnel.don_vi_id,
+        ngay_nhap_ngu: ngay_nhap_ngu
+          ? new Date(ngay_nhap_ngu)
+          : personnel.ngay_nhap_ngu,
         chuc_vu_id: position_id || personnel.chuc_vu_id,
       };
 
+      // Xử lý đơn vị: nếu có unit_id mới, xác định loại và set đúng foreign key
+      if (unit_id && unit_id !== currentUnitId) {
+        const [coQuanDonVi, donViTrucThuoc] = await Promise.all([
+          prisma.coQuanDonVi.findUnique({ where: { id: unit_id } }),
+          prisma.donViTrucThuoc.findUnique({ where: { id: unit_id } }),
+        ]);
+
+        if (coQuanDonVi) {
+          updateData.co_quan_don_vi_id = unit_id;
+          updateData.don_vi_truc_thuoc_id = null;
+        } else if (donViTrucThuoc) {
+          updateData.co_quan_don_vi_id = null;
+          updateData.don_vi_truc_thuoc_id = unit_id;
+        }
+      } else {
+        // Giữ nguyên đơn vị hiện tại
+        updateData.co_quan_don_vi_id = personnel.co_quan_don_vi_id;
+        updateData.don_vi_truc_thuoc_id = personnel.don_vi_truc_thuoc_id;
+      }
+
       // Cập nhật quân nhân
       const updatedPersonnel = await prisma.quanNhan.update({
-        where: { id: parseInt(id) },
+        where: { id: String(id) },
         data: updateData,
         include: {
-          DonVi: true,
+          CoQuanDonVi: true,
+          DonViTrucThuoc: {
+            include: {
+              CoQuanDonVi: true,
+            },
+          },
           ChucVu: true,
         },
       });
@@ -328,7 +419,7 @@ class PersonnelService {
         // 1. Đóng lịch sử chức vụ cũ (set ngay_ket_thuc = hôm nay)
         await prisma.lichSuChucVu.updateMany({
           where: {
-            quan_nhan_id: parseInt(id),
+            quan_nhan_id: id,
             ngay_ket_thuc: null, // Chỉ đóng lịch sử đang active
           },
           data: {
@@ -339,7 +430,7 @@ class PersonnelService {
         // 2. Tạo lịch sử chức vụ mới
         await prisma.lichSuChucVu.create({
           data: {
-            quan_nhan_id: parseInt(id),
+            quan_nhan_id: id,
             chuc_vu_id: position_id,
             ngay_bat_dau: today,
             ngay_ket_thuc: null, // Chức vụ hiện tại
@@ -347,19 +438,48 @@ class PersonnelService {
         });
       }
 
-      // Nếu đổi đơn vị, cập nhật số lượng
-      if (unit_id && unit_id !== personnel.don_vi_id) {
+      // Nếu đổi đơn vị, cập nhật số lượng quân nhân
+      if (unit_id && unit_id !== currentUnitId) {
+        const oldUnitId = currentUnitId;
+        const newUnitId = unit_id;
+
         // Giảm số lượng ở đơn vị cũ
-        await prisma.donVi.update({
-          where: { id: personnel.don_vi_id },
-          data: { so_luong: { decrement: 1 } },
-        });
+        if (oldUnitId) {
+          const [oldCoQuanDonVi, oldDonViTrucThuoc] = await Promise.all([
+            prisma.coQuanDonVi.findUnique({ where: { id: oldUnitId } }),
+            prisma.donViTrucThuoc.findUnique({ where: { id: oldUnitId } }),
+          ]);
+
+          if (oldCoQuanDonVi) {
+            await prisma.coQuanDonVi.update({
+              where: { id: oldUnitId },
+              data: { so_luong: { decrement: 1 } },
+            });
+          } else if (oldDonViTrucThuoc) {
+            await prisma.donViTrucThuoc.update({
+              where: { id: oldUnitId },
+              data: { so_luong: { decrement: 1 } },
+            });
+          }
+        }
 
         // Tăng số lượng ở đơn vị mới
-        await prisma.donVi.update({
-          where: { id: unit_id },
-          data: { so_luong: { increment: 1 } },
-        });
+        const [newCoQuanDonVi, newDonViTrucThuoc] = await Promise.all([
+          prisma.coQuanDonVi.findUnique({ where: { id: newUnitId } }),
+          prisma.donViTrucThuoc.findUnique({ where: { id: newUnitId } }),
+        ]);
+
+        if (newCoQuanDonVi) {
+          await prisma.coQuanDonVi.update({
+            where: { id: newUnitId },
+            data: { so_luong: { increment: 1 } },
+          });
+        } else if (newDonViTrucThuoc) {
+          await prisma.donViTrucThuoc.update({
+            where: { id: newUnitId },
+            data: { so_luong: { increment: 1 } },
+          });
+        }
       }
 
       return updatedPersonnel;
@@ -375,41 +495,64 @@ class PersonnelService {
     try {
       // Kiểm tra quân nhân có tồn tại không
       const personnel = await prisma.quanNhan.findUnique({
-        where: { id: parseInt(id) },
+        where: { id: String(id) },
       });
 
       if (!personnel) {
-        throw new Error('Quân nhân không tồn tại');
+        throw new Error("Quân nhân không tồn tại");
       }
 
       // Kiểm tra quyền: MANAGER chỉ xóa được quân nhân trong đơn vị của mình
-      if (userRole === 'MANAGER' && userQuanNhanId) {
+      if (userRole === "MANAGER" && userQuanNhanId) {
         const manager = await prisma.quanNhan.findUnique({
-          where: { id: parseInt(userQuanNhanId) },
-          select: { don_vi_id: true },
+          where: { id: userQuanNhanId },
+          select: { co_quan_don_vi_id: true, don_vi_truc_thuoc_id: true },
         });
 
-        if (manager && personnel.don_vi_id !== manager.don_vi_id) {
-          throw new Error('Bạn không có quyền xóa quân nhân ngoài đơn vị');
+        if (manager) {
+          // MANAGER thuộc cơ quan đơn vị, chỉ xóa được quân nhân trong cùng cơ quan đơn vị
+          if (manager.co_quan_don_vi_id) {
+            if (personnel.co_quan_don_vi_id !== manager.co_quan_don_vi_id) {
+              throw new Error("Bạn không có quyền xóa quân nhân ngoài đơn vị");
+            }
+          }
         }
       }
 
+      // Lưu lại đơn vị để cập nhật số lượng sau khi xóa
+      const unitId =
+        personnel.co_quan_don_vi_id || personnel.don_vi_truc_thuoc_id;
+      const isCoQuanDonVi = !!personnel.co_quan_don_vi_id;
+
       // Xóa quân nhân
       await prisma.quanNhan.delete({
-        where: { id: parseInt(id) },
+        where: { id: String(id) },
       });
 
       // Giảm số lượng quân nhân trong đơn vị
-      await prisma.donVi.update({
-        where: { id: personnel.don_vi_id },
-        data: {
-          so_luong: {
-            decrement: 1,
-          },
-        },
-      });
+      if (unitId) {
+        if (isCoQuanDonVi) {
+          await prisma.coQuanDonVi.update({
+            where: { id: unitId },
+            data: {
+              so_luong: {
+                decrement: 1,
+              },
+            },
+          });
+        } else {
+          await prisma.donViTrucThuoc.update({
+            where: { id: unitId },
+            data: {
+              so_luong: {
+                decrement: 1,
+              },
+            },
+          });
+        }
+      }
 
-      return { message: 'Xóa quân nhân thành công' };
+      return { message: "Xóa quân nhân thành công" };
     } catch (error) {
       throw error;
     }
@@ -422,52 +565,59 @@ class PersonnelService {
     try {
       const personnel = await prisma.quanNhan.findMany({
         include: {
-          DonVi: true,
-          ChucVu: {
+          CoQuanDonVi: true,
+          DonViTrucThuoc: {
             include: {
-              NhomCongHien: true,
+              CoQuanDonVi: true,
             },
           },
+          ChucVu: true,
         },
-        orderBy: [{ don_vi_id: 'asc' }, { ho_ten: 'asc' }],
+        orderBy: [
+          { co_quan_don_vi_id: "asc" },
+          { don_vi_truc_thuoc_id: "asc" },
+          { ho_ten: "asc" },
+        ],
       });
 
       // Tạo workbook Excel
       const workbook = new ExcelJS.Workbook();
-      const worksheet = workbook.addWorksheet('QuanNhan');
+      const worksheet = workbook.addWorksheet("QuanNhan");
 
       worksheet.columns = [
-        { header: 'CCCD', key: 'cccd', width: 18 },
-        { header: 'Họ tên', key: 'ho_ten', width: 28 },
-        { header: 'Ngày sinh (YYYY-MM-DD)', key: 'ngay_sinh', width: 20 },
+        { header: "CCCD", key: "cccd", width: 18 },
+        { header: "Họ tên", key: "ho_ten", width: 28 },
+        { header: "Ngày sinh (YYYY-MM-DD)", key: "ngay_sinh", width: 20 },
         {
-          header: 'Ngày nhập ngũ (YYYY-MM-DD)',
-          key: 'ngay_nhap_ngu',
+          header: "Ngày nhập ngũ (YYYY-MM-DD)",
+          key: "ngay_nhap_ngu",
           width: 24,
         },
-        { header: 'Mã đơn vị', key: 'ma_don_vi', width: 14 },
-        { header: 'Tên đơn vị', key: 'ten_don_vi', width: 24 },
-        { header: 'Tên chức vụ', key: 'ten_chuc_vu', width: 22 },
-        { header: 'Là chỉ huy (is_manager)', key: 'is_manager', width: 16 },
-        { header: 'Nhóm cống hiến', key: 'ten_nhom_cong_hien', width: 20 },
+        { header: "Mã đơn vị", key: "ma_don_vi", width: 14 },
+        { header: "Tên đơn vị", key: "ten_don_vi", width: 24 },
+        { header: "Tên chức vụ", key: "ten_chuc_vu", width: 22 },
+        { header: "Là chỉ huy (is_manager)", key: "is_manager", width: 16 },
+        { header: "Hệ số lương", key: "he_so_luong", width: 15 },
       ];
 
       // Format cột CCCD thành Text (để giữ số 0 đầu tiên)
-      worksheet.getColumn(1).numFmt = '@';
+      worksheet.getColumn(1).numFmt = "@";
 
-      personnel.forEach(p => {
+      personnel.forEach((p) => {
         worksheet.addRow({
           cccd: p.cccd,
           ho_ten: p.ho_ten,
-          ngay_sinh: p.ngay_sinh ? new Date(p.ngay_sinh).toISOString().slice(0, 10) : '',
+          ngay_sinh: p.ngay_sinh
+            ? new Date(p.ngay_sinh).toISOString().slice(0, 10)
+            : "",
           ngay_nhap_ngu: p.ngay_nhap_ngu
             ? new Date(p.ngay_nhap_ngu).toISOString().slice(0, 10)
-            : '',
-          ma_don_vi: p.DonVi?.ma_don_vi || '',
-          ten_don_vi: p.DonVi?.ten_don_vi || '',
-          ten_chuc_vu: p.ChucVu?.ten_chuc_vu || '',
-          is_manager: p.ChucVu?.is_manager ? 'TRUE' : 'FALSE',
-          ten_nhom_cong_hien: p.ChucVu?.NhomCongHien?.ten_nhom || '',
+            : "",
+          ma_don_vi: (p.DonViTrucThuoc || p.CoQuanDonVi)?.ma_don_vi || "",
+          ten_don_vi: (p.DonViTrucThuoc || p.CoQuanDonVi)?.ten_don_vi || "",
+          ten_chuc_vu: p.ChucVu?.ten_chuc_vu || "",
+          is_manager: p.ChucVu?.is_manager ? "TRUE" : "FALSE",
+          he_so_luong: p.ChucVu?.he_so_luong || "",
         });
       });
 
@@ -484,17 +634,17 @@ class PersonnelService {
   async exportPersonnelSample() {
     try {
       const workbook = new ExcelJS.Workbook();
-      const worksheet = workbook.addWorksheet('Mẫu Quân nhân');
+      const worksheet = workbook.addWorksheet("Mẫu Quân nhân");
 
       // Định nghĩa các cột
       const columns = [
-        { header: 'CCCD', key: 'cccd', width: 15 },
-        { header: 'Họ tên', key: 'ho_ten', width: 25 },
-        { header: 'Ngày sinh', key: 'ngay_sinh', width: 15 },
-        { header: 'Ngày nhập ngũ', key: 'ngay_nhap_ngu', width: 15 },
-        { header: 'Mã đơn vị', key: 'ma_don_vi', width: 15 },
-        { header: 'Tên chức vụ', key: 'ten_chuc_vu', width: 20 },
-        { header: 'Trạng thái', key: 'trang_thai', width: 15 },
+        { header: "CCCD", key: "cccd", width: 15 },
+        { header: "Họ tên", key: "ho_ten", width: 25 },
+        { header: "Ngày sinh", key: "ngay_sinh", width: 15 },
+        { header: "Ngày nhập ngũ", key: "ngay_nhap_ngu", width: 15 },
+        { header: "Mã đơn vị", key: "ma_don_vi", width: 15 },
+        { header: "Tên chức vụ", key: "ten_chuc_vu", width: 20 },
+        { header: "Trạng thái", key: "trang_thai", width: 15 },
       ];
 
       worksheet.columns = columns;
@@ -502,52 +652,55 @@ class PersonnelService {
       // Style cho header
       worksheet.getRow(1).font = { bold: true };
       worksheet.getRow(1).fill = {
-        type: 'pattern',
-        pattern: 'solid',
-        fgColor: { argb: 'FFE6F3FF' },
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: "FFE6F3FF" },
       };
 
       // Format cột CCCD thành Text (để giữ số 0 đầu tiên)
-      worksheet.getColumn(1).numFmt = '@';
+      worksheet.getColumn(1).numFmt = "@";
 
       // Thêm dữ liệu mẫu
       const sampleData = [
         {
-          cccd: '123456789012',
-          ho_ten: 'Nguyễn Văn A',
-          ngay_sinh: '1990-01-15',
-          ngay_nhap_ngu: '2010-03-01',
-          ma_don_vi: 'DV001',
-          ten_chuc_vu: 'Thiếu úy',
-          trang_thai: 'ACTIVE',
+          cccd: "123456789012",
+          ho_ten: "Nguyễn Văn A",
+          ngay_sinh: "1990-01-15",
+          ngay_nhap_ngu: "2010-03-01",
+          ma_don_vi: "DV001",
+          ten_chuc_vu: "Thiếu úy",
+          trang_thai: "ACTIVE",
         },
         {
-          cccd: '123456789013',
-          ho_ten: 'Trần Thị B',
-          ngay_sinh: '1992-05-20',
-          ngay_nhap_ngu: '2012-07-15',
-          ma_don_vi: 'DV002',
-          ten_chuc_vu: 'Trung úy',
-          trang_thai: 'ACTIVE',
+          cccd: "123456789013",
+          ho_ten: "Trần Thị B",
+          ngay_sinh: "1992-05-20",
+          ngay_nhap_ngu: "2012-07-15",
+          ma_don_vi: "DV002",
+          ten_chuc_vu: "Trung úy",
+          trang_thai: "ACTIVE",
         },
       ];
 
-      sampleData.forEach(row => {
+      sampleData.forEach((row) => {
         worksheet.addRow(row);
       });
 
       // Thêm ghi chú
       worksheet.addRow([]);
-      worksheet.addRow(['Ghi chú:']);
-      worksheet.addRow(['- Các cột có dấu * là bắt buộc']);
-      worksheet.addRow(['- Mã đơn vị phải tồn tại trong hệ thống']);
-      worksheet.addRow(['- Tên chức vụ phải tồn tại trong hệ thống']);
-      worksheet.addRow(['- Ngày tháng định dạng: YYYY-MM-DD']);
-      worksheet.addRow(['- Trạng thái: ACTIVE hoặc INACTIVE']);
+      worksheet.addRow(["Ghi chú:"]);
+      worksheet.addRow(["- Các cột có dấu * là bắt buộc"]);
+      worksheet.addRow(["- Mã đơn vị phải tồn tại trong hệ thống"]);
+      worksheet.addRow(["- Tên chức vụ phải tồn tại trong hệ thống"]);
+      worksheet.addRow(["- Ngày tháng định dạng: YYYY-MM-DD"]);
+      worksheet.addRow(["- Trạng thái: ACTIVE hoặc INACTIVE"]);
 
       // Style cho ghi chú
       for (let i = sampleData.length + 3; i <= worksheet.rowCount; i++) {
-        worksheet.getRow(i).font = { italic: true, color: { argb: 'FF666666' } };
+        worksheet.getRow(i).font = {
+          italic: true,
+          color: { argb: "FF666666" },
+        };
       }
 
       const buffer = await workbook.xlsx.writeBuffer();
@@ -568,20 +721,20 @@ class PersonnelService {
       const worksheet = workbook.worksheets[0];
 
       if (!worksheet) {
-        throw new Error('File Excel không hợp lệ');
+        throw new Error("File Excel không hợp lệ");
       }
 
       // Đọc header map
       const headerRow = worksheet.getRow(1);
       const headerMap = {};
       headerRow.eachCell((cell, colNumber) => {
-        const key = String(cell.value || '')
+        const key = String(cell.value || "")
           .trim()
           .toLowerCase();
         if (key) headerMap[key] = colNumber;
       });
 
-      const requiredHeaders = ['cccd', 'họ tên', 'mã đơn vị', 'tên chức vụ'];
+      const requiredHeaders = ["cccd", "họ tên", "mã đơn vị", "tên chức vụ"];
       for (const h of requiredHeaders) {
         if (!headerMap[h]) {
           throw new Error(`Thiếu cột bắt buộc: ${h}`);
@@ -595,25 +748,36 @@ class PersonnelService {
       // Duyệt các dòng dữ liệu
       for (let rowNumber = 2; rowNumber <= worksheet.rowCount; rowNumber++) {
         const row = worksheet.getRow(rowNumber);
-        const cccd = this.parseCCCD(row.getCell(headerMap['cccd']).value);
-        const ho_ten = String(row.getCell(headerMap['họ tên']).value || '').trim();
-        const ma_don_vi = String(row.getCell(headerMap['mã đơn vị']).value || '').trim();
-        const ten_chuc_vu = String(row.getCell(headerMap['tên chức vụ']).value || '').trim();
-        const ngay_sinhRaw = headerMap['ngày sinh']
-          ? row.getCell(headerMap['ngày sinh']).value
+        const cccd = this.parseCCCD(row.getCell(headerMap["cccd"]).value);
+        const ho_ten = String(
+          row.getCell(headerMap["họ tên"]).value || ""
+        ).trim();
+        const ma_don_vi = String(
+          row.getCell(headerMap["mã đơn vị"]).value || ""
+        ).trim();
+        const ten_chuc_vu = String(
+          row.getCell(headerMap["tên chức vụ"]).value || ""
+        ).trim();
+        const ngay_sinhRaw = headerMap["ngày sinh"]
+          ? row.getCell(headerMap["ngày sinh"]).value
           : null;
-        const ngay_nhap_nguRaw = headerMap['ngày nhập ngũ']
-          ? row.getCell(headerMap['ngày nhập ngũ']).value
+        const ngay_nhap_nguRaw = headerMap["ngày nhập ngũ"]
+          ? row.getCell(headerMap["ngày nhập ngũ"]).value
           : null;
 
         if (!cccd || !ho_ten || !ma_don_vi || !ten_chuc_vu) {
           if (!cccd && !ho_ten && !ma_don_vi && !ten_chuc_vu) continue; // dòng trống
-          errors.push({ row: rowNumber, error: 'Thiếu dữ liệu bắt buộc' });
+          errors.push({ row: rowNumber, error: "Thiếu dữ liệu bắt buộc" });
           continue;
         }
 
-        // Tìm đơn vị
-        const unit = await prisma.donVi.findUnique({ where: { ma_don_vi } });
+        // Tìm đơn vị (có thể là CoQuanDonVi hoặc DonViTrucThuoc)
+        const [coQuanDonVi, donViTrucThuoc] = await Promise.all([
+          prisma.coQuanDonVi.findUnique({ where: { ma_don_vi } }),
+          prisma.donViTrucThuoc.findUnique({ where: { ma_don_vi } }),
+        ]);
+
+        const unit = coQuanDonVi || donViTrucThuoc;
         if (!unit) {
           errors.push({
             row: rowNumber,
@@ -624,7 +788,13 @@ class PersonnelService {
 
         // Tìm chức vụ theo tên trong đơn vị
         const position = await prisma.chucVu.findFirst({
-          where: { ten_chuc_vu, don_vi_id: unit.id },
+          where: {
+            ten_chuc_vu,
+            OR: [
+              { co_quan_don_vi_id: unit.id },
+              { don_vi_truc_thuoc_id: unit.id },
+            ],
+          },
         });
         if (!position) {
           errors.push({
@@ -635,10 +805,11 @@ class PersonnelService {
         }
 
         // Chuẩn hóa ngày
-        const parseDate = val => {
+        const parseDate = (val) => {
           if (!val) return null;
           if (val instanceof Date) return val;
-          if (typeof val === 'object' && val?.result) return new Date(val.result);
+          if (typeof val === "object" && val?.result)
+            return new Date(val.result);
           const s = String(val).trim();
           if (!s) return null;
           const d = new Date(s);
@@ -650,22 +821,41 @@ class PersonnelService {
 
         // Tạo hoặc cập nhật theo CCCD
         const existing = await prisma.quanNhan.findUnique({ where: { cccd } });
+        const isCoQuanDonVi = !!coQuanDonVi;
+
         if (!existing) {
+          const personnelData = {
+            cccd,
+            ho_ten,
+            ngay_sinh,
+            ngay_nhap_ngu,
+            chuc_vu_id: position.id,
+          };
+
+          if (isCoQuanDonVi) {
+            personnelData.co_quan_don_vi_id = unit.id;
+            personnelData.don_vi_truc_thuoc_id = null;
+          } else {
+            personnelData.co_quan_don_vi_id = null;
+            personnelData.don_vi_truc_thuoc_id = unit.id;
+          }
+
           const newPersonnel = await prisma.quanNhan.create({
-            data: {
-              cccd,
-              ho_ten,
-              ngay_sinh,
-              ngay_nhap_ngu,
-              don_vi_id: unit.id,
-              chuc_vu_id: position.id,
-            },
+            data: personnelData,
           });
+
           // tăng số lượng đơn vị
-          await prisma.donVi.update({
-            where: { id: unit.id },
-            data: { so_luong: { increment: 1 } },
-          });
+          if (isCoQuanDonVi) {
+            await prisma.coQuanDonVi.update({
+              where: { id: unit.id },
+              data: { so_luong: { increment: 1 } },
+            });
+          } else {
+            await prisma.donViTrucThuoc.update({
+              where: { id: unit.id },
+              data: { so_luong: { increment: 1 } },
+            });
+          }
 
           // Tạo lịch sử chức vụ ban đầu
           await prisma.lichSuChucVu.create({
@@ -680,33 +870,60 @@ class PersonnelService {
           created.push(newPersonnel.id);
         } else {
           // Kiểm tra nếu đổi đơn vị
-          const oldUnitId = existing.don_vi_id;
+          const oldUnitId =
+            existing.co_quan_don_vi_id || existing.don_vi_truc_thuoc_id;
           const newUnitId = unit.id;
+          const oldIsCoQuanDonVi = !!existing.co_quan_don_vi_id;
+
+          const updateData = {
+            ho_ten,
+            ngay_sinh: ngay_sinh ?? existing.ngay_sinh,
+            ngay_nhap_ngu: ngay_nhap_ngu ?? existing.ngay_nhap_ngu,
+            chuc_vu_id: position.id,
+          };
+
+          if (isCoQuanDonVi) {
+            updateData.co_quan_don_vi_id = unit.id;
+            updateData.don_vi_truc_thuoc_id = null;
+          } else {
+            updateData.co_quan_don_vi_id = null;
+            updateData.don_vi_truc_thuoc_id = unit.id;
+          }
 
           const updatedPersonnel = await prisma.quanNhan.update({
             where: { id: existing.id },
-            data: {
-              ho_ten,
-              ngay_sinh: ngay_sinh ?? existing.ngay_sinh,
-              ngay_nhap_ngu: ngay_nhap_ngu ?? existing.ngay_nhap_ngu,
-              don_vi_id: unit.id,
-              chuc_vu_id: position.id,
-            },
+            data: updateData,
           });
 
           // Nếu đổi đơn vị, cập nhật số lượng
           if (oldUnitId !== newUnitId) {
             // Giảm số lượng ở đơn vị cũ
-            await prisma.donVi.update({
-              where: { id: oldUnitId },
-              data: { so_luong: { decrement: 1 } },
-            });
+            if (oldUnitId) {
+              if (oldIsCoQuanDonVi) {
+                await prisma.coQuanDonVi.update({
+                  where: { id: oldUnitId },
+                  data: { so_luong: { decrement: 1 } },
+                });
+              } else {
+                await prisma.donViTrucThuoc.update({
+                  where: { id: oldUnitId },
+                  data: { so_luong: { decrement: 1 } },
+                });
+              }
+            }
 
             // Tăng số lượng ở đơn vị mới
-            await prisma.donVi.update({
-              where: { id: newUnitId },
-              data: { so_luong: { increment: 1 } },
-            });
+            if (isCoQuanDonVi) {
+              await prisma.coQuanDonVi.update({
+                where: { id: newUnitId },
+                data: { so_luong: { increment: 1 } },
+              });
+            } else {
+              await prisma.donViTrucThuoc.update({
+                where: { id: newUnitId },
+                data: { so_luong: { increment: 1 } },
+              });
+            }
           }
 
           // Nếu đổi chức vụ, cập nhật lịch sử chức vụ

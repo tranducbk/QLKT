@@ -38,7 +38,12 @@ class AccountService {
           include: {
             QuanNhan: {
               include: {
-                DonVi: true,
+                CoQuanDonVi: true,
+                DonViTrucThuoc: {
+                  include: {
+                    CoQuanDonVi: true,
+                  },
+                },
                 ChucVu: true,
               },
             },
@@ -51,16 +56,20 @@ class AccountService {
       ]);
 
       // Format dữ liệu trả về
-      const formattedAccounts = accounts.map(account => ({
-        id: account.id,
-        username: account.username,
-        role: account.role,
-        quan_nhan_id: account.quan_nhan_id,
-        ho_ten: account.QuanNhan?.ho_ten || null,
-        don_vi: account.QuanNhan?.DonVi?.ten_don_vi || null,
-        chuc_vu: account.QuanNhan?.ChucVu?.ten_chuc_vu || null,
-        createdAt: account.createdAt,
-      }));
+      const formattedAccounts = accounts.map(account => {
+        const quanNhan = account.QuanNhan;
+        const donVi = quanNhan?.DonViTrucThuoc || quanNhan?.CoQuanDonVi;
+        return {
+          id: account.id,
+          username: account.username,
+          role: account.role,
+          quan_nhan_id: account.quan_nhan_id,
+          ho_ten: quanNhan?.ho_ten || null,
+          don_vi: donVi?.ten_don_vi || null,
+          chuc_vu: quanNhan?.ChucVu?.ten_chuc_vu || null,
+          createdAt: account.createdAt,
+        };
+      });
 
       return {
         accounts: formattedAccounts,
@@ -86,7 +95,12 @@ class AccountService {
         include: {
           QuanNhan: {
             include: {
-              DonVi: true,
+              CoQuanDonVi: true,
+              DonViTrucThuoc: {
+                include: {
+                  CoQuanDonVi: true,
+                },
+              },
               ChucVu: true,
             },
           },
@@ -109,8 +123,11 @@ class AccountService {
               id: account.QuanNhan.id,
               ho_ten: account.QuanNhan.ho_ten,
               cccd: account.QuanNhan.cccd,
-              DonVi: account.QuanNhan.DonVi
-                ? { id: account.QuanNhan.DonVi.id, ten_don_vi: account.QuanNhan.DonVi.ten_don_vi }
+              CoQuanDonVi: account.QuanNhan.CoQuanDonVi
+                ? { id: account.QuanNhan.CoQuanDonVi.id, ten_don_vi: account.QuanNhan.CoQuanDonVi.ten_don_vi }
+                : null,
+              DonViTrucThuoc: account.QuanNhan.DonViTrucThuoc
+                ? { id: account.QuanNhan.DonViTrucThuoc.id, ten_don_vi: account.QuanNhan.DonViTrucThuoc.ten_don_vi }
                 : null,
               ChucVu: account.QuanNhan.ChucVu
                 ? {
@@ -142,7 +159,7 @@ class AccountService {
         throw new Error('Tên đăng nhập đã tồn tại');
       }
 
-      let finalPersonnelId = personnel_id;
+      let finalPersonnelId = personnel_id || null;
 
       // Nếu có personnel_id, kiểm tra quân nhân có tồn tại không
       if (personnel_id) {
@@ -162,19 +179,22 @@ class AccountService {
         if (existingPersonnelAccount) {
           throw new Error('Quân nhân này đã có tài khoản');
         }
-      } else if (role === 'MANAGER' || role === 'USER') {
-        // Tự động tạo QuanNhan cho MANAGER/USER
+      }
+
+      // Tự động tạo QuanNhan cho MANAGER/USER
+      if ((role === 'MANAGER' || role === 'USER') && !personnel_id) {
         if (!don_vi_id || !chuc_vu_id) {
           throw new Error('Vui lòng cung cấp đơn vị và chức vụ');
         }
 
         // Kiểm tra đơn vị và chức vụ có tồn tại không
-        const [donVi, chucVu] = await Promise.all([
-          prisma.donVi.findUnique({ where: { id: don_vi_id } }),
+        const [coQuanDonVi, donViTrucThuoc, chucVu] = await Promise.all([
+          prisma.coQuanDonVi.findUnique({ where: { id: don_vi_id } }),
+          prisma.donViTrucThuoc.findUnique({ where: { id: don_vi_id } }),
           prisma.chucVu.findUnique({ where: { id: chuc_vu_id } }),
         ]);
 
-        if (!donVi) {
+        if (!coQuanDonVi && !donViTrucThuoc) {
           throw new Error('Đơn vị không tồn tại');
         }
 
@@ -182,16 +202,27 @@ class AccountService {
           throw new Error('Chức vụ không tồn tại');
         }
 
+        // Xác định loại đơn vị và set đúng foreign key
+        const isCoQuanDonVi = !!coQuanDonVi;
+        const personnelData = {
+          cccd: null, // CCCD có thể null, người dùng sẽ cập nhật sau
+          ho_ten: username, // Dùng username làm họ tên mặc định
+          chuc_vu_id,
+          ngay_sinh: null,
+          ngay_nhap_ngu: null,
+        };
+
+        if (isCoQuanDonVi) {
+          personnelData.co_quan_don_vi_id = don_vi_id;
+          personnelData.don_vi_truc_thuoc_id = null;
+        } else {
+          personnelData.co_quan_don_vi_id = null;
+          personnelData.don_vi_truc_thuoc_id = don_vi_id;
+        }
+
         // Tạo QuanNhan mới với thông tin tối thiểu
         const newPersonnel = await prisma.quanNhan.create({
-          data: {
-            cccd: `TEMP-${Date.now()}`, // CCCD tạm thời duy nhất
-            ho_ten: username, // Dùng username làm họ tên mặc định
-            don_vi_id,
-            chuc_vu_id,
-            ngay_sinh: null, // Người dùng sẽ cập nhật sau
-            ngay_nhap_ngu: null, // Người dùng sẽ cập nhật sau
-          },
+          data: personnelData,
         });
 
         finalPersonnelId = newPersonnel.id;
@@ -201,20 +232,31 @@ class AccountService {
           data: {
             quan_nhan_id: newPersonnel.id,
             chuc_vu_id: chuc_vu_id,
-            ngay_bat_dau: new Date(), // Bắt đầu từ hôm nay
-            ngay_ket_thuc: null, // Chức vụ hiện tại
+            ngay_bat_dau: new Date(),
+            ngay_ket_thuc: null,
           },
         });
 
         // Cập nhật số lượng quân nhân trong đơn vị
-        await prisma.donVi.update({
-          where: { id: don_vi_id },
-          data: {
-            so_luong: {
-              increment: 1,
+        if (isCoQuanDonVi) {
+          await prisma.coQuanDonVi.update({
+            where: { id: don_vi_id },
+            data: {
+              so_luong: {
+                increment: 1,
+              },
             },
-          },
-        });
+          });
+        } else {
+          await prisma.donViTrucThuoc.update({
+            where: { id: don_vi_id },
+            data: {
+              so_luong: {
+                increment: 1,
+              },
+            },
+          });
+        }
       }
 
       // Mã hóa mật khẩu
@@ -231,7 +273,12 @@ class AccountService {
         include: {
           QuanNhan: {
             include: {
-              DonVi: true,
+              CoQuanDonVi: true,
+              DonViTrucThuoc: {
+                include: {
+                  CoQuanDonVi: true,
+                },
+              },
               ChucVu: true,
             },
           },
@@ -244,7 +291,7 @@ class AccountService {
         role: newAccount.role,
         quan_nhan_id: newAccount.quan_nhan_id,
         ho_ten: newAccount.QuanNhan?.ho_ten || null,
-        don_vi: newAccount.QuanNhan?.DonVi?.ten_don_vi || null,
+        don_vi: (newAccount.QuanNhan?.DonViTrucThuoc || newAccount.QuanNhan?.CoQuanDonVi)?.ten_don_vi || null,
         chuc_vu: newAccount.QuanNhan?.ChucVu?.ten_chuc_vu || null,
       };
     } catch (error) {
@@ -275,7 +322,12 @@ class AccountService {
         include: {
           QuanNhan: {
             include: {
-              DonVi: true,
+              CoQuanDonVi: true,
+              DonViTrucThuoc: {
+                include: {
+                  CoQuanDonVi: true,
+                },
+              },
               ChucVu: true,
             },
           },
@@ -288,7 +340,7 @@ class AccountService {
         role: updatedAccount.role,
         quan_nhan_id: updatedAccount.quan_nhan_id,
         ho_ten: updatedAccount.QuanNhan?.ho_ten || null,
-        don_vi: updatedAccount.QuanNhan?.DonVi?.ten_don_vi || null,
+        don_vi: (updatedAccount.QuanNhan?.DonViTrucThuoc || updatedAccount.QuanNhan?.CoQuanDonVi)?.ten_don_vi || null,
         chuc_vu: updatedAccount.QuanNhan?.ChucVu?.ten_chuc_vu || null,
       };
     } catch (error) {
@@ -348,15 +400,16 @@ class AccountService {
         throw new Error('Không thể xóa tài khoản SUPER_ADMIN');
       }
 
-      // Xóa tài khoản
-      await prisma.taiKhoan.delete({
-        where: { id },
-      });
-
-      // Nếu có QuanNhan liên kết và CCCD là tạm thời (TEMP-), xóa luôn QuanNhan
-      if (account.QuanNhan && account.QuanNhan.cccd.startsWith('TEMP-')) {
+      // Nếu có QuanNhan liên kết và CCCD = null, xóa luôn QuanNhan (phải xóa trước TaiKhoan)
+      if (account.QuanNhan && !account.QuanNhan.cccd) {
         const personnelId = account.QuanNhan.id;
-        const donViId = account.QuanNhan.don_vi_id;
+        const unitId = account.QuanNhan.co_quan_don_vi_id || account.QuanNhan.don_vi_truc_thuoc_id;
+        const isCoQuanDonVi = !!account.QuanNhan.co_quan_don_vi_id;
+
+        // Xóa tài khoản trước (để không vi phạm foreign key)
+        await prisma.taiKhoan.delete({
+          where: { id },
+        });
 
         // Xóa QuanNhan
         await prisma.quanNhan.delete({
@@ -364,16 +417,32 @@ class AccountService {
         });
 
         // Giảm số lượng quân nhân trong đơn vị
-        if (donViId) {
-          await prisma.donVi.update({
-            where: { id: donViId },
-            data: {
-              so_luong: {
-                decrement: 1,
+        if (unitId) {
+          if (isCoQuanDonVi) {
+            await prisma.coQuanDonVi.update({
+              where: { id: unitId },
+              data: {
+                so_luong: {
+                  decrement: 1,
+                },
               },
-            },
-          });
+            });
+          } else {
+            await prisma.donViTrucThuoc.update({
+              where: { id: unitId },
+              data: {
+                so_luong: {
+                  decrement: 1,
+                },
+              },
+            });
+          }
         }
+      } else {
+        // Chỉ xóa tài khoản, không xóa QuanNhan
+        await prisma.taiKhoan.delete({
+          where: { id },
+        });
       }
 
       return { message: 'Xóa tài khoản thành công' };

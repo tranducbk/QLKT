@@ -24,7 +24,6 @@ export default function PositionsPage() {
   const { theme } = useTheme();
   const [positions, setPositions] = useState([]);
   const [units, setUnits] = useState([]);
-  const [contributionGroups, setContributionGroups] = useState([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingPosition, setEditingPosition] = useState<any>(null);
@@ -37,14 +36,12 @@ export default function PositionsPage() {
   async function loadData() {
     try {
       setLoading(true);
-      const [positionsRes, unitsRes, groupsRes] = await Promise.all([
+      const [positionsRes, unitsRes] = await Promise.all([
         apiClient.getPositions(),
         apiClient.getUnits(),
-        apiClient.getContributionGroups(),
       ]);
       setPositions(positionsRes.data || []);
       setUnits(unitsRes.data || []);
-      setContributionGroups(groupsRes.data || []);
     } catch (error) {
       message.error('Không thể tải dữ liệu');
     } finally {
@@ -293,7 +290,6 @@ export default function PositionsPage() {
       >
         <PositionForm
           position={editingPosition}
-          contributionGroups={contributionGroups}
           units={units}
           onSuccess={loadData}
           onClose={handleCloseDialog}

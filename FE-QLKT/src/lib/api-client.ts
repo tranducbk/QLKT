@@ -71,15 +71,17 @@ export const apiClient = {
     username: string;
     password: string;
     role: string;
-    don_vi_id?: number;
-    chuc_vu_id?: number;
-    personnel_id?: number;
+    don_vi_id?: string;
+    chuc_vu_id?: string;
+    personnel_id?: string;
   }): Promise<ApiResponse> {
     try {
       const res = await axiosInstance.post('/api/accounts', body);
-      return { success: true, data: res.data?.data || res.data };
+      return { success: true, data: res.data?.data || res.data, message: res.data?.message };
     } catch (e: any) {
-      return { success: false, message: e?.response?.data?.message || e.message };
+      console.error('API createAccount error:', e);
+      const errorMessage = e?.response?.data?.message || e?.message || 'Có lỗi xảy ra khi tạo tài khoản';
+      return { success: false, message: errorMessage };
     }
   },
 
@@ -165,10 +167,19 @@ export const apiClient = {
   },
 
   // Units
-  async getUnits(): Promise<ApiResponse> {
+  async getUnits(params?: { hierarchy?: boolean }): Promise<ApiResponse> {
     try {
-      const res = await axiosInstance.get('/api/categories/units');
-      return { success: true, data: res.data?.data?.units || res.data?.data || res.data };
+      const res = await axiosInstance.get('/api/units', { params });
+      return { success: true, data: res.data?.data || res.data };
+    } catch (e: any) {
+      return { success: false, message: e?.response?.data?.message || e.message };
+    }
+  },
+
+  async getUnitById(id: string): Promise<ApiResponse> {
+    try {
+      const res = await axiosInstance.get(`/api/units/${id}`);
+      return { success: true, data: res.data?.data || res.data };
     } catch (e: any) {
       return { success: false, message: e?.response?.data?.message || e.message };
     }
@@ -176,7 +187,7 @@ export const apiClient = {
 
   async createUnit(body: any): Promise<ApiResponse> {
     try {
-      const res = await axiosInstance.post('/api/categories/units', body);
+      const res = await axiosInstance.post('/api/units', body);
       return { success: true, data: res.data?.data || res.data };
     } catch (e: any) {
       return { success: false, message: e?.response?.data?.message || e.message };
@@ -185,7 +196,7 @@ export const apiClient = {
 
   async updateUnit(id: string, body: any): Promise<ApiResponse> {
     try {
-      const res = await axiosInstance.put(`/api/categories/units/${id}`, body);
+      const res = await axiosInstance.put(`/api/units/${id}`, body);
       return { success: true, data: res.data?.data || res.data };
     } catch (e: any) {
       return { success: false, message: e?.response?.data?.message || e.message };
@@ -194,7 +205,7 @@ export const apiClient = {
 
   async deleteUnit(id: string): Promise<ApiResponse> {
     try {
-      const res = await axiosInstance.delete(`/api/categories/units/${id}`);
+      const res = await axiosInstance.delete(`/api/units/${id}`);
       return { success: true, data: res.data?.data || res.data };
     } catch (e: any) {
       return { success: false, message: e?.response?.data?.message || e.message };
@@ -202,10 +213,10 @@ export const apiClient = {
   },
 
   // Positions
-  async getPositions(): Promise<ApiResponse> {
+  async getPositions(params?: { unit_id?: number; include_children?: boolean }): Promise<ApiResponse> {
     try {
-      const res = await axiosInstance.get('/api/categories/positions');
-      return { success: true, data: res.data?.data?.positions || res.data?.data || res.data };
+      const res = await axiosInstance.get('/api/positions', { params });
+      return { success: true, data: res.data?.data || res.data };
     } catch (e: any) {
       return { success: false, message: e?.response?.data?.message || e.message };
     }
@@ -213,7 +224,7 @@ export const apiClient = {
 
   async createPosition(body: any): Promise<ApiResponse> {
     try {
-      const res = await axiosInstance.post('/api/categories/positions', body);
+      const res = await axiosInstance.post('/api/positions', body);
       return { success: true, data: res.data?.data || res.data };
     } catch (e: any) {
       return { success: false, message: e?.response?.data?.message || e.message };
@@ -222,7 +233,7 @@ export const apiClient = {
 
   async updatePosition(id: string, body: any): Promise<ApiResponse> {
     try {
-      const res = await axiosInstance.put(`/api/categories/positions/${id}`, body);
+      const res = await axiosInstance.put(`/api/positions/${id}`, body);
       return { success: true, data: res.data?.data || res.data };
     } catch (e: any) {
       return { success: false, message: e?.response?.data?.message || e.message };
@@ -231,44 +242,7 @@ export const apiClient = {
 
   async deletePosition(id: string): Promise<ApiResponse> {
     try {
-      const res = await axiosInstance.delete(`/api/categories/positions/${id}`);
-      return { success: true, data: res.data?.data || res.data };
-    } catch (e: any) {
-      return { success: false, message: e?.response?.data?.message || e.message };
-    }
-  },
-
-  // Contribution Groups
-  async getContributionGroups(): Promise<ApiResponse> {
-    try {
-      const res = await axiosInstance.get('/api/categories/contribution-groups');
-      return { success: true, data: res.data?.data?.groups || res.data?.data || res.data };
-    } catch (e: any) {
-      return { success: false, message: e?.response?.data?.message || e.message };
-    }
-  },
-
-  async createContributionGroup(body: any): Promise<ApiResponse> {
-    try {
-      const res = await axiosInstance.post('/api/categories/contribution-groups', body);
-      return { success: true, data: res.data?.data || res.data };
-    } catch (e: any) {
-      return { success: false, message: e?.response?.data?.message || e.message };
-    }
-  },
-
-  async updateContributionGroup(id: string, body: any): Promise<ApiResponse> {
-    try {
-      const res = await axiosInstance.put(`/api/categories/contribution-groups/${id}`, body);
-      return { success: true, data: res.data?.data || res.data };
-    } catch (e: any) {
-      return { success: false, message: e?.response?.data?.message || e.message };
-    }
-  },
-
-  async deleteContributionGroup(id: string): Promise<ApiResponse> {
-    try {
-      const res = await axiosInstance.delete(`/api/categories/contribution-groups/${id}`);
+      const res = await axiosInstance.delete(`/api/positions/${id}`);
       return { success: true, data: res.data?.data || res.data };
     } catch (e: any) {
       return { success: false, message: e?.response?.data?.message || e.message };

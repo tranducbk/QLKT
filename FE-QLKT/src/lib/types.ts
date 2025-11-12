@@ -30,12 +30,6 @@ export interface Position {
   id: string
   ten_chuc_vu: string
   is_manager: boolean
-  nhom_cong_hien_id: string
-  nhom_cong_hien_name: string
-}
-
-export interface ContributionGroup {
-  id: string
-  ten_nhom: string
-  mo_ta: string
+  he_so_luong?: number
+  don_vi_id: string
 }

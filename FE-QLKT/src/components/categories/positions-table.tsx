@@ -39,23 +39,53 @@ export function PositionsTable({ positions, onEdit, onRefresh }: PositionsTableP
       render: (text) => <strong>{text}</strong>,
     },
     {
+      title: 'Cơ quan đơn vị',
+      key: 'co_quan_don_vi',
+      width: 200,
+      render: (_, record) => {
+        if (record.CoQuanDonVi) {
+          return <span>{record.CoQuanDonVi.ten_don_vi}</span>;
+        }
+        if (record.DonViTrucThuoc?.CoQuanDonVi) {
+          return <span>{record.DonViTrucThuoc.CoQuanDonVi.ten_don_vi}</span>;
+        }
+        return null;
+      },
+    },
+    {
+      title: 'Đơn vị trực thuộc',
+      key: 'don_vi_truc_thuoc',
+      width: 200,
+      render: (_, record) => {
+        if (record.DonViTrucThuoc) {
+          return <span>{record.DonViTrucThuoc.ten_don_vi}</span>;
+        }
+        return null;
+      },
+    },
+    {
       title: 'Là Chỉ huy?',
       dataIndex: 'is_manager',
       key: 'is_manager',
       width: 120,
-      render: (isManager) =>
-        isManager ? (
+      render: (isManager, record) => {
+        // Chỉ hiển thị cột này cho chức vụ của cơ quan đơn vị (không có DonViTrucThuoc)
+        if (record.DonViTrucThuoc) {
+          return null; // Ẩn cột này cho đơn vị trực thuộc
+        }
+        return isManager ? (
           <Tag color="green">Có</Tag>
         ) : (
           <Tag>Không</Tag>
-        ),
+        );
+      },
     },
     {
-      title: 'Nhóm Công hiến',
-      dataIndex: 'NhomCongHien',
-      key: 'nhom_cong_hien',
-      width: 200,
-      render: (nhom) => nhom?.ten_nhom || '-',
+      title: 'Hệ số lương',
+      dataIndex: 'he_so_luong',
+      key: 'he_so_luong',
+      width: 150,
+      render: (value) => value ? parseFloat(value).toFixed(2) : '-',
     },
     {
       title: 'Hành động',

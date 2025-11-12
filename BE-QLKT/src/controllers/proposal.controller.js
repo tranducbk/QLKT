@@ -3,25 +3,34 @@ const notificationHelper = require('../helpers/notificationHelper');
 
 class ProposalController {
   /**
-   * GET /api/proposals/template?type=HANG_NAM|NIEN_HAN
+   * GET /api/proposals/template?type=CA_NHAN_HANG_NAM|DON_VI_HANG_NAM|NIEN_HAN|CONG_HIEN|DOT_XUAT|NCKH
    * Xuất file mẫu Excel để Manager điền đề xuất
    */
   async exportTemplate(req, res) {
     try {
       const userId = req.user.id;
-      const { type = 'HANG_NAM' } = req.query;
+      const { type = 'CA_NHAN_HANG_NAM' } = req.query;
 
       // Validate type
-      if (!['HANG_NAM', 'NIEN_HAN'].includes(type)) {
+      const validTypes = ['CA_NHAN_HANG_NAM', 'DON_VI_HANG_NAM', 'NIEN_HAN', 'CONG_HIEN', 'DOT_XUAT', 'NCKH'];
+      if (!validTypes.includes(type)) {
         return res.status(400).json({
           success: false,
-          message: 'Loại đề xuất không hợp lệ. Chỉ chấp nhận HANG_NAM hoặc NIEN_HAN',
+          message: 'Loại đề xuất không hợp lệ. Chỉ chấp nhận: ' + validTypes.join(', '),
         });
       }
 
       const buffer = await proposalService.exportTemplate(userId, type);
 
-      const typeName = type === 'HANG_NAM' ? 'hang_nam' : 'nien_han';
+      const typeNames = {
+        'CA_NHAN_HANG_NAM': 'ca_nhan_hang_nam',
+        'DON_VI_HANG_NAM': 'don_vi_hang_nam',
+        'NIEN_HAN': 'nien_han',
+        'CONG_HIEN': 'cong_hien',
+        'DOT_XUAT': 'dot_xuat',
+        'NCKH': 'nckh',
+      };
+      const typeName = typeNames[type] || 'default';
       const fileName = `mau_de_xuat_${typeName}_${new Date().toISOString().slice(0, 10)}.xlsx`;
       res.setHeader(
         'Content-Type',
@@ -42,18 +51,28 @@ class ProposalController {
   /**
    * POST /api/proposals
    * Nộp file đề xuất khen thưởng (Excel + PDF)
-   * Body: type=HANG_NAM|NIEN_HAN, so_quyet_dinh (optional)
+   * Body: type=CA_NHAN_HANG_NAM|DON_VI_HANG_NAM|NIEN_HAN|CONG_HIEN|DOT_XUAT|NCKH, so_quyet_dinh (optional)
    */
   async submitProposal(req, res) {
     try {
       const userId = req.user.id;
-      const { so_quyet_dinh, type = 'HANG_NAM' } = req.body;
+      const userRole = req.user.role;
+      const { so_quyet_dinh, type = 'CA_NHAN_HANG_NAM' } = req.body;
 
       // Validate type
-      if (!['HANG_NAM', 'NIEN_HAN'].includes(type)) {
+      const validTypes = ['CA_NHAN_HANG_NAM', 'DON_VI_HANG_NAM', 'NIEN_HAN', 'CONG_HIEN', 'DOT_XUAT', 'NCKH'];
+      if (!validTypes.includes(type)) {
         return res.status(400).json({
           success: false,
-          message: 'Loại đề xuất không hợp lệ. Chỉ chấp nhận HANG_NAM hoặc NIEN_HAN',
+          message: 'Loại đề xuất không hợp lệ. Chỉ chấp nhận: ' + validTypes.join(', '),
+        });
+      }
+
+      // Manager không được đề xuất loại ĐỘT XUẤT (chỉ Admin mới thêm được)
+      if (userRole === 'MANAGER' && type === 'DOT_XUAT') {
+        return res.status(403).json({
+          success: false,
+          message: 'Manager không có quyền đề xuất khen thưởng đột xuất. Loại này chỉ do Admin quản lý.',
         });
       }
 
