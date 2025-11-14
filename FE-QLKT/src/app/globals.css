@@ -2001,3 +2001,64 @@ tr:hover .action-buttons {
     opacity: 0.7;
   }
 }
+
+/* Vietnam Address Cascader - Light Mode */
+.vietnam-address-cascader-wrapper .ant-cascader-input,
+.vietnam-address-cascader-wrapper .ant-input,
+.vietnam-address-cascader-wrapper input {
+  color: #111827 !important;
+  -webkit-text-fill-color: #111827 !important;
+  background-color: #ffffff !important;
+}
+
+.vietnam-address-cascader-wrapper .ant-cascader-picker-label {
+  color: #111827 !important;
+}
+
+/* Vietnam Address Cascader - Dark Mode */
+.dark .vietnam-address-cascader-wrapper .ant-cascader-input,
+.dark .vietnam-address-cascader-wrapper .ant-input,
+.dark .vietnam-address-cascader-wrapper input {
+  color: #f9fafb !important;
+  -webkit-text-fill-color: #f9fafb !important;
+  background-color: #1f2937 !important;
+}
+
+.dark .vietnam-address-cascader-wrapper .ant-cascader-picker-label {
+  color: #f9fafb !important;
+}
+
+/* Cascader Dropdown */
+.ant-cascader-dropdown {
+  background-color: #ffffff !important;
+  border-color: #d1d5db !important;
+}
+
+.dark .ant-cascader-dropdown {
+  background-color: #1f2937 !important;
+  border-color: #374151 !important;
+}
+
+.ant-cascader-menu {
+  background-color: #ffffff !important;
+}
+
+.dark .ant-cascader-menu {
+  background-color: #1f2937 !important;
+}
+
+.ant-cascader-menu-item {
+  color: #111827 !important;
+}
+
+.dark .ant-cascader-menu-item {
+  color: #f9fafb !important;
+}
+
+.ant-cascader-menu-item:hover {
+  background-color: #f3f4f6 !important;
+}
+
+.dark .ant-cascader-menu-item:hover {
+  background-color: #374151 !important;
+}

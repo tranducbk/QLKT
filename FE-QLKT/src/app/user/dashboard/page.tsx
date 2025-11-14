@@ -153,7 +153,11 @@ export default function UserDashboard() {
                   <Space size="large" wrap className="text-white/90">
                     <Space>
                       <TeamOutlined />
-                      <span>{personnelInfo?.DonVi?.ten_don_vi || 'N/A'}</span>
+                      <span>
+                        {personnelInfo?.DonViTrucThuoc?.ten_don_vi ||
+                          personnelInfo?.CoQuanDonVi?.ten_don_vi ||
+                          'N/A'}
+                      </span>
                     </Space>
                     <Space>
                       <SafetyOutlined />
@@ -265,7 +269,14 @@ export default function UserDashboard() {
                     : 'N/A'}
                 </Descriptions.Item>
                 <Descriptions.Item label="Đơn vị" labelStyle={{ fontWeight: 500 }}>
-                  <Badge color="blue" text={personnelInfo.DonVi?.ten_don_vi || 'N/A'} />
+                  <Badge
+                    color="blue"
+                    text={
+                      personnelInfo.DonViTrucThuoc?.ten_don_vi ||
+                      personnelInfo.CoQuanDonVi?.ten_don_vi ||
+                      'N/A'
+                    }
+                  />
                 </Descriptions.Item>
                 <Descriptions.Item label="Chức vụ" labelStyle={{ fontWeight: 500 }}>
                   <Badge color="green" text={personnelInfo.ChucVu?.ten_chuc_vu || 'N/A'} />

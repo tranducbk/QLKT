@@ -74,8 +74,8 @@ export const personnelFormSchema = z
 
 // Unit schemas
 export const unitFormSchema = z.object({
-  ma_don_vi: z.string().min(1, 'Mã đơn vị là bắt buộc'),
-  ten_don_vi: z.string().min(1, 'Tên đơn vị là bắt buộc'),
+  ma_don_vi: z.string().min(1, 'Mã cơ quan đơn vị trực thuộc là bắt buộc'),
+  ten_don_vi: z.string().min(1, 'Tên cơ quan đơn vị trực thuộc là bắt buộc'),
 });
 
 // Position schemas

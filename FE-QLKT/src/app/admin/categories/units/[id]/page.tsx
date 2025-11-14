@@ -177,7 +177,15 @@ export default function UnitDetailPage() {
           <div>
             <Button
               icon={<ArrowLeftOutlined />}
-              onClick={() => router.push('/admin/categories')}
+              onClick={() => {
+                // Nếu là đơn vị trực thuộc, quay lại trang chi tiết cơ quan đơn vị cha
+                if (isDonViTrucThuoc && unit.CoQuanDonVi?.id) {
+                  router.push(`/admin/categories/units/${unit.CoQuanDonVi.id}`);
+                } else {
+                  // Nếu là cơ quan đơn vị, quay lại danh sách
+                  router.push('/admin/categories');
+                }
+              }}
               style={{ marginBottom: 16 }}
             >
               Quay lại
@@ -210,22 +218,31 @@ export default function UnitDetailPage() {
               children: (
                 <Card>
                   <Descriptions bordered column={2}>
-                    <Descriptions.Item label="Mã đơn vị" span={1}>
+                    <Descriptions.Item
+                      label={isDonViTrucThuoc ? 'Mã đơn vị trực thuộc' : 'Mã cơ quan đơn vị'}
+                      span={1}
+                    >
                       {unit.ma_don_vi}
                     </Descriptions.Item>
-                    <Descriptions.Item label="Tên đơn vị" span={1}>
+                    <Descriptions.Item
+                      label={isDonViTrucThuoc ? 'Tên đơn vị trực thuộc' : 'Tên cơ quan đơn vị'}
+                      span={1}
+                    >
                       {unit.ten_don_vi}
                     </Descriptions.Item>
                     <Descriptions.Item label="Số lượng quân nhân" span={1}>
                       {unit.so_luong || 0}
                     </Descriptions.Item>
-                    <Descriptions.Item label="Cơ quan đơn vị" span={1}>
-                      {unit.CoQuanDonVi ? (
-                        <Link href={`/admin/categories/units/${unit.CoQuanDonVi.id}`}>
-                          {unit.CoQuanDonVi.ten_don_vi}
-                        </Link>
-                      ) : null}
-                    </Descriptions.Item>
+                    {/* Chỉ hiển thị "Cơ quan đơn vị" nếu đơn vị là đơn vị trực thuộc (có co_quan_don_vi_id) */}
+                    {isDonViTrucThuoc && (
+                      <Descriptions.Item label="Cơ quan đơn vị" span={1}>
+                        {unit.CoQuanDonVi ? (
+                          <Link href={`/admin/categories/units/${unit.CoQuanDonVi.id}`}>
+                            {unit.CoQuanDonVi.ten_don_vi}
+                          </Link>
+                        ) : null}
+                      </Descriptions.Item>
+                    )}
                     {/* Chỉ hiển thị "Số đơn vị trực thuộc" nếu đơn vị là cơ quan đơn vị (không có co_quan_don_vi_id) */}
                     {!isDonViTrucThuoc && (
                       <Descriptions.Item label="Số đơn vị trực thuộc" span={1}>
@@ -362,7 +379,9 @@ export default function UnitDetailPage() {
               <span style={{ fontSize: '18px', fontWeight: 600 }}>
                 {dialogType === 'unit'
                   ? editingItem?.id
-                    ? 'Chỉnh sửa Đơn vị'
+                    ? editingItem.co_quan_don_vi_id
+                      ? 'Chỉnh sửa Đơn vị trực thuộc'
+                      : 'Chỉnh sửa Cơ quan đơn vị'
                     : 'Thêm Đơn vị trực thuộc'
                   : editingItem?.id
                   ? 'Chỉnh sửa Chức vụ'

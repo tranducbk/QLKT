@@ -79,7 +79,16 @@ export default function CategoriesPage() {
   const filteredPositions =
     selectedUnit === 'ALL'
       ? positions
-      : positions.filter(p => p.don_vi_id?.toString() === selectedUnit);
+      : positions.filter(p => {
+          const unitIdStr = selectedUnit.toString();
+          // Nếu chức vụ trực thuộc cơ quan đơn vị (qua relation object)
+          if (p.CoQuanDonVi?.id?.toString() === unitIdStr) return true;
+          // Nếu chức vụ của đơn vị trực thuộc thuộc cơ quan đơn vị đó (qua relation object)
+          if (p.DonViTrucThuoc?.CoQuanDonVi?.id?.toString() === unitIdStr) return true;
+          // Fallback: kiểm tra co_quan_don_vi_id trực tiếp
+          if (p.co_quan_don_vi_id?.toString() === unitIdStr) return true;
+          return false;
+        });
 
   if (loading) {
     return (
@@ -143,7 +152,7 @@ export default function CategoriesPage() {
           items={[
             {
               key: 'units',
-              label: `Đơn vị (${units.length})`,
+              label: `Cơ quan đơn vị (${units.length})`,
               children: (
                 <>
                   <div
@@ -180,43 +189,46 @@ export default function CategoriesPage() {
                 <>
                   {/* Filters */}
                   <Card style={{ marginBottom: 24 }}>
-                    <Space direction="vertical" style={{ width: '100%' }} size="middle">
-                      <Space
-                        wrap
-                        style={{ width: '100%', justifyContent: 'space-between' }}
-                        size="middle"
-                      >
-                        <div style={{ flex: 1, minWidth: 300 }}>
-                          <Text type="secondary" style={{ marginBottom: 8, display: 'block' }}>
-                            Đơn vị
-                          </Text>
-                          <Select
-                            value={selectedUnit}
-                            onChange={setSelectedUnit}
-                            style={{ width: '100%' }}
-                            size="large"
-                            placeholder="Chọn Đơn vị"
-                          >
-                            <Option value="ALL">Tất cả Đơn vị ({units.length})</Option>
-                            {units.map(unit => (
-                              <Option key={unit.id} value={unit.id.toString()}>
-                                {unit.ten_don_vi}
-                              </Option>
-                            ))}
-                          </Select>
-                        </div>
-                        <div style={{ alignSelf: 'flex-end' }}>
-                          <Button
-                            type="primary"
-                            size="large"
-                            icon={<PlusOutlined />}
-                            onClick={() => handleOpenDialog('position')}
-                          >
-                            Thêm Chức vụ
-                          </Button>
-                        </div>
-                      </Space>
-                    </Space>
+                    <div
+                      style={{
+                        display: 'flex',
+                        gap: '16px',
+                        alignItems: 'flex-end',
+                        flexWrap: 'wrap',
+                      }}
+                    >
+                      <div style={{ flex: 1, minWidth: 300 }}>
+                        <Text type="secondary" style={{ marginBottom: 8, display: 'block' }}>
+                          Cơ quan đơn vị
+                        </Text>
+                        <Select
+                          value={selectedUnit}
+                          onChange={setSelectedUnit}
+                          style={{ width: '100%' }}
+                          size="large"
+                          placeholder="Chọn Cơ quan đơn vị"
+                        >
+                          <Option value="ALL">Tất cả Cơ quan đơn vị ({units.length})</Option>
+                          {units.map(unit => (
+                            <Option key={unit.id} value={unit.id.toString()}>
+                              {unit.ten_don_vi}
+                            </Option>
+                          ))}
+                        </Select>
+                      </div>
+                      <div>
+                        <div style={{ height: '22px', marginBottom: 8 }}></div>
+                        <Button
+                          type="primary"
+                          size="large"
+                          icon={<PlusOutlined />}
+                          onClick={() => handleOpenDialog('position')}
+                          style={{ minWidth: 'auto' }}
+                        >
+                          Thêm Chức vụ
+                        </Button>
+                      </div>
+                    </div>
                   </Card>
 
                   {/* Table */}
@@ -242,7 +254,9 @@ export default function CategoriesPage() {
           title={
             dialogType === 'unit'
               ? editingItem
-                ? 'Sửa Đơn vị'
+                ? editingItem.co_quan_don_vi_id
+                  ? 'Sửa Đơn vị trực thuộc'
+                  : 'Sửa Cơ quan đơn vị'
                 : 'Thêm Cơ quan đơn vị mới'
               : editingItem
                 ? 'Sửa Chức vụ'

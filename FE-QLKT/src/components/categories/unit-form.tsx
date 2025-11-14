@@ -70,7 +70,15 @@ export function UnitForm({ unit, units = [], onSuccess, onClose }: UnitFormProps
       }
 
       if (res.success) {
-        message.success(unit?.id ? 'Cập nhật đơn vị thành công' : 'Tạo đơn vị thành công');
+        message.success(
+          unit?.id
+            ? unit.co_quan_don_vi_id
+              ? 'Cập nhật đơn vị trực thuộc thành công'
+              : 'Cập nhật cơ quan đơn vị thành công'
+            : unit?.co_quan_don_vi_id
+            ? 'Tạo đơn vị trực thuộc thành công'
+            : 'Tạo cơ quan đơn vị thành công'
+        );
         onSuccess?.();
         onClose?.();
       } else {
@@ -91,22 +99,47 @@ export function UnitForm({ unit, units = [], onSuccess, onClose }: UnitFormProps
   // Lọc bỏ đơn vị hiện tại khỏi danh sách đơn vị cha (tránh vòng lặp)
   const availableParentUnits = units.filter(u => u.id !== unit?.id);
 
+  // Xác định loại đơn vị: nếu có co_quan_don_vi_id thì là đơn vị trực thuộc, ngược lại là cơ quan đơn vị
+  const isDonViTrucThuoc = !!unit?.co_quan_don_vi_id;
+
   return (
     <Form form={form} layout="vertical" onFinish={onSubmit} autoComplete="off">
       <Form.Item
-        label="Mã Đơn vị"
+        label={isDonViTrucThuoc ? 'Mã Đơn vị trực thuộc' : 'Mã Cơ quan đơn vị'}
         name="ma_don_vi"
-        rules={[{ required: true, message: 'Vui lòng nhập mã đơn vị' }]}
+        rules={[
+          {
+            required: true,
+            message: isDonViTrucThuoc
+              ? 'Vui lòng nhập mã đơn vị trực thuộc'
+              : 'Vui lòng nhập mã cơ quan đơn vị',
+          },
+        ]}
       >
-        <Input placeholder="Nhập mã đơn vị" />
+        <Input
+          placeholder={
+            isDonViTrucThuoc ? 'Nhập mã đơn vị trực thuộc' : 'Nhập mã cơ quan đơn vị'
+          }
+        />
       </Form.Item>
 
       <Form.Item
-        label="Tên Đơn vị"
+        label={isDonViTrucThuoc ? 'Tên Đơn vị trực thuộc' : 'Tên Cơ quan đơn vị'}
         name="ten_don_vi"
-        rules={[{ required: true, message: 'Vui lòng nhập tên đơn vị' }]}
+        rules={[
+          {
+            required: true,
+            message: isDonViTrucThuoc
+              ? 'Vui lòng nhập tên đơn vị trực thuộc'
+              : 'Vui lòng nhập tên cơ quan đơn vị',
+          },
+        ]}
       >
-        <Input placeholder="Nhập tên đơn vị" />
+        <Input
+          placeholder={
+            isDonViTrucThuoc ? 'Nhập tên đơn vị trực thuộc' : 'Nhập tên cơ quan đơn vị'
+          }
+        />
       </Form.Item>
 
       {/* Chỉ hiển thị field Cơ quan đơn vị khi SỬA đơn vị (có id) và đơn vị đó có co_quan_don_vi_id */}

@@ -319,7 +319,7 @@ export default function CreateProposalPage() {
           <Alert
             style={{ marginTop: 16 }}
             message="Đề xuất NCKH/SKKH"
-            description="Áp dụng cho khen thưởng thành tích khoa học: Nghiên cứu Khoa học (NCKH) và Sáng kiến Kinh nghiệm (SKKH)."
+            description="Áp dụng cho khen thưởng thành tích khoa học: Nghiên cứu Khoa học (NCKH) và Sáng kiến Khoa học (SKKH)."
             type="success"
             showIcon
           />

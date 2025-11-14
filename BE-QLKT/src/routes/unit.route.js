@@ -6,21 +6,21 @@ const { auditLog, createDescription, getResourceId } = require('../middlewares/a
 
 /**
  * @route   GET /api/units
- * @desc    Lấy tất cả đơn vị (?hierarchy=true để lấy theo cấu trúc cây)
+ * @desc    Lấy tất cả cơ quan đơn vị và đơn vị trực thuộc (?hierarchy=true để lấy theo cấu trúc cây)
  * @access  Private - ADMIN and above
  */
 router.get('/', verifyToken, requireAdmin, unitController.getAllUnits);
 
 /**
  * @route   GET /api/units/:id
- * @desc    Lấy chi tiết đơn vị với cấu trúc cây
+ * @desc    Lấy chi tiết cơ quan đơn vị hoặc đơn vị trực thuộc với cấu trúc cây
  * @access  Private - ADMIN and above
  */
 router.get('/:id', verifyToken, requireAdmin, unitController.getUnitById);
 
 /**
  * @route   POST /api/units
- * @desc    Tạo đơn vị mới (có thể là đơn vị trực thuộc với co_quan_don_vi_id)
+ * @desc    Tạo cơ quan đơn vị mới hoặc đơn vị trực thuộc (nếu có co_quan_don_vi_id)
  * @access  Private - ADMIN and above
  */
 router.post(
@@ -32,7 +32,7 @@ router.post(
     resource: 'units',
     getDescription: (req, res, responseData) => {
       const tenDonVi = req.body?.ten_don_vi || 'N/A';
-      return `Tạo mới đơn vị: ${tenDonVi}`;
+      return `Tạo mới cơ quan đơn vị/đơn vị trực thuộc: ${tenDonVi}`;
     },
     getResourceId: getResourceId.fromResponse('id'),
   }),
@@ -41,7 +41,7 @@ router.post(
 
 /**
  * @route   PUT /api/units/:id
- * @desc    Sửa đơn vị (tên, co_quan_don_vi_id)
+ * @desc    Sửa cơ quan đơn vị hoặc đơn vị trực thuộc (mã, tên, co_quan_don_vi_id)
  * @access  Private - ADMIN and above
  */
 router.put(
@@ -53,7 +53,7 @@ router.put(
     resource: 'units',
     getDescription: (req, res, responseData) => {
       const tenDonVi = req.body?.ten_don_vi || 'N/A';
-      return `Cập nhật đơn vị: ${tenDonVi}`;
+      return `Cập nhật cơ quan đơn vị/đơn vị trực thuộc: ${tenDonVi}`;
     },
     getResourceId: getResourceId.fromParams('id'),
   }),
@@ -62,7 +62,7 @@ router.put(
 
 /**
  * @route   DELETE /api/units/:id
- * @desc    Xóa đơn vị
+ * @desc    Xóa cơ quan đơn vị hoặc đơn vị trực thuộc
  * @access  Private - ADMIN and above
  */
 router.delete(
@@ -76,9 +76,9 @@ router.delete(
       try {
         const data = typeof responseData === 'string' ? JSON.parse(responseData) : responseData;
         const tenDonVi = data?.data?.ten_don_vi || `ID ${req.params.id}`;
-        return `Xóa đơn vị: ${tenDonVi}`;
+        return `Xóa cơ quan đơn vị/đơn vị trực thuộc: ${tenDonVi}`;
       } catch {
-        return `Xóa đơn vị: ID ${req.params.id}`;
+        return `Xóa cơ quan đơn vị/đơn vị trực thuộc: ID ${req.params.id}`;
       }
     },
     getResourceId: getResourceId.fromParams('id'),

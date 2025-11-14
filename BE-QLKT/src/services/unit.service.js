@@ -2,7 +2,7 @@ const { prisma } = require('../models');
 
 class UnitService {
   /**
-   * Lấy tất cả đơn vị (có thể lấy theo cấu trúc cây)
+   * Lấy tất cả cơ quan đơn vị và đơn vị trực thuộc (có thể lấy theo cấu trúc cây)
    */
   async getAllUnits(includeHierarchy = false) {
     try {
@@ -80,7 +80,7 @@ class UnitService {
   }
 
   /**
-   * Tạo đơn vị mới (có thể là cơ quan đơn vị hoặc đơn vị trực thuộc)
+   * Tạo cơ quan đơn vị mới hoặc đơn vị trực thuộc (nếu có co_quan_don_vi_id)
    */
   async createUnit(data) {
     try {
@@ -144,25 +144,45 @@ class UnitService {
   }
 
   /**
-   * Sửa đơn vị (tên, co_quan_don_vi_id)
+   * Sửa cơ quan đơn vị hoặc đơn vị trực thuộc (mã, tên, co_quan_don_vi_id)
    */
   async updateUnit(id, data) {
     try {
-      const { ten_don_vi, co_quan_don_vi_id } = data;
+      const { ma_don_vi, ten_don_vi, co_quan_don_vi_id } = data;
 
-      // Kiểm tra đơn vị có tồn tại không (kiểm tra cả 2 bảng)
+      // Kiểm tra cơ quan đơn vị hoặc đơn vị trực thuộc có tồn tại không (kiểm tra cả 2 bảng)
       const [coQuanDonVi, donViTrucThuoc] = await Promise.all([
         prisma.coQuanDonVi.findUnique({ where: { id } }),
         prisma.donViTrucThuoc.findUnique({ where: { id } }),
       ]);
 
       if (!coQuanDonVi && !donViTrucThuoc) {
-        throw new Error('Đơn vị không tồn tại');
+        throw new Error('Cơ quan đơn vị hoặc đơn vị trực thuộc không tồn tại');
       }
 
       // Nếu là đơn vị trực thuộc
       if (donViTrucThuoc) {
         const updateData = {};
+        if (ma_don_vi) {
+          // Kiểm tra mã đơn vị có bị trùng không (kiểm tra cả 2 bảng, trừ chính nó)
+          const [existingDonVi, existingCoQuan] = await Promise.all([
+            prisma.donViTrucThuoc.findFirst({
+              where: {
+                ma_don_vi: ma_don_vi,
+                id: { not: id },
+              },
+            }),
+            prisma.coQuanDonVi.findFirst({
+              where: {
+                ma_don_vi: ma_don_vi,
+              },
+            }),
+          ]);
+          if (existingDonVi || existingCoQuan) {
+            throw new Error('Mã đơn vị đã tồn tại');
+          }
+          updateData.ma_don_vi = ma_don_vi;
+        }
         if (ten_don_vi) updateData.ten_don_vi = ten_don_vi;
         if (co_quan_don_vi_id !== undefined) {
           // Kiểm tra cơ quan đơn vị có tồn tại không
@@ -188,8 +208,28 @@ class UnitService {
 
         return updatedUnit;
       } else {
-        // Nếu là cơ quan đơn vị, chỉ cho phép sửa tên
+        // Nếu là cơ quan đơn vị
         const updateData = {};
+        if (ma_don_vi) {
+          // Kiểm tra mã đơn vị có bị trùng không (kiểm tra cả 2 bảng, trừ chính nó)
+          const [existingCoQuan, existingDonVi] = await Promise.all([
+            prisma.coQuanDonVi.findFirst({
+              where: {
+                ma_don_vi: ma_don_vi,
+                id: { not: id },
+              },
+            }),
+            prisma.donViTrucThuoc.findFirst({
+              where: {
+                ma_don_vi: ma_don_vi,
+              },
+            }),
+          ]);
+          if (existingCoQuan || existingDonVi) {
+            throw new Error('Mã đơn vị đã tồn tại');
+          }
+          updateData.ma_don_vi = ma_don_vi;
+        }
         if (ten_don_vi) updateData.ten_don_vi = ten_don_vi;
 
         const updatedUnit = await prisma.coQuanDonVi.update({
@@ -234,12 +274,12 @@ class UnitService {
   }
 
   /**
-   * Xóa đơn vị (nếu đơn vị đó không còn quân nhân và không có đơn vị con)
-   * @param {string} id - UUID của đơn vị
+   * Xóa cơ quan đơn vị hoặc đơn vị trực thuộc (nếu không còn quân nhân và không có đơn vị trực thuộc)
+   * @param {string} id - UUID của cơ quan đơn vị hoặc đơn vị trực thuộc
    */
   async deleteUnit(id) {
     try {
-      // Kiểm tra đơn vị có tồn tại không (kiểm tra cả 2 bảng)
+      // Kiểm tra cơ quan đơn vị hoặc đơn vị trực thuộc có tồn tại không (kiểm tra cả 2 bảng)
       const [coQuanDonVi, donViTrucThuoc] = await Promise.all([
         prisma.coQuanDonVi.findUnique({
           where: { id },
@@ -253,7 +293,7 @@ class UnitService {
       ]);
 
       if (!coQuanDonVi && !donViTrucThuoc) {
-        throw new Error('Đơn vị không tồn tại');
+        throw new Error('Cơ quan đơn vị hoặc đơn vị trực thuộc không tồn tại');
       }
 
       // Nếu là cơ quan đơn vị
@@ -313,15 +353,15 @@ class UnitService {
         });
       }
 
-      return { message: 'Xóa đơn vị thành công' };
+      return { message: 'Xóa cơ quan đơn vị/đơn vị trực thuộc thành công' };
     } catch (error) {
       throw error;
     }
   }
 
   /**
-   * Lấy đơn vị theo ID với cấu trúc cây đầy đủ
-   * @param {string} id - UUID của đơn vị
+   * Lấy cơ quan đơn vị hoặc đơn vị trực thuộc theo ID với cấu trúc cây đầy đủ
+   * @param {string} id - UUID của cơ quan đơn vị hoặc đơn vị trực thuộc
    */
   async getUnitById(id) {
     try {
@@ -384,7 +424,7 @@ class UnitService {
       ]);
 
       if (!coQuanDonVi && !donViTrucThuoc) {
-        throw new Error('Đơn vị không tồn tại');
+        throw new Error('Cơ quan đơn vị hoặc đơn vị trực thuộc không tồn tại');
       }
 
       return coQuanDonVi || donViTrucThuoc;

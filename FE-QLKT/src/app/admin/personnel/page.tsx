@@ -47,6 +47,7 @@ export default function PersonnelPage() {
   const [selectedCoQuanDonVi, setSelectedCoQuanDonVi] = useState<string | 'ALL'>('ALL');
   const [selectedDonViTrucThuoc, setSelectedDonViTrucThuoc] = useState<string | 'ALL' | null>(null);
   const [selectedChucVu, setSelectedChucVu] = useState<string | 'ALL'>('ALL');
+  const [chucVuSearchValue, setChucVuSearchValue] = useState<string>('');
   const [positions, setPositions] = useState<any[]>([]);
   const [tableLoading, setTableLoading] = useState(false);
   const router = useRouter();
@@ -404,12 +405,15 @@ export default function PersonnelPage() {
                     const newValue = value || 'ALL';
                     setSelectedCoQuanDonVi(newValue);
                     setSelectedDonViTrucThuoc(newValue !== 'ALL' ? 'ALL' : null);
-                    setSelectedChucVu('ALL'); // Reset chức vụ khi đổi cơ quan đơn vị
+                    setSelectedChucVu('ALL'); // Reset chức vụ
+                    setChucVuSearchValue(''); // Clear search value khi đổi cơ quan đơn vị
+                    setChucVuSearchValue(''); // Clear search value
                   }}
                   onClear={() => {
                     setSelectedCoQuanDonVi('ALL');
                     setSelectedDonViTrucThuoc(null);
                     setSelectedChucVu('ALL'); // Reset chức vụ
+                    setChucVuSearchValue(''); // Clear search value
                   }}
                   style={{ width: '100%' }}
                   size="large"
@@ -455,11 +459,13 @@ export default function PersonnelPage() {
                   }
                   onChange={value => {
                     setSelectedDonViTrucThuoc(value || 'ALL');
-                    setSelectedChucVu('ALL'); // Reset chức vụ khi đổi đơn vị trực thuộc
+                    setSelectedChucVu('ALL'); // Reset chức vụ
+                    setChucVuSearchValue(''); // Clear search value khi đổi đơn vị trực thuộc
                   }}
                   onClear={() => {
                     setSelectedDonViTrucThuoc('ALL');
                     setSelectedChucVu('ALL'); // Reset chức vụ
+                    setChucVuSearchValue(''); // Clear search value
                   }}
                   style={{ width: '100%' }}
                   size="large"
@@ -505,9 +511,17 @@ export default function PersonnelPage() {
                   Chức vụ
                 </Text>
                 <Select
-                  value={selectedChucVu || 'ALL'}
-                  onChange={value => setSelectedChucVu(value || 'ALL')}
-                  onClear={() => setSelectedChucVu('ALL')}
+                  value={selectedChucVu === 'ALL' ? undefined : selectedChucVu}
+                  onChange={value => {
+                    setSelectedChucVu(value || 'ALL');
+                    setChucVuSearchValue(''); // Clear search when selecting
+                  }}
+                  onClear={() => {
+                    setSelectedChucVu('ALL');
+                    setChucVuSearchValue('');
+                  }}
+                  searchValue={chucVuSearchValue}
+                  onSearch={setChucVuSearchValue}
                   style={{ width: '100%' }}
                   size="large"
                   showSearch

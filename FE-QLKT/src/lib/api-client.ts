@@ -449,7 +449,15 @@ export const apiClient = {
   },
 
   // Proposals
-  async getProposalTemplate(type: 'HANG_NAM' | 'NIEN_HAN' = 'HANG_NAM'): Promise<Blob> {
+  async getProposalTemplate(
+    type:
+      | 'CA_NHAN_HANG_NAM'
+      | 'DON_VI_HANG_NAM'
+      | 'NIEN_HAN'
+      | 'CONG_HIEN'
+      | 'DOT_XUAT'
+      | 'NCKH' = 'CA_NHAN_HANG_NAM'
+  ): Promise<Blob> {
     try {
       const res = await axiosInstance.get('/api/proposals/template', {
         params: { type },

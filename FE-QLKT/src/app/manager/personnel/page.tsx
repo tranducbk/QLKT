@@ -308,17 +308,19 @@ export default function ManagerPersonnelPage() {
 
         {/* Filters */}
         <Card style={{ marginBottom: '24px', padding: '16px' }}>
-          <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
             <Input
               placeholder="Tìm kiếm theo tên hoặc CCCD..."
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
               onPressEnter={handleSearch}
+              size="large"
               style={{ flex: 1, minWidth: '200px' }}
             />
             <Select
               value={selectedPosition}
               onChange={setSelectedPosition}
+              size="large"
               style={{ width: 256 }}
               placeholder="Lọc theo Chức vụ"
             >
@@ -329,7 +331,7 @@ export default function ManagerPersonnelPage() {
                 </Option>
               ))}
             </Select>
-            <Button type="primary" onClick={handleSearch} disabled={loading}>
+            <Button type="primary" size="large" onClick={handleSearch} disabled={loading}>
               Tìm kiếm
             </Button>
           </div>

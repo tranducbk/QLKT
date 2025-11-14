@@ -397,7 +397,7 @@ export default function ProfileEditForm() {
                 placeholder="Ví dụ: xã hoà an, tỉnh ninh bình"
                 size="large"
                 className="rounded-lg"
-                rows={2}
+                rows={1}
                 onBlur={() => handleAddressBlur('que_quan_2_cap')}
               />
             </Form.Item>
@@ -419,7 +419,7 @@ export default function ProfileEditForm() {
                 placeholder="Ví dụ: phường lào cai, tỉnh lào cai"
                 size="large"
                 className="rounded-lg"
-                rows={2}
+                rows={1}
                 onBlur={() => handleAddressBlur('tru_quan')}
               />
             </Form.Item>
@@ -433,7 +433,7 @@ export default function ProfileEditForm() {
                 placeholder="Ví dụ: xã an hoà, huyện yên bình, tỉnh nam định"
                 size="large"
                 className="rounded-lg"
-                rows={2}
+                rows={1}
                 onBlur={() => handleAddressBlur('cho_o_hien_nay')}
               />
             </Form.Item>

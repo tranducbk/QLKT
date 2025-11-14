@@ -33,7 +33,7 @@ export function UnitsTable({
       setLoading(true);
       setDeletingId(id);
       await apiClient.deleteUnit(id);
-      message.success('Xóa đơn vị thành công');
+      message.success('Xóa cơ quan đơn vị/đơn vị trực thuộc thành công');
       onRefresh?.();
     } catch (error) {
       message.error('Có lỗi xảy ra khi xóa');
@@ -45,7 +45,7 @@ export function UnitsTable({
 
   const baseColumns: ColumnsType<any> = [
     {
-      title: 'Mã Đơn vị',
+      title: 'Mã',
       dataIndex: 'ma_don_vi',
       key: 'ma_don_vi',
       width: 120,
@@ -53,12 +53,12 @@ export function UnitsTable({
       render: text => text,
     },
     {
-      title: 'Tên Đơn vị',
+      title: 'Tên',
       dataIndex: 'ten_don_vi',
       key: 'ten_don_vi',
       width: 250,
       align: 'left',
-      render: text => <strong>{text}</strong>,
+      render: (text, record) => <strong>{text}</strong>,
     },
     {
       title: 'Quân số',
@@ -132,7 +132,7 @@ export function UnitsTable({
           </Button>
           <Popconfirm
             title="Xác nhận xóa"
-            description="Bạn có chắc chắn muốn xóa đơn vị này? Hành động này không thể hoàn tác."
+            description="Bạn có chắc chắn muốn xóa cơ quan đơn vị/đơn vị trực thuộc này? Hành động này không thể hoàn tác."
             onConfirm={() => handleDelete(record.id)}
             okText="Xóa"
             cancelText="Hủy"

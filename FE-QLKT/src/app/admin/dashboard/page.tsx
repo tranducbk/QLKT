@@ -77,7 +77,7 @@ export default function AdminDashboard() {
       iconColor: 'text-green-600 dark:text-green-400',
       bgColor:
         'bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/30 dark:to-green-800/20',
-      link: '/admin/units',
+      link: '/admin/categories',
     },
     {
       title: 'Tổng số Chức vụ',
@@ -181,13 +181,13 @@ export default function AdminDashboard() {
                 Quản lý Quân nhân
               </Button>
             </Link>
-            <Link href="/admin/units">
+            <Link href="/admin/categories">
               <Button
                 icon={<ApartmentOutlined />}
                 size="large"
                 className="w-full h-auto py-4 text-base font-medium hover:scale-105 transition-transform"
               >
-                Quản lý Đơn vị
+                Quản lý Cơ quan Đơn vị
               </Button>
             </Link>
             <Link href="/admin/positions">

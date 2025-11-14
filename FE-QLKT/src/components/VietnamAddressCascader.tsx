@@ -86,24 +86,32 @@ export default function VietnamAddressCascader({
     }
   };
 
+  const displayRender = (labels: string[]) => {
+    return labels.join(' / ');
+  };
+
   return (
-    <Cascader
-      options={options}
-      onChange={handleChange}
-      value={value}
-      placeholder={placeholder}
-      size={size}
-      className={className}
-      disabled={disabled}
-      loading={loading}
-      showSearch={{
-        filter: (inputValue, path) =>
-          path.some(
-            (option) =>
-              option.label && option.label.toLowerCase().indexOf(inputValue.toLowerCase()) > -1
-          ),
-      }}
-      style={{ width: '100%' }}
-    />
+    <div className="vietnam-address-cascader-wrapper" style={{ width: '100%' }}>
+      <Cascader
+        options={options}
+        onChange={handleChange}
+        value={value}
+        placeholder={placeholder}
+        size={size}
+        className={className}
+        disabled={disabled}
+        loading={loading}
+        showSearch={{
+          filter: (inputValue, path) =>
+            path.some(
+              (option) =>
+                option.label && option.label.toLowerCase().indexOf(inputValue.toLowerCase()) > -1
+            ),
+        }}
+        displayRender={displayRender}
+        allowClear
+        style={{ width: '100%' }}
+      />
+    </div>
   );
 }
