@@ -40,24 +40,59 @@ import styles from './proposal-detail.module.css';
 const { Title, Text } = Typography;
 
 interface DanhHieuItem {
-  cccd: string;
+  personnel_id: string;
   ho_ten: string;
   nam: number;
   danh_hieu: string | null;
-  nhan_bkbqp: boolean;
-  so_quyet_dinh_bkbqp: string | null;
-  nhan_cstdtq: boolean;
-  so_quyet_dinh_cstdtq: string | null;
+  so_quyet_dinh?: string | null;
+  file_quyet_dinh?: string | null;
+  // Các trường cũ (tương thích với dữ liệu cũ, không dùng nữa)
+  nhan_bkbqp?: boolean;
+  so_quyet_dinh_bkbqp?: string | null;
+  file_quyet_dinh_bkbqp?: string | null;
+  nhan_cstdtq?: boolean;
+  so_quyet_dinh_cstdtq?: string | null;
+  file_quyet_dinh_cstdtq?: string | null;
+  co_quan_don_vi?: {
+    id: string;
+    ten_co_quan_don_vi: string;
+    ma_co_quan_don_vi: string;
+  } | null;
+  don_vi_truc_thuoc?: {
+    id: string;
+    ten_don_vi: string;
+    ma_don_vi: string;
+    co_quan_don_vi?: {
+      id: string;
+      ten_don_vi_truc: string;
+      ma_don_vi: string;
+    } | null;
+  } | null;
 }
 
 interface ThanhTichItem {
-  cccd: string;
+  personnel_id: string;
   ho_ten: string;
   nam: number;
   loai: string;
   mo_ta: string;
   status: string;
   so_quyet_dinh?: string | null;
+  co_quan_don_vi?: {
+    id: string;
+    ten_co_quan_don_vi: string;
+    ma_co_quan_don_vi: string;
+  } | null;
+  don_vi_truc_thuoc?: {
+    id: string;
+    ten_don_vi: string;
+    ma_don_vi: string;
+    co_quan_don_vi?: {
+      id: string;
+      ten_don_vi_truc: string;
+      ma_don_vi: string;
+    } | null;
+  } | null;
 }
 
 interface AttachedFile {
@@ -452,7 +487,7 @@ export default function ManagerProposalDetailPage() {
               dataSource={proposal.data_thanh_tich || []}
               rowKey={(_, index) => `tt_${index}`}
               pagination={false}
-              scroll={{ x: 1200 }}
+              scroll={{ x: 1400 }}
               columns={[
                 {
                   title: 'STT',
@@ -462,18 +497,23 @@ export default function ManagerProposalDetailPage() {
                   render: (_, __, index) => index + 1,
                 },
                 {
-                  title: 'CCCD',
-                  dataIndex: 'cccd',
-                  key: 'cccd',
-                  width: 160,
-                  render: text => <Text code>{text || '-'}</Text>,
-                },
-                {
                   title: 'Họ tên',
                   dataIndex: 'ho_ten',
                   key: 'ho_ten',
                   width: 150,
                   render: text => <Text strong>{text || '-'}</Text>,
+                },
+                {
+                  title: 'Cơ quan đơn vị',
+                  key: 'co_quan_don_vi',
+                  width: 180,
+                  render: (_, record) => record.co_quan_don_vi?.ten_co_quan_don_vi || '-',
+                },
+                {
+                  title: 'Đơn vị trực thuộc',
+                  key: 'don_vi_truc_thuoc',
+                  width: 180,
+                  render: (_, record) => record.don_vi_truc_thuoc?.ten_don_vi || '-',
                 },
                 {
                   title: 'Năm',
@@ -517,7 +557,7 @@ export default function ManagerProposalDetailPage() {
               dataSource={proposal.data_danh_hieu || []}
               rowKey={(_, index) => `dh_${index}`}
               pagination={false}
-              scroll={{ x: 900 }}
+              scroll={{ x: 1100 }}
               columns={[
                 {
                   title: 'STT',
@@ -527,18 +567,23 @@ export default function ManagerProposalDetailPage() {
                   render: (_, __, index) => index + 1,
                 },
                 {
-                  title: 'CCCD',
-                  dataIndex: 'cccd',
-                  key: 'cccd',
-                  width: 140,
-                  render: text => <Text code>{text || '-'}</Text>,
-                },
-                {
                   title: 'Họ và tên',
                   dataIndex: 'ho_ten',
                   key: 'ho_ten',
                   width: 200,
                   render: text => <Text strong>{text || '-'}</Text>,
+                },
+                {
+                  title: 'Cơ quan đơn vị',
+                  key: 'co_quan_don_vi',
+                  width: 180,
+                  render: (_, record) => record.co_quan_don_vi?.ten_co_quan_don_vi || '-',
+                },
+                {
+                  title: 'Đơn vị trực thuộc',
+                  key: 'don_vi_truc_thuoc',
+                  width: 180,
+                  render: (_, record) => record.don_vi_truc_thuoc?.ten_don_vi || '-',
                 },
                 {
                   title: 'Năm',
@@ -565,7 +610,7 @@ export default function ManagerProposalDetailPage() {
               dataSource={proposal.data_nien_han || []}
               rowKey={(_, index) => `nh_${index}`}
               pagination={false}
-              scroll={{ x: 900 }}
+              scroll={{ x: 1100 }}
               columns={[
                 {
                   title: 'STT',
@@ -575,18 +620,23 @@ export default function ManagerProposalDetailPage() {
                   render: (_, __, index) => index + 1,
                 },
                 {
-                  title: 'CCCD',
-                  dataIndex: 'cccd',
-                  key: 'cccd',
-                  width: 140,
-                  render: text => <Text code>{text || '-'}</Text>,
-                },
-                {
                   title: 'Họ và tên',
                   dataIndex: 'ho_ten',
                   key: 'ho_ten',
                   width: 200,
                   render: text => <Text strong>{text || '-'}</Text>,
+                },
+                {
+                  title: 'Cơ quan đơn vị',
+                  key: 'co_quan_don_vi',
+                  width: 180,
+                  render: (_, record) => record.co_quan_don_vi?.ten_co_quan_don_vi || '-',
+                },
+                {
+                  title: 'Đơn vị trực thuộc',
+                  key: 'don_vi_truc_thuoc',
+                  width: 180,
+                  render: (_, record) => record.don_vi_truc_thuoc?.ten_don_vi || '-',
                 },
                 {
                   title: 'Năm',

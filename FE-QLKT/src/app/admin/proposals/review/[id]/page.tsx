@@ -56,8 +56,8 @@ interface DanhHieuItem {
   file_quyet_dinh_cstdtq?: string | null;
   co_quan_don_vi?: {
     id: string;
-    ten_don_vi: string;
-    ma_don_vi: string;
+    ten_co_quan_don_vi: string;
+    ma_co_quan_don_vi: string;
   } | null;
   don_vi_truc_thuoc?: {
     id: string;
@@ -65,7 +65,7 @@ interface DanhHieuItem {
     ma_don_vi: string;
     co_quan_don_vi?: {
       id: string;
-      ten_don_vi: string;
+      ten_don_vi_truc: string;
       ma_don_vi: string;
     } | null;
   } | null;
@@ -87,8 +87,8 @@ interface ThanhTichItem {
   file_quyet_dinh?: string | null;
   co_quan_don_vi?: {
     id: string;
-    ten_don_vi: string;
-    ma_don_vi: string;
+    ten_co_quan_don_vi: string;
+    ma_co_quan_don_vi: string;
   } | null;
   don_vi_truc_thuoc?: {
     id: string;
@@ -96,7 +96,7 @@ interface ThanhTichItem {
     ma_don_vi: string;
     co_quan_don_vi?: {
       id: string;
-      ten_don_vi: string;
+      ten_don_vi_truc: string;
       ma_don_vi: string;
     } | null;
   } | null;
@@ -242,13 +242,8 @@ export default function ProposalDetailPage() {
           }
         } else {
           // Với đề xuất cá nhân, kiểm tra so_quyet_dinh (bắt buộc)
-          // Nếu có danh hiệu BKBQP thì cần thêm so_quyet_dinh_bkbqp
           if (!item.so_quyet_dinh || item.so_quyet_dinh.trim() === '') {
             missingDecisions.push(`Cán bộ ${index + 1}: ${item.ho_ten || 'N/A'}`);
-          }
-          // Kiểm tra BKBQP nếu có
-          if (item.danh_hieu === 'BKBQP' && (!item.so_quyet_dinh_bkbqp || item.so_quyet_dinh_bkbqp.trim() === '')) {
-            missingDecisions.push(`Cán bộ ${index + 1} (${item.ho_ten || 'N/A'}): Thiếu số quyết định BKBQP`);
           }
         }
       });
@@ -359,19 +354,46 @@ export default function ProposalDetailPage() {
       // Apply decision to selected danh hieu
       const updatedDanhHieu = editedDanhHieu.map((item, index) => {
         if (selectedRowKeys.includes(index)) {
-          // Với đề xuất đơn vị hằng năm, dùng so_quyet_dinh
-          // Với đề xuất cá nhân có BKBQP, dùng so_quyet_dinh_bkbqp
-          if (proposal.loai_de_xuat === 'DON_VI_HANG_NAM') {
+          // Xác định loại quyết định dựa trên loai_khen_thuong hoặc số quyết định
+          const loaiKhenThuong = decision.loai_khen_thuong || '';
+          const soQuyetDinh = decision.so_quyet_dinh || '';
+          
+          // Kiểm tra nếu là quyết định BKBQP hoặc CSTDTQ
+          const isBKBQP = loaiKhenThuong.includes('BKBQP') || 
+                          soQuyetDinh.toLowerCase().includes('bkbqp') ||
+                          soQuyetDinh.toLowerCase().includes('bằng khen');
+          const isCSTDTQ = loaiKhenThuong.includes('CSTDTQ') || 
+                          loaiKhenThuong.includes('CSTĐTQ') ||
+                          soQuyetDinh.toLowerCase().includes('cstdtq') ||
+                          soQuyetDinh.toLowerCase().includes('chiến sĩ thi đua toàn quân');
+
+          // Nếu là quyết định BKBQP hoặc CSTDTQ, lưu vào trường tương ứng
+          if (isBKBQP) {
+            return {
+              ...item,
+              nhan_bkbqp: true,
+              so_quyet_dinh_bkbqp: decision.so_quyet_dinh,
+              file_quyet_dinh_bkbqp: decision.file_path || null,
+              // Giữ nguyên so_quyet_dinh cho danh hiệu chính (CSTDCS/CSTT)
+              so_quyet_dinh: item.so_quyet_dinh || null,
+              file_quyet_dinh: item.file_quyet_dinh || null,
+            };
+          } else if (isCSTDTQ) {
+            return {
+              ...item,
+              nhan_cstdtq: true,
+              so_quyet_dinh_cstdtq: decision.so_quyet_dinh,
+              file_quyet_dinh_cstdtq: decision.file_path || null,
+              // Giữ nguyên so_quyet_dinh cho danh hiệu chính (CSTDCS/CSTT)
+              so_quyet_dinh: item.so_quyet_dinh || null,
+              file_quyet_dinh: item.file_quyet_dinh || null,
+            };
+          } else {
+            // Quyết định cho danh hiệu chính (CSTDCS/CSTT)
             return {
               ...item,
               so_quyet_dinh: decision.so_quyet_dinh,
               file_quyet_dinh: decision.file_path || null,
-            };
-          } else {
-            return {
-              ...item,
-              so_quyet_dinh_bkbqp: decision.so_quyet_dinh,
-              file_quyet_dinh_bkbqp: decision.file_path || null,
             };
           }
         }
@@ -486,8 +508,12 @@ export default function ProposalDetailPage() {
     );
   }
 
-  // Columns cho đề xuất cá nhân
-  const danhHieuColumns = [
+  // ============================================
+  // COLUMNS CHO TỪNG LOẠI ĐỀ XUẤT
+  // ============================================
+  
+  // Columns cho CA_NHAN_HANG_NAM (Cá nhân Hằng năm)
+  const caNhanHangNamColumns = [
     {
       title: 'STT',
       key: 'stt',
@@ -505,13 +531,7 @@ export default function ProposalDetailPage() {
       key: 'co_quan_don_vi',
       width: 200,
       render: (_: any, record: DanhHieuItem) => {
-        if (record.don_vi_truc_thuoc?.co_quan_don_vi) {
-          return record.don_vi_truc_thuoc.co_quan_don_vi.ten_don_vi;
-        }
-        if (record.co_quan_don_vi) {
-          return record.co_quan_don_vi.ten_don_vi;
-        }
-        return '-';
+        return record.co_quan_don_vi?.ten_co_quan_don_vi || '-';
       },
     },
     {
@@ -519,10 +539,7 @@ export default function ProposalDetailPage() {
       key: 'don_vi_truc_thuoc',
       width: 200,
       render: (_: any, record: DanhHieuItem) => {
-        if (record.don_vi_truc_thuoc) {
-          return record.don_vi_truc_thuoc.ten_don_vi;
-        }
-        return '-';
+        return record.don_vi_truc_thuoc?.ten_don_vi || '-';
       },
     },
     {
@@ -564,7 +581,10 @@ export default function ProposalDetailPage() {
       key: 'so_quyet_dinh',
       width: 180,
       render: (_: any, record: DanhHieuItem, index: number) => {
-        const soQuyetDinh = record.so_quyet_dinh;
+        // Kiểm tra cả so_quyet_dinh và các trường cũ để tương thích với dữ liệu cũ
+        const soQuyetDinh = record.so_quyet_dinh || record.so_quyet_dinh_bkbqp || record.so_quyet_dinh_cstdtq;
+        const fileQuyetDinh = record.file_quyet_dinh || record.file_quyet_dinh_bkbqp || record.file_quyet_dinh_cstdtq;
+        
         if (!soQuyetDinh || (typeof soQuyetDinh === 'string' && soQuyetDinh.trim() === '')) {
           return <span style={{ color: '#999', fontWeight: 400 }}>Chưa có</span>;
         }
@@ -573,35 +593,11 @@ export default function ProposalDetailPage() {
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              handleOpenDecisionFile(soQuyetDinh, record.file_quyet_dinh);
+              handleOpenDecisionFile(soQuyetDinh, fileQuyetDinh);
             }}
             style={{ color: '#52c41a', fontWeight: 500, textDecoration: 'underline', cursor: 'pointer' }}
           >
             {soQuyetDinh}
-          </a>
-        );
-      },
-    },
-    {
-      title: 'Số quyết định BKBQP',
-      dataIndex: 'so_quyet_dinh_bkbqp',
-      key: 'so_quyet_dinh_bkbqp',
-      width: 180,
-      render: (_: any, record: DanhHieuItem, index: number) => {
-        const soQuyetDinhBKBQP = record.so_quyet_dinh_bkbqp;
-        if (!soQuyetDinhBKBQP || (typeof soQuyetDinhBKBQP === 'string' && soQuyetDinhBKBQP.trim() === '')) {
-          return <span style={{ color: '#999', fontWeight: 400 }}>Chưa có</span>;
-        }
-        return (
-          <a
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              handleOpenDecisionFile(soQuyetDinhBKBQP, record.file_quyet_dinh_bkbqp);
-            }}
-            style={{ color: '#52c41a', fontWeight: 500, textDecoration: 'underline', cursor: 'pointer' }}
-          >
-            {soQuyetDinhBKBQP}
           </a>
         );
       },
@@ -702,7 +698,10 @@ export default function ProposalDetailPage() {
       key: 'so_quyet_dinh',
       width: 180,
       render: (_: any, record: DanhHieuItem, index: number) => {
-        const soQuyetDinh = record.so_quyet_dinh;
+        // Kiểm tra cả so_quyet_dinh và các trường cũ để tương thích với dữ liệu cũ
+        const soQuyetDinh = record.so_quyet_dinh || record.so_quyet_dinh_bkbqp || record.so_quyet_dinh_cstdtq;
+        const fileQuyetDinh = record.file_quyet_dinh || record.file_quyet_dinh_bkbqp || record.file_quyet_dinh_cstdtq;
+        
         if (!soQuyetDinh || (typeof soQuyetDinh === 'string' && soQuyetDinh.trim() === '')) {
           return <span style={{ color: '#999', fontWeight: 400 }}>Chưa có</span>;
         }
@@ -711,7 +710,7 @@ export default function ProposalDetailPage() {
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              handleOpenDecisionFile(soQuyetDinh, record.file_quyet_dinh);
+              handleOpenDecisionFile(soQuyetDinh, fileQuyetDinh);
             }}
             style={{ color: '#52c41a', fontWeight: 500, textDecoration: 'underline', cursor: 'pointer' }}
           >
@@ -740,13 +739,7 @@ export default function ProposalDetailPage() {
       key: 'co_quan_don_vi',
       width: 200,
       render: (_: any, record: ThanhTichItem) => {
-        if (record.don_vi_truc_thuoc?.co_quan_don_vi) {
-          return record.don_vi_truc_thuoc.co_quan_don_vi.ten_don_vi;
-        }
-        if (record.co_quan_don_vi) {
-          return record.co_quan_don_vi.ten_don_vi;
-        }
-        return '-';
+        return record.co_quan_don_vi?.ten_co_quan_don_vi || '-';
       },
     },
     {
@@ -754,10 +747,7 @@ export default function ProposalDetailPage() {
       key: 'don_vi_truc_thuoc',
       width: 200,
       render: (_: any, record: ThanhTichItem) => {
-        if (record.don_vi_truc_thuoc) {
-          return record.don_vi_truc_thuoc.ten_don_vi;
-        }
-        return '-';
+        return record.don_vi_truc_thuoc?.ten_don_vi || '-';
       },
     },
     {
@@ -1063,7 +1053,13 @@ export default function ProposalDetailPage() {
           ) : (
             <Table
               rowSelection={proposal.status === 'PENDING' ? rowSelection : undefined}
-              columns={proposal.loai_de_xuat === 'DON_VI_HANG_NAM' ? donViHangNamColumns : danhHieuColumns}
+              columns={
+                proposal.loai_de_xuat === 'DON_VI_HANG_NAM' 
+                  ? donViHangNamColumns 
+                  : proposal.loai_de_xuat === 'CA_NHAN_HANG_NAM'
+                  ? caNhanHangNamColumns
+                  : caNhanHangNamColumns // Tạm thời dùng cho các loại khác (NIEN_HAN, CONG_HIEN, DOT_XUAT), sẽ tạo riêng sau
+              }
               dataSource={editedDanhHieu}
               rowKey={(_, index) => index}
               pagination={false}

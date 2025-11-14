@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Table, Select, Input, Alert, Typography, Space, Tag } from 'antd';
+import { Table, Select, Input, Alert, Typography, Space, Tag, message } from 'antd';
 import { EditOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import axiosInstance from '@/utils/axiosInstance';
@@ -155,15 +155,49 @@ export default function Step3SetTitles({
   };
 
   // Get danh hiệu options based on proposal type
+  // Xác định loại danh hiệu đã được chọn trong đề xuất
+  const getSelectedDanhHieuType = () => {
+    if (proposalType !== 'CA_NHAN_HANG_NAM') return null;
+    
+    const selectedDanhHieus = titleData
+      .map(item => item.danh_hieu)
+      .filter(Boolean);
+    
+    if (selectedDanhHieus.length === 0) return null;
+    
+    // Kiểm tra xem có CSTDCS/CSTT không
+    const hasChinh = selectedDanhHieus.some(dh => dh === 'CSTDCS' || dh === 'CSTT');
+    const hasBKBQP = selectedDanhHieus.some(dh => dh === 'BKBQP');
+    const hasCSTDTQ = selectedDanhHieus.some(dh => dh === 'CSTDTQ');
+    
+    if (hasChinh) {
+      return 'chinh'; // CSTDCS/CSTT
+    } else if (hasBKBQP || hasCSTDTQ) {
+      return 'bkbqp_cstdtq'; // BKBQP và CSTDTQ có thể cùng nhau
+    }
+    return null;
+  };
+
   const getDanhHieuOptions = () => {
     switch (proposalType) {
       case 'CA_NHAN_HANG_NAM':
-        return [
+        const selectedType = getSelectedDanhHieuType();
+        const allOptions = [
           { label: 'Chiến sĩ thi đua cơ sở (CSTDCS)', value: 'CSTDCS' },
           { label: 'Chiến sĩ tiên tiến (CSTT)', value: 'CSTT' },
           { label: 'Bằng khen của Bộ trưởng Bộ Quốc phòng (BKBQP)', value: 'BKBQP' },
           { label: 'Chiến sĩ thi đua toàn quân (CSTDTQ)', value: 'CSTDTQ' },
         ];
+        
+        // Nếu đã chọn CSTDCS/CSTT, chỉ hiển thị CSTDCS/CSTT
+        // Nếu đã chọn BKBQP/CSTDTQ, có thể chọn cả BKBQP và CSTDTQ
+        if (selectedType === 'chinh') {
+          return allOptions.filter(opt => opt.value === 'CSTDCS' || opt.value === 'CSTT');
+        } else if (selectedType === 'bkbqp_cstdtq') {
+          return allOptions.filter(opt => opt.value === 'BKBQP' || opt.value === 'CSTDTQ');
+        }
+        
+        return allOptions;
       case 'DON_VI_HANG_NAM':
         return [
           { label: 'Đơn vị Quyết thắng (ĐVQT)', value: 'ĐVQT' },
@@ -190,6 +224,36 @@ export default function Step3SetTitles({
 
   // Update title for a personnel/unit
   const updateTitle = (id: string, field: string, value: any) => {
+    // Validation: Kiểm tra nếu đang chọn danh hiệu và đã có danh hiệu khác loại
+    if (field === 'danh_hieu' && proposalType === 'CA_NHAN_HANG_NAM' && value) {
+      const selectedType = getSelectedDanhHieuType();
+      const isChinh = value === 'CSTDCS' || value === 'CSTT';
+      const isBKBQP_CSTDTQ = value === 'BKBQP' || value === 'CSTDTQ';
+      
+      // Kiểm tra xem có mix CSTDCS/CSTT với BKBQP/CSTDTQ không
+      if (selectedType === 'chinh' && isBKBQP_CSTDTQ) {
+        // Đã có CSTDCS/CSTT, không cho phép thêm BKBQP/CSTDTQ
+        const currentData = titleData.find(d => d.personnel_id === id);
+        if (!currentData || !currentData.danh_hieu) {
+          message.warning(
+            'Không thể đề xuất CSTDCS/CSTT cùng với BKBQP/CSTDTQ trong một đề xuất. ' +
+            'Vui lòng tạo đề xuất riêng cho loại danh hiệu này.'
+          );
+          return;
+        }
+      } else if (selectedType === 'bkbqp_cstdtq' && isChinh) {
+        // Đã có BKBQP/CSTDTQ, không cho phép thêm CSTDCS/CSTT
+        const currentData = titleData.find(d => d.personnel_id === id);
+        if (!currentData || !currentData.danh_hieu) {
+          message.warning(
+            'Không thể đề xuất CSTDCS/CSTT cùng với BKBQP/CSTDTQ trong một đề xuất. ' +
+            'Vui lòng tạo đề xuất riêng cho loại danh hiệu này.'
+          );
+          return;
+        }
+      }
+    }
+
     const newData = [...titleData];
     let index: number;
     
@@ -293,6 +357,7 @@ export default function Step3SetTitles({
             placeholder="Chọn danh hiệu"
             style={{ width: '100%' }}
             size="middle"
+            allowClear
             popupMatchSelectWidth={false}
             styles={{ popup: { root: { minWidth: 'max-content' } } }}
             options={getDanhHieuOptions()}
@@ -347,6 +412,9 @@ export default function Step3SetTitles({
             placeholder="Chọn danh hiệu"
             style={{ width: '100%' }}
             size="middle"
+            allowClear
+            popupMatchSelectWidth={false}
+            styles={{ popup: { root: { minWidth: 'max-content' } } }}
             options={getDanhHieuOptions()}
           />
         );

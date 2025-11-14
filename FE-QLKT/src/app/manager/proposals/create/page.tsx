@@ -479,23 +479,34 @@ export default function CreateProposalPage() {
               render: (text: string) => <Text strong>{text}</Text>,
             },
             {
-              title: 'CCCD',
-              dataIndex: 'cccd',
-              key: 'cccd',
-              width: 140,
-              render: (text: string) => <Text code>{text}</Text>,
-            },
-            {
               title: 'Cơ quan đơn vị',
               key: 'co_quan_don_vi',
-              width: 150,
-              render: (_, record) => record.CoQuanDonVi?.ten_don_vi || '-',
+              width: 180,
+              render: (_, record) => {
+                // Kiểm tra cả hai cấu trúc: từ API (CoQuanDonVi) và từ JSON (co_quan_don_vi)
+                if (record.co_quan_don_vi?.ten_co_quan_don_vi) {
+                  return record.co_quan_don_vi.ten_co_quan_don_vi;
+                }
+                if (record.CoQuanDonVi?.ten_don_vi) {
+                  return record.CoQuanDonVi.ten_don_vi;
+                }
+                return '-';
+              },
             },
             {
               title: 'Đơn vị trực thuộc',
               key: 'don_vi_truc_thuoc',
-              width: 150,
-              render: (_, record) => record.DonViTrucThuoc?.ten_don_vi || '-',
+              width: 180,
+              render: (_, record) => {
+                // Kiểm tra cả hai cấu trúc: từ API (DonViTrucThuoc) và từ JSON (don_vi_truc_thuoc)
+                if (record.don_vi_truc_thuoc?.ten_don_vi) {
+                  return record.don_vi_truc_thuoc.ten_don_vi;
+                }
+                if (record.DonViTrucThuoc?.ten_don_vi) {
+                  return record.DonViTrucThuoc.ten_don_vi;
+                }
+                return '-';
+              },
             }
           );
         }

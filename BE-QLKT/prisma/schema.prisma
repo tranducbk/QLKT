@@ -23,6 +23,7 @@ model CoQuanDonVi {
   QuanNhan               QuanNhan[]
   BangDeXuat             BangDeXuat[]
   TheoDoiKhenThuongDonVi TheoDoiKhenThuongDonVi[]
+  TheoDoiKhenThuongDonViCha TheoDoiKhenThuongDonVi[] @relation("CoQuanDonViCha")
 
   @@map("co_quan_don_vi")
 }
@@ -148,14 +149,16 @@ model LichSuChucVu {
 
 // 7. Bảng Thành tích khoa học (INPUT)
 model ThanhTichKhoaHoc {
-  id           String   @id @default(cuid()) @db.VarChar(30)
-  quan_nhan_id String   @db.VarChar(30)
-  nam          Int
-  loai         String   @db.VarChar(10) // NCKH, SKKH
-  mo_ta        String   @db.VarChar(500)
-  status       String   @default("PENDING") @db.VarChar(20) // APPROVED, PENDING
-  createdAt    DateTime @default(now()) @db.Timestamptz(6)
-  updatedAt    DateTime @updatedAt @db.Timestamptz(6)
+  id              String   @id @default(cuid()) @db.VarChar(30)
+  quan_nhan_id    String   @db.VarChar(30)
+  nam             Int
+  loai            String   @db.VarChar(10) // NCKH, SKKH
+  mo_ta           String   @db.VarChar(500)
+  status          String   @default("PENDING") @db.VarChar(20) // APPROVED, PENDING
+  so_quyet_dinh   String?  @db.VarChar(100) // Số quyết định khen thưởng (nếu có)
+  file_quyet_dinh String?  @db.VarChar(255) // Tên file PDF quyết định (nếu có)
+  createdAt       DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt       DateTime @updatedAt @db.Timestamptz(6)
 
   // Relations
   QuanNhan QuanNhan @relation(fields: [quan_nhan_id], references: [id], onDelete: Cascade)
@@ -287,10 +290,10 @@ model ThongBao {
 
 // 12. Bảng Đề xuất Khen thưởng (Proposals)
 model BangDeXuat {
-  id                   String    @id @default(uuid()) @db.Uuid
-  co_quan_don_vi_id    String?   @db.Uuid // ID cơ quan đơn vị của Manager nộp đề xuất (nullable)
-  don_vi_truc_thuoc_id String?   @db.Uuid // ID đơn vị trực thuộc của Manager nộp đề xuất (nullable)
-  nguoi_de_xuat_id     String    @db.Uuid // ID tài khoản người đề xuất
+  id                   String    @id @default(cuid()) @db.VarChar(30)
+  co_quan_don_vi_id    String?   @db.VarChar(30) // ID cơ quan đơn vị của Manager nộp đề xuất (nullable)
+  don_vi_truc_thuoc_id String?   @db.VarChar(30) // ID đơn vị trực thuộc của Manager nộp đề xuất (nullable)
+  nguoi_de_xuat_id     String    @db.VarChar(30) // ID tài khoản người đề xuất
   loai_de_xuat         String    @default("HANG_NAM") @db.VarChar(20) // HANG_NAM, NIEN_HAN
   nam                  Int       @default(2025) // Năm đề xuất
   status               String    @default("PENDING") @db.VarChar(20) // PENDING, APPROVED, REJECTED
@@ -302,7 +305,7 @@ model BangDeXuat {
   ten_file_pdf         String?   @db.VarChar(255) // Tên file PDF (Admin upload khi duyệt)
   ghi_chu              String?   @db.Text // Ghi chú từ Manager hoặc Admin
   rejection_reason     String?   @db.Text // Lý do từ chối (nếu status = REJECTED)
-  nguoi_duyet_id       String?   @db.Uuid // ID tài khoản Admin phê duyệt
+  nguoi_duyet_id       String?   @db.VarChar(30) // ID tài khoản Admin phê duyệt
   ngay_duyet           DateTime? @db.Timestamptz(6) // Ngày phê duyệt
   createdAt            DateTime  @default(now()) @db.Timestamptz(6)
   updatedAt            DateTime  @updatedAt @db.Timestamptz(6)
@@ -322,10 +325,12 @@ model TheoDoiKhenThuongDonVi {
   co_quan_don_vi_id         String?   @db.VarChar(30) // ID cơ quan đơn vị được khen thưởng (nullable)
   don_vi_truc_thuoc_id      String?   @db.VarChar(30) // ID đơn vị trực thuộc được khen thưởng (nullable)
   nam                       Int // Năm khen thưởng (chỉ hằng năm)
+  danh_hieu                 String?   @db.VarChar(50) // Danh hiệu: ĐVQT, ĐVTT, BKBQP, BKTTCP
+  ten_don_vi                String?   @db.VarChar(255) // Tên đơn vị (lưu để dễ query)
+  ma_don_vi                 String?   @db.VarChar(50) // Mã đơn vị (lưu để dễ query)
+  co_quan_don_vi_cha_id     String?   @db.VarChar(30) // ID cơ quan đơn vị cha (null nếu là đơn vị cha)
   so_quyet_dinh             String?   @db.VarChar(100) // Số quyết định khen thưởng (nếu đã có)
   ten_file_pdf              String?   @db.VarChar(255) // Tên file PDF quyết định (nếu có)
-  tong_so_quan_nhan         Int       @default(0) // Tổng số quân nhân được khen thưởng trong năm
-  chi_tiet                  Json? // Chi tiết khen thưởng (JSON)
   // Theo dõi điều kiện khen thưởng cấp trên dựa theo số năm liên tục
   so_nam_lien_tuc           Int       @default(0) // Số năm đạt tiêu chí liên tục đến năm hiện tại
   du_dieu_kien_bk_tong_cuc  Boolean   @default(false) // Đủ điều kiện 3 năm (đề xuất/đạt Bằng khen Tổng cục)
@@ -341,10 +346,11 @@ model TheoDoiKhenThuongDonVi {
   updatedAt                 DateTime  @updatedAt @db.Timestamptz(6)
 
   // Relations
-  CoQuanDonVi   CoQuanDonVi?   @relation(fields: [co_quan_don_vi_id], references: [id], onDelete: Cascade)
-  DonViTrucThuoc DonViTrucThuoc? @relation(fields: [don_vi_truc_thuoc_id], references: [id], onDelete: Cascade)
-  NguoiTao      TaiKhoan       @relation("TheoDoiKhenThuongTao", fields: [nguoi_tao_id], references: [id], onDelete: Cascade)
-  NguoiDuyet    TaiKhoan?      @relation("TheoDoiKhenThuongDuyet", fields: [nguoi_duyet_id], references: [id], onDelete: SetNull)
+  CoQuanDonVi        CoQuanDonVi?        @relation(fields: [co_quan_don_vi_id], references: [id], onDelete: Cascade)
+  DonViTrucThuoc     DonViTrucThuoc?     @relation(fields: [don_vi_truc_thuoc_id], references: [id], onDelete: Cascade)
+  CoQuanDonViCha     CoQuanDonVi?        @relation("CoQuanDonViCha", fields: [co_quan_don_vi_cha_id], references: [id], onDelete: SetNull)
+  NguoiTao           TaiKhoan            @relation("TheoDoiKhenThuongTao", fields: [nguoi_tao_id], references: [id], onDelete: Cascade)
+  NguoiDuyet         TaiKhoan?           @relation("TheoDoiKhenThuongDuyet", fields: [nguoi_duyet_id], references: [id], onDelete: SetNull)
 
   @@unique([co_quan_don_vi_id, nam], name: "unique_co_quan_don_vi_nam")
   @@unique([don_vi_truc_thuoc_id, nam], name: "unique_don_vi_truc_thuoc_nam")
@@ -353,8 +359,8 @@ model TheoDoiKhenThuongDonVi {
   @@map("theo_doi_khen_thuong_don_vi")
 }
 
-// 14. Bảng Quyết định Khen thưởng
-model QuyetDinhKhenThuong {
+// 14. Bảng File Quyết định
+model FileQuyetDinh {
   id               String   @id @default(uuid()) @db.Uuid
   so_quyet_dinh    String   @unique @db.VarChar(100) // Số quyết định (unique)
   nam              Int // Năm quyết định
@@ -369,7 +375,7 @@ model QuyetDinhKhenThuong {
   @@index([so_quyet_dinh])
   @@index([nam])
   @@index([loai_khen_thuong])
-  @@map("quyet_dinh_khen_thuong")
+  @@map("file_quyet_dinh")
 }
 
 generator erd {

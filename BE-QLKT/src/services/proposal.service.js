@@ -804,11 +804,50 @@ class ProposalService {
         }
       }
 
-      // Tạo map để lookup nhanh
+      // Tạo map để lookup nhanh và đảm bảo load đầy đủ thông tin đơn vị
       const personnelMap = {};
+      const missingDonViIds = new Set();
+
       personnelList.forEach(p => {
+        // Nếu có don_vi_truc_thuoc_id nhưng DonViTrucThuoc chưa được load, cần fetch lại
+        if (p.don_vi_truc_thuoc_id && !p.DonViTrucThuoc) {
+          missingDonViIds.add(p.don_vi_truc_thuoc_id);
+        }
         personnelMap[p.id] = p;
       });
+
+      // Fetch lại các đơn vị trực thuộc bị thiếu
+      if (missingDonViIds.size > 0) {
+        const missingDonVis = await prisma.donViTrucThuoc.findMany({
+          where: {
+            id: {
+              in: Array.from(missingDonViIds),
+            },
+          },
+          include: {
+            CoQuanDonVi: {
+              select: {
+                id: true,
+                ten_don_vi: true,
+                ma_don_vi: true,
+              },
+            },
+          },
+        });
+
+        const donViMap = {};
+        missingDonVis.forEach(dv => {
+          donViMap[dv.id] = dv;
+        });
+
+        // Cập nhật lại personnelMap với thông tin đơn vị đã fetch
+        Object.keys(personnelMap).forEach(personnelId => {
+          const personnel = personnelMap[personnelId];
+          if (personnel.don_vi_truc_thuoc_id && !personnel.DonViTrucThuoc) {
+            personnel.DonViTrucThuoc = donViMap[personnel.don_vi_truc_thuoc_id] || null;
+          }
+        });
+      }
 
       // Format titleData theo type và enrich với thông tin quân nhân/đơn vị
       let dataDanhHieu = null;
@@ -832,8 +871,8 @@ class ProposalService {
             co_quan_don_vi: personnel?.CoQuanDonVi
               ? {
                   id: personnel.CoQuanDonVi.id,
-                  ten_don_vi: personnel.CoQuanDonVi.ten_don_vi,
-                  ma_don_vi: personnel.CoQuanDonVi.ma_don_vi,
+                  ten_co_quan_don_vi: personnel.CoQuanDonVi.ten_don_vi,
+                  ma_co_quan_don_vi: personnel.CoQuanDonVi.ma_don_vi,
                 }
               : null,
             don_vi_truc_thuoc: personnel?.DonViTrucThuoc
@@ -844,7 +883,7 @@ class ProposalService {
                   co_quan_don_vi: personnel.DonViTrucThuoc.CoQuanDonVi
                     ? {
                         id: personnel.DonViTrucThuoc.CoQuanDonVi.id,
-                        ten_don_vi: personnel.DonViTrucThuoc.CoQuanDonVi.ten_don_vi,
+                        ten_don_vi_truc: personnel.DonViTrucThuoc.CoQuanDonVi.ten_don_vi,
                         ma_don_vi: personnel.DonViTrucThuoc.CoQuanDonVi.ma_don_vi,
                       }
                     : null,
@@ -906,37 +945,53 @@ class ProposalService {
             };
           })
         );
-      } else if (type === 'CA_NHAN_HANG_NAM' || type === 'HANG_NAM') {
+      } else if (type === 'CA_NHAN_HANG_NAM') {
         // Standard: titleData = [{ personnel_id, danh_hieu }]
         // Không lưu cccd, thêm thông tin đơn vị
+        // Luôn lưu cả co_quan_don_vi và don_vi_truc_thuoc nếu quân nhân có dữ liệu
         dataDanhHieu = titleData.map(item => {
           const personnel = personnelMap[item.personnel_id];
+
+          // Xác định đơn vị của quân nhân
+          const personnelCoQuanDonVi = personnel?.CoQuanDonVi;
+          const personnelDonViTrucThuoc = personnel?.DonViTrucThuoc;
+
+          // Luôn lưu cả hai nếu có dữ liệu
+          let coQuanDonVi = null;
+          let donViTrucThuoc = null;
+
+          if (personnelCoQuanDonVi) {
+            coQuanDonVi = {
+              id: personnelCoQuanDonVi.id,
+              ten_co_quan_don_vi: personnelCoQuanDonVi.ten_don_vi,
+              ma_co_quan_don_vi: personnelCoQuanDonVi.ma_don_vi,
+            };
+          }
+
+          // Kiểm tra cả don_vi_truc_thuoc_id và DonViTrucThuoc để đảm bảo lưu đúng
+          // Nếu có don_vi_truc_thuoc_id, phải có DonViTrucThuoc (đã được fetch ở trên nếu thiếu)
+          if (personnel?.don_vi_truc_thuoc_id && personnelDonViTrucThuoc) {
+            donViTrucThuoc = {
+              id: personnelDonViTrucThuoc.id,
+              ten_don_vi: personnelDonViTrucThuoc.ten_don_vi,
+              ma_don_vi: personnelDonViTrucThuoc.ma_don_vi,
+              co_quan_don_vi: personnelDonViTrucThuoc.CoQuanDonVi
+                ? {
+                    id: personnelDonViTrucThuoc.CoQuanDonVi.id,
+                    ten_don_vi_truc: personnelDonViTrucThuoc.CoQuanDonVi.ten_don_vi,
+                    ma_don_vi: personnelDonViTrucThuoc.CoQuanDonVi.ma_don_vi,
+                  }
+                : null,
+            };
+          }
+
           return {
             personnel_id: item.personnel_id,
             ho_ten: personnel?.ho_ten || '',
             nam: nam,
             danh_hieu: item.danh_hieu,
-            co_quan_don_vi: personnel?.CoQuanDonVi
-              ? {
-                  id: personnel.CoQuanDonVi.id,
-                  ten_don_vi: personnel.CoQuanDonVi.ten_don_vi,
-                  ma_don_vi: personnel.CoQuanDonVi.ma_don_vi,
-                }
-              : null,
-            don_vi_truc_thuoc: personnel?.DonViTrucThuoc
-              ? {
-                  id: personnel.DonViTrucThuoc.id,
-                  ten_don_vi: personnel.DonViTrucThuoc.ten_don_vi,
-                  ma_don_vi: personnel.DonViTrucThuoc.ma_don_vi,
-                  co_quan_don_vi: personnel.DonViTrucThuoc.CoQuanDonVi
-                    ? {
-                        id: personnel.DonViTrucThuoc.CoQuanDonVi.id,
-                        ten_don_vi: personnel.DonViTrucThuoc.CoQuanDonVi.ten_don_vi,
-                        ma_don_vi: personnel.DonViTrucThuoc.CoQuanDonVi.ma_don_vi,
-                      }
-                    : null,
-                }
-              : null,
+            co_quan_don_vi: coQuanDonVi,
+            don_vi_truc_thuoc: donViTrucThuoc,
           };
         });
       } else {
@@ -952,8 +1007,8 @@ class ProposalService {
             co_quan_don_vi: personnel?.CoQuanDonVi
               ? {
                   id: personnel.CoQuanDonVi.id,
-                  ten_don_vi: personnel.CoQuanDonVi.ten_don_vi,
-                  ma_don_vi: personnel.CoQuanDonVi.ma_don_vi,
+                  ten_co_quan_don_vi: personnel.CoQuanDonVi.ten_don_vi,
+                  ma_co_quan_don_vi: personnel.CoQuanDonVi.ma_don_vi,
                 }
               : null,
             don_vi_truc_thuoc: personnel?.DonViTrucThuoc
@@ -964,7 +1019,7 @@ class ProposalService {
                   co_quan_don_vi: personnel.DonViTrucThuoc.CoQuanDonVi
                     ? {
                         id: personnel.DonViTrucThuoc.CoQuanDonVi.id,
-                        ten_don_vi: personnel.DonViTrucThuoc.CoQuanDonVi.ten_don_vi,
+                        ten_don_vi_truc: personnel.DonViTrucThuoc.CoQuanDonVi.ten_don_vi,
                         ma_don_vi: personnel.DonViTrucThuoc.CoQuanDonVi.ma_don_vi,
                       }
                     : null,
@@ -972,6 +1027,28 @@ class ProposalService {
               : null,
           };
         });
+      }
+
+      // ============================================
+      // VALIDATION: Đảm bảo không mix CSTDCS/CSTT với BKBQP/CSTDTQ
+      // BKBQP và CSTDTQ có thể đề xuất cùng nhau
+      // ============================================
+      if (type === 'CA_NHAN_HANG_NAM' && dataDanhHieu && dataDanhHieu.length > 0) {
+        // Kiểm tra xem có CSTDCS/CSTT không
+        const hasChinh = dataDanhHieu.some(
+          item => item.danh_hieu === 'CSTDCS' || item.danh_hieu === 'CSTT'
+        );
+        const hasBKBQP = dataDanhHieu.some(item => item.danh_hieu === 'BKBQP');
+        const hasCSTDTQ = dataDanhHieu.some(item => item.danh_hieu === 'CSTDTQ');
+
+        // Không cho phép mix CSTDCS/CSTT với BKBQP/CSTDTQ
+        // BKBQP và CSTDTQ có thể đề xuất cùng nhau
+        if (hasChinh && (hasBKBQP || hasCSTDTQ)) {
+          throw new Error(
+            'Không thể đề xuất CSTDCS/CSTT cùng với BKBQP/CSTDTQ trong một đề xuất. ' +
+              'Vui lòng tách thành các đề xuất riêng: một đề xuất cho CSTDCS/CSTT, và một đề xuất riêng cho BKBQP/CSTDTQ.'
+          );
+        }
       }
 
       // ============================================
@@ -1330,12 +1407,13 @@ class ProposalService {
               nam: item.nam || proposal.createdAt?.getFullYear() || new Date().getFullYear(),
             };
 
-            // Thêm thông tin đơn vị nếu chưa có
+            // Thêm thông tin đơn vị nếu chưa có (theo cấu trúc mới)
+            // Luôn lưu cả hai nếu quân nhân có dữ liệu
             if (!item.co_quan_don_vi && personnel?.CoQuanDonVi) {
               enrichedItem.co_quan_don_vi = {
                 id: personnel.CoQuanDonVi.id,
-                ten_don_vi: personnel.CoQuanDonVi.ten_don_vi,
-                ma_don_vi: personnel.CoQuanDonVi.ma_don_vi,
+                ten_co_quan_don_vi: personnel.CoQuanDonVi.ten_don_vi,
+                ma_co_quan_don_vi: personnel.CoQuanDonVi.ma_don_vi,
               };
             }
             if (!item.don_vi_truc_thuoc && personnel?.DonViTrucThuoc) {
@@ -1346,7 +1424,7 @@ class ProposalService {
                 co_quan_don_vi: personnel.DonViTrucThuoc.CoQuanDonVi
                   ? {
                       id: personnel.DonViTrucThuoc.CoQuanDonVi.id,
-                      ten_don_vi: personnel.DonViTrucThuoc.CoQuanDonVi.ten_don_vi,
+                      ten_don_vi_truc: personnel.DonViTrucThuoc.CoQuanDonVi.ten_don_vi,
                       ma_don_vi: personnel.DonViTrucThuoc.CoQuanDonVi.ma_don_vi,
                     }
                   : null,
@@ -1365,12 +1443,13 @@ class ProposalService {
               nam: item.nam || proposal.createdAt?.getFullYear() || new Date().getFullYear(),
             };
 
-            // Thêm thông tin đơn vị nếu chưa có
+            // Thêm thông tin đơn vị nếu chưa có (theo cấu trúc mới)
+            // Luôn lưu cả hai nếu quân nhân có dữ liệu
             if (!item.co_quan_don_vi && personnel?.CoQuanDonVi) {
               enrichedItem.co_quan_don_vi = {
                 id: personnel.CoQuanDonVi.id,
-                ten_don_vi: personnel.CoQuanDonVi.ten_don_vi,
-                ma_don_vi: personnel.CoQuanDonVi.ma_don_vi,
+                ten_co_quan_don_vi: personnel.CoQuanDonVi.ten_don_vi,
+                ma_co_quan_don_vi: personnel.CoQuanDonVi.ma_don_vi,
               };
             }
             if (!item.don_vi_truc_thuoc && personnel?.DonViTrucThuoc) {
@@ -1381,7 +1460,7 @@ class ProposalService {
                 co_quan_don_vi: personnel.DonViTrucThuoc.CoQuanDonVi
                   ? {
                       id: personnel.DonViTrucThuoc.CoQuanDonVi.id,
-                      ten_don_vi: personnel.DonViTrucThuoc.CoQuanDonVi.ten_don_vi,
+                      ten_don_vi_truc: personnel.DonViTrucThuoc.CoQuanDonVi.ten_don_vi,
                       ma_don_vi: personnel.DonViTrucThuoc.CoQuanDonVi.ma_don_vi,
                     }
                   : null,
@@ -1826,19 +1905,19 @@ class ProposalService {
         // Với đề xuất cá nhân, import vào bảng DanhHieuHangNam
         for (const item of danhHieuData) {
           try {
-            // Kiểm tra có CCCD không (bắt buộc cho đề xuất cá nhân)
-            if (!item.cccd) {
-              errors.push(`Thiếu CCCD trong dữ liệu danh hiệu: ${JSON.stringify(item)}`);
+            // Kiểm tra có personnel_id không (bắt buộc cho đề xuất cá nhân)
+            if (!item.personnel_id) {
+              errors.push(`Thiếu personnel_id trong dữ liệu danh hiệu: ${JSON.stringify(item)}`);
               continue;
             }
 
-            // Tìm quân nhân theo CCCD
+            // Tìm quân nhân theo personnel_id
             const quanNhan = await prisma.quanNhan.findUnique({
-              where: { cccd: item.cccd },
+              where: { id: item.personnel_id },
             });
 
             if (!quanNhan) {
-              errors.push(`Không tìm thấy quân nhân CCCD: ${item.cccd}`);
+              errors.push(`Không tìm thấy quân nhân với ID: ${item.personnel_id}`);
               continue;
             }
 
@@ -1848,49 +1927,68 @@ class ProposalService {
             const filePdfDanhHieu = danhHieuDecision.file_pdf;
 
             // Quyết định BKBQP và CSTDTQ (từ item hoặc từ special mapping)
+            // Nếu có so_quyet_dinh_bkbqp hoặc file_quyet_dinh_bkbqp, tự động set nhan_bkbqp = true
             let soQuyetDinhBKBQP = item.so_quyet_dinh_bkbqp;
-            let filePdfBKBQP = null;
-            if (item.nhan_bkbqp && specialDecisionMapping.BKBQP) {
-              soQuyetDinhBKBQP = soQuyetDinhBKBQP || specialDecisionMapping.BKBQP.so_quyet_dinh;
-              filePdfBKBQP = specialDecisionMapping.BKBQP.file_pdf;
+            let filePdfBKBQP = item.file_quyet_dinh_bkbqp || null;
+            let nhanBKBQP = item.nhan_bkbqp || false;
+
+            // Tự động nhận diện nếu có quyết định BKBQP
+            if (soQuyetDinhBKBQP || filePdfBKBQP) {
+              nhanBKBQP = true;
             }
 
-            let soQuyetDinhCSTDTQ = item.so_quyet_dinh_cstdtq;
-            let filePdfCSTDTQ = null;
-            if (item.nhan_cstdtq && specialDecisionMapping.CSTDTQ) {
-              soQuyetDinhCSTDTQ = soQuyetDinhCSTDTQ || specialDecisionMapping.CSTDTQ.so_quyet_dinh;
-              filePdfCSTDTQ = specialDecisionMapping.CSTDTQ.file_pdf;
+            if (nhanBKBQP && specialDecisionMapping.BKBQP) {
+              soQuyetDinhBKBQP = soQuyetDinhBKBQP || specialDecisionMapping.BKBQP.so_quyet_dinh;
+              filePdfBKBQP = filePdfBKBQP || specialDecisionMapping.BKBQP.file_pdf;
             }
+
+            // Nếu có so_quyet_dinh_cstdtq hoặc file_quyet_dinh_cstdtq, tự động set nhan_cstdtq = true
+            let soQuyetDinhCSTDTQ = item.so_quyet_dinh_cstdtq;
+            let filePdfCSTDTQ = item.file_quyet_dinh_cstdtq || null;
+            let nhanCSTDTQ = item.nhan_cstdtq || false;
+
+            // Tự động nhận diện nếu có quyết định CSTDTQ
+            if (soQuyetDinhCSTDTQ || filePdfCSTDTQ) {
+              nhanCSTDTQ = true;
+            }
+
+            if (nhanCSTDTQ && specialDecisionMapping.CSTDTQ) {
+              soQuyetDinhCSTDTQ = soQuyetDinhCSTDTQ || specialDecisionMapping.CSTDTQ.so_quyet_dinh;
+              filePdfCSTDTQ = filePdfCSTDTQ || specialDecisionMapping.CSTDTQ.file_pdf;
+            }
+
+            // Lưu vào cùng năm đề xuất (không phải năm trong item.nam)
+            const namLuu = proposal.nam;
 
             // Upsert vào bảng DanhHieuHangNam
             await prisma.danhHieuHangNam.upsert({
               where: {
                 quan_nhan_id_nam: {
                   quan_nhan_id: quanNhan.id,
-                  nam: item.nam,
+                  nam: namLuu,
                 },
               },
               update: {
                 danh_hieu: item.danh_hieu,
                 so_quyet_dinh: soQuyetDinhDanhHieu,
                 file_quyet_dinh: filePdfDanhHieu,
-                nhan_bkbqp: item.nhan_bkbqp || false,
+                nhan_bkbqp: nhanBKBQP,
                 so_quyet_dinh_bkbqp: soQuyetDinhBKBQP,
                 file_quyet_dinh_bkbqp: filePdfBKBQP,
-                nhan_cstdtq: item.nhan_cstdtq || false,
+                nhan_cstdtq: nhanCSTDTQ,
                 so_quyet_dinh_cstdtq: soQuyetDinhCSTDTQ,
                 file_quyet_dinh_cstdtq: filePdfCSTDTQ,
               },
               create: {
                 quan_nhan_id: quanNhan.id,
-                nam: item.nam,
+                nam: namLuu,
                 danh_hieu: item.danh_hieu,
                 so_quyet_dinh: soQuyetDinhDanhHieu,
                 file_quyet_dinh: filePdfDanhHieu,
-                nhan_bkbqp: item.nhan_bkbqp || false,
+                nhan_bkbqp: nhanBKBQP,
                 so_quyet_dinh_bkbqp: soQuyetDinhBKBQP,
                 file_quyet_dinh_bkbqp: filePdfBKBQP,
-                nhan_cstdtq: item.nhan_cstdtq || false,
+                nhan_cstdtq: nhanCSTDTQ,
                 so_quyet_dinh_cstdtq: soQuyetDinhCSTDTQ,
                 file_quyet_dinh_cstdtq: filePdfCSTDTQ,
               },
@@ -1899,7 +1997,9 @@ class ProposalService {
             importedDanhHieu++;
             affectedPersonnelIds.add(quanNhan.id); // Track personnel bị ảnh hưởng
           } catch (error) {
-            errors.push(`Lỗi import danh hiệu CCCD ${item.cccd || 'N/A'}: ${error.message}`);
+            errors.push(
+              `Lỗi import danh hiệu personnel_id ${item.personnel_id || 'N/A'}: ${error.message}`
+            );
           }
         }
       }
