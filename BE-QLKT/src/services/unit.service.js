@@ -80,6 +80,88 @@ class UnitService {
   }
 
   /**
+   * Lấy đơn vị của Manager và các đơn vị con
+   * @param {string} userQuanNhanId - ID của quân nhân (Manager)
+   * @returns {Promise<Array>} - Mảng gồm đơn vị cha và các đơn vị con
+   */
+  async getManagerUnits(userQuanNhanId) {
+    try {
+      // Lấy thông tin quân nhân của Manager
+      const manager = await prisma.quanNhan.findUnique({
+        where: { id: userQuanNhanId },
+        select: {
+          co_quan_don_vi_id: true,
+          don_vi_truc_thuoc_id: true,
+        },
+      });
+
+      if (!manager) {
+        throw new Error('Không tìm thấy thông tin quân nhân');
+      }
+
+      const units = [];
+
+      // Manager thuộc cơ quan đơn vị
+      if (manager.co_quan_don_vi_id) {
+        // Lấy cơ quan đơn vị của Manager
+        const coQuanDonVi = await prisma.coQuanDonVi.findUnique({
+          where: { id: manager.co_quan_don_vi_id },
+          select: {
+            id: true,
+            ten_don_vi: true,
+            ma_don_vi: true,
+          },
+        });
+
+        if (coQuanDonVi) {
+          units.push(coQuanDonVi);
+        }
+
+        // Lấy tất cả đơn vị trực thuộc của cơ quan đơn vị này
+        const donViTrucThuoc = await prisma.donViTrucThuoc.findMany({
+          where: { co_quan_don_vi_id: manager.co_quan_don_vi_id },
+          include: {
+            CoQuanDonVi: {
+              select: {
+                id: true,
+                ten_don_vi: true,
+                ma_don_vi: true,
+              },
+            },
+          },
+          orderBy: {
+            ma_don_vi: 'asc',
+          },
+        });
+
+        units.push(...donViTrucThuoc);
+      } else if (manager.don_vi_truc_thuoc_id) {
+        // Manager thuộc đơn vị trực thuộc (ít gặp, nhưng xử lý để đầy đủ)
+        const donViTrucThuoc = await prisma.donViTrucThuoc.findUnique({
+          where: { id: manager.don_vi_truc_thuoc_id },
+          include: {
+            CoQuanDonVi: {
+              select: {
+                id: true,
+                ten_don_vi: true,
+                ma_don_vi: true,
+              },
+            },
+          },
+        });
+
+        if (donViTrucThuoc) {
+          units.push(donViTrucThuoc);
+        }
+      }
+
+      return units;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
    * Tạo cơ quan đơn vị mới hoặc đơn vị trực thuộc (nếu có co_quan_don_vi_id)
    */
   async createUnit(data) {

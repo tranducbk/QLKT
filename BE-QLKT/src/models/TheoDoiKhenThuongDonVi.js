@@ -5,26 +5,59 @@ const TheoDoiKhenThuongDonVi = sequelize.define(
   'TheoDoiKhenThuongDonVi',
   {
     id: {
-      type: DataTypes.INTEGER,
+      type: DataTypes.STRING(30),
       primaryKey: true,
-      autoIncrement: true,
     },
-    don_vi_id: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
+    co_quan_don_vi_id: {
+      type: DataTypes.STRING(30),
+      allowNull: true,
       references: {
-        model: 'don_vi',
+        model: 'co_quan_don_vi',
         key: 'id',
       },
       onDelete: 'CASCADE',
-      comment: 'ID đơn vị được khen thưởng',
+      comment: 'ID cơ quan đơn vị được khen thưởng (nullable)',
+    },
+    don_vi_truc_thuoc_id: {
+      type: DataTypes.STRING(30),
+      allowNull: true,
+      references: {
+        model: 'don_vi_truc_thuoc',
+        key: 'id',
+      },
+      onDelete: 'CASCADE',
+      comment: 'ID đơn vị trực thuộc được khen thưởng (nullable)',
     },
     nam: {
       type: DataTypes.INTEGER,
       allowNull: false,
       comment: 'Năm khen thưởng',
     },
-    // Theo dõi điều kiện 3 năm/5 năm chỉ áp dụng hằng năm
+    danh_hieu: {
+      type: DataTypes.STRING(50),
+      allowNull: true,
+      comment: 'Danh hiệu: ĐVQT, ĐVTT, BKBQP, BKTTCP',
+    },
+    ten_don_vi: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+      comment: 'Tên đơn vị (lưu để dễ query)',
+    },
+    ma_don_vi: {
+      type: DataTypes.STRING(50),
+      allowNull: true,
+      comment: 'Mã đơn vị (lưu để dễ query)',
+    },
+    co_quan_don_vi_cha_id: {
+      type: DataTypes.STRING(30),
+      allowNull: true,
+      references: {
+        model: 'co_quan_don_vi',
+        key: 'id',
+      },
+      onDelete: 'SET NULL',
+      comment: 'ID cơ quan đơn vị cha (null nếu là đơn vị cha)',
+    },
     so_quyet_dinh: {
       type: DataTypes.STRING(100),
       allowNull: true,
@@ -34,16 +67,6 @@ const TheoDoiKhenThuongDonVi = sequelize.define(
       type: DataTypes.STRING(255),
       allowNull: true,
       comment: 'Tên file PDF quyết định (nếu có)',
-    },
-    tong_so_quan_nhan: {
-      type: DataTypes.INTEGER,
-      defaultValue: 0,
-      comment: 'Tổng số quân nhân được khen thưởng',
-    },
-    chi_tiet: {
-      type: DataTypes.JSON,
-      allowNull: true,
-      comment: 'Chi tiết khen thưởng (JSON): danh sách quân nhân, loại khen thưởng, v.v.',
     },
     so_nam_lien_tuc: {
       type: DataTypes.INTEGER,
@@ -55,13 +78,13 @@ const TheoDoiKhenThuongDonVi = sequelize.define(
       type: DataTypes.BOOLEAN,
       allowNull: false,
       defaultValue: false,
-      comment: 'Đủ điều kiện 3 năm để đề xuất/đạt Bằng khen Tổng cục',
+      comment: 'Đủ điều kiện 3 năm (đề xuất/đạt Bằng khen Tổng cục)',
     },
     du_dieu_kien_bk_thu_tuong: {
       type: DataTypes.BOOLEAN,
       allowNull: false,
       defaultValue: false,
-      comment: 'Đủ điều kiện 5 năm để đề xuất/đạt Bằng khen Thủ tướng',
+      comment: 'Đủ điều kiện 5 năm (đề xuất/đạt Bằng khen Thủ tướng)',
     },
     goi_y: {
       type: DataTypes.TEXT,
@@ -75,17 +98,17 @@ const TheoDoiKhenThuongDonVi = sequelize.define(
       comment: 'PENDING, APPROVED, REJECTED',
     },
     nguoi_tao_id: {
-      type: DataTypes.INTEGER,
+      type: DataTypes.STRING(30),
       allowNull: false,
       references: {
         model: 'tai_khoan',
         key: 'id',
       },
-      onDelete: 'RESTRICT',
-      comment: 'ID người tạo bản ghi (thường là Admin phê duyệt đề xuất)',
+      onDelete: 'CASCADE',
+      comment: 'ID người tạo (Admin phê duyệt)',
     },
     nguoi_duyet_id: {
-      type: DataTypes.INTEGER,
+      type: DataTypes.STRING(30),
       allowNull: true,
       references: {
         model: 'tai_khoan',
@@ -97,7 +120,7 @@ const TheoDoiKhenThuongDonVi = sequelize.define(
     ngay_duyet: {
       type: DataTypes.DATE,
       allowNull: true,
-      comment: 'Thời gian duyệt',
+      comment: 'Ngày duyệt',
     },
     ghi_chu: {
       type: DataTypes.TEXT,
@@ -120,12 +143,20 @@ const TheoDoiKhenThuongDonVi = sequelize.define(
     timestamps: true,
     indexes: [
       {
-        fields: ['don_vi_id', 'nam'],
+        fields: ['co_quan_don_vi_id', 'nam'],
         unique: true,
-        name: 'unique_don_vi_nam',
+        name: 'unique_co_quan_don_vi_nam',
       },
       {
-        fields: ['don_vi_id', 'nam'],
+        fields: ['don_vi_truc_thuoc_id', 'nam'],
+        unique: true,
+        name: 'unique_don_vi_truc_thuoc_nam',
+      },
+      {
+        fields: ['co_quan_don_vi_id', 'nam'],
+      },
+      {
+        fields: ['don_vi_truc_thuoc_id', 'nam'],
       },
     ],
   }

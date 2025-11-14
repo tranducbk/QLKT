@@ -10,6 +10,7 @@ import {
   Drawer,
   Switch,
   ConfigProvider,
+  App,
   theme as antdTheme,
 } from 'antd';
 import {
@@ -232,6 +233,11 @@ export default function MainLayout({ children, role = 'ADMIN' }: MainLayoutProps
           label: <Link href="/admin/proposals/review">Duyệt Đề xuất</Link>,
         },
         {
+          key: 'decisions',
+          icon: <FileTextOutlined />,
+          label: <Link href="/admin/decisions">Quản lý Quyết định</Link>,
+        },
+        {
           key: 'awards',
           icon: <FileTextOutlined />,
           label: <Link href="/admin/awards">Quản lý Khen Thưởng</Link>,
@@ -420,7 +426,8 @@ export default function MainLayout({ children, role = 'ADMIN' }: MainLayoutProps
         },
       }}
     >
-      <Layout className="min-h-screen">
+      <App>
+        <Layout className="min-h-screen">
         {/* Desktop Sidebar */}
         {!isMobile && (
           <Sider
@@ -646,6 +653,7 @@ export default function MainLayout({ children, role = 'ADMIN' }: MainLayoutProps
           </Footer>
         </Layout>
       </Layout>
+      </App>
     </ConfigProvider>
   );
 }

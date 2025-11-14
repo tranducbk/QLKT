@@ -127,8 +127,7 @@ class DecisionController {
    */
   async createDecision(req, res) {
     try {
-      const { so_quyet_dinh, nam, ngay_ky, nguoi_ky, file_path, loai_khen_thuong, ghi_chu } =
-        req.body;
+      const { so_quyet_dinh, nam, ngay_ky, nguoi_ky, loai_khen_thuong, ghi_chu } = req.body;
 
       // Validate input
       if (!so_quyet_dinh || !nam || !ngay_ky || !nguoi_ky) {
@@ -136,6 +135,12 @@ class DecisionController {
           success: false,
           message: 'Vui lòng nhập đầy đủ thông tin bắt buộc: số quyết định, năm, ngày ký, người ký',
         });
+      }
+
+      // Xử lý file nếu có
+      let file_path = null;
+      if (req.file) {
+        file_path = `uploads/decisions/${req.file.filename}`;
       }
 
       const decision = await decisionService.createDecision({
@@ -169,8 +174,13 @@ class DecisionController {
   async updateDecision(req, res) {
     try {
       const { id } = req.params;
-      const { so_quyet_dinh, nam, ngay_ky, nguoi_ky, file_path, loai_khen_thuong, ghi_chu } =
-        req.body;
+      const { so_quyet_dinh, nam, ngay_ky, nguoi_ky, loai_khen_thuong, ghi_chu } = req.body;
+
+      // Xử lý file nếu có
+      let file_path = req.body.file_path; // Giữ nguyên nếu không có file mới
+      if (req.file) {
+        file_path = `uploads/decisions/${req.file.filename}`;
+      }
 
       if (
         !so_quyet_dinh &&

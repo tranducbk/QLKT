@@ -1,8 +1,57 @@
 const express = require('express');
 const router = express.Router();
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
 const decisionController = require('../controllers/decision.controller');
 const { verifyToken, requireAdmin } = require('../middlewares/auth');
 const { auditLog, createDescription, getResourceId } = require('../middlewares/auditLog');
+
+// Cấu hình multer để lưu file vào thư mục uploads/decisions
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const uploadDir = path.join(__dirname, '..', '..', 'uploads', 'decisions');
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    // Giữ nguyên tên file gốc, thêm số thứ tự nếu trùng
+    const originalName = Buffer.from(file.originalname, 'latin1').toString('utf8'); // Xử lý tên file có ký tự đặc biệt
+    const ext = path.extname(originalName);
+    const baseName = path.basename(originalName, ext);
+    
+    let filename = originalName;
+    let counter = 1;
+    const uploadDir = path.join(__dirname, '..', '..', 'uploads', 'decisions');
+    
+    // Kiểm tra nếu file đã tồn tại, thêm số thứ tự
+    while (fs.existsSync(path.join(uploadDir, filename))) {
+      filename = `${baseName}(${counter})${ext}`;
+      counter++;
+    }
+    
+    cb(null, filename);
+  },
+});
+
+const upload = multer({
+  storage: storage,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    ];
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Chỉ chấp nhận file PDF, DOC, DOCX'));
+    }
+  },
+});
 
 /**
  * @route   GET /api/decisions
@@ -60,6 +109,7 @@ router.post(
   '/',
   verifyToken,
   requireAdmin,
+  upload.single('file'),
   auditLog({
     action: 'CREATE',
     resource: 'decisions',
@@ -81,6 +131,7 @@ router.put(
   '/:id',
   verifyToken,
   requireAdmin,
+  upload.single('file'),
   auditLog({
     action: 'UPDATE',
     resource: 'decisions',

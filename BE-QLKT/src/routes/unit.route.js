@@ -1,8 +1,15 @@
 const express = require('express');
 const router = express.Router();
 const unitController = require('../controllers/unit.controller');
-const { verifyToken, requireAdmin } = require('../middlewares/auth');
+const { verifyToken, requireAdmin, requireManager } = require('../middlewares/auth');
 const { auditLog, createDescription, getResourceId } = require('../middlewares/auditLog');
+
+/**
+ * @route   GET /api/units/my-units
+ * @desc    Lấy đơn vị của Manager và các đơn vị con
+ * @access  Private - MANAGER
+ */
+router.get('/my-units', verifyToken, requireManager, unitController.getMyUnits);
 
 /**
  * @route   GET /api/units

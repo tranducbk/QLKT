@@ -30,6 +30,7 @@ import dayjs from 'dayjs';
 import ProposalDetailModal from './components/ProposalDetailModal';
 import RejectModal from './components/RejectModal';
 import ApproveModal from './components/ApproveModal';
+import DecisionModal from '@/components/DecisionModal';
 
 const { Title, Text } = Typography;
 
@@ -69,7 +70,10 @@ export default function AdminProposalsPage() {
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [rejectModalVisible, setRejectModalVisible] = useState(false);
   const [approveModalVisible, setApproveModalVisible] = useState(false);
+  const [decisionModalVisible, setDecisionModalVisible] = useState(false);
   const [selectedProposal, setSelectedProposal] = useState<Proposal | null>(null);
+  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
+  const [selectedDecision, setSelectedDecision] = useState<any>(null);
 
   useEffect(() => {
     fetchProposals();
@@ -375,12 +379,36 @@ export default function AdminProposalsPage() {
           style={{ marginBottom: 16 }}
         />
 
+        {/* Action buttons for selected proposals */}
+        {selectedRowKeys.length > 0 && (
+          <div style={{ marginBottom: 16 }}>
+            <Space>
+              <Button
+                type="primary"
+                onClick={() => setDecisionModalVisible(true)}
+              >
+                Thêm quyết định ({selectedRowKeys.length} đề xuất)
+              </Button>
+              <Button onClick={() => setSelectedRowKeys([])}>
+                Bỏ chọn
+              </Button>
+            </Space>
+          </div>
+        )}
+
         {/* Table */}
         <Table
           columns={columns}
           dataSource={filteredProposals}
           rowKey="id"
           loading={loading}
+          rowSelection={{
+            selectedRowKeys,
+            onChange: setSelectedRowKeys,
+            getCheckboxProps: (record) => ({
+              disabled: record.status !== 'APPROVED', // Chỉ cho phép chọn đề xuất đã được phê duyệt
+            }),
+          }}
           pagination={{
             pageSize: 20,
             showSizeChanger: true,
@@ -424,6 +452,62 @@ export default function AdminProposalsPage() {
           />
         </>
       )}
+
+      {/* Decision Modal - Sử dụng lại modal đã có */}
+      <DecisionModal
+        visible={decisionModalVisible}
+        onClose={() => {
+          setDecisionModalVisible(false);
+          setSelectedDecision(null);
+        }}
+        onSuccess={async (decision, isNewDecision) => {
+          setSelectedDecision(decision);
+          
+          // Upload quyết định cho các đề xuất đã chọn
+          const selectedProposals = filteredProposals.filter(p => selectedRowKeys.includes(p.id));
+          
+          try {
+            const uploadPromises = selectedProposals.map(async (proposal) => {
+              const formData = new FormData();
+              
+              // Thêm số quyết định
+              formData.append('so_quyet_dinh', decision.so_quyet_dinh);
+              
+              // Thêm ghi chú nếu có
+              if (decision.ghi_chu) {
+                formData.append('ghi_chu', decision.ghi_chu);
+              }
+              
+              // Gọi API upload quyết định cho đề xuất đã được phê duyệt
+              // Lưu ý: Cần tạo endpoint backend /api/proposals/:id/upload-decision
+              await axiosInstance.post(`/api/proposals/${proposal.id}/upload-decision`, formData, {
+                headers: {
+                  'Content-Type': 'multipart/form-data',
+                },
+              });
+            });
+            
+            await Promise.all(uploadPromises);
+            message.success(`Đã thêm quyết định cho ${selectedProposals.length} đề xuất thành công`);
+            setDecisionModalVisible(false);
+            setSelectedRowKeys([]);
+            setSelectedDecision(null);
+            fetchProposals();
+          } catch (error: any) {
+            console.error('Upload decision error:', error);
+            if (error.response?.status === 404) {
+              message.warning('API endpoint chưa được tạo. Quyết định đã được lưu nhưng chưa gắn vào đề xuất.');
+            } else {
+              message.error(error.response?.data?.message || 'Lỗi khi upload quyết định cho đề xuất');
+            }
+          }
+        }}
+        loaiKhenThuong={
+          selectedRowKeys.length > 0
+            ? filteredProposals.find(p => selectedRowKeys.includes(p.id))?.loai_de_xuat
+            : undefined
+        }
+      />
     </div>
   );
 }

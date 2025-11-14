@@ -87,10 +87,13 @@ router.post(
   verifyToken,
   checkRole(['ADMIN']),
   upload.fields([
-    { name: 'file_pdf_cstt', maxCount: 1 },
-    { name: 'file_pdf_cstdcs', maxCount: 1 },
-    { name: 'file_pdf_bkbqp', maxCount: 1 },
-    { name: 'file_pdf_cstdtq', maxCount: 1 },
+    // File PDF cho từng loại đề xuất
+    { name: 'file_pdf_ca_nhan_hang_nam', maxCount: 1 }, // CA_NHAN_HANG_NAM
+    { name: 'file_pdf_don_vi_hang_nam', maxCount: 1 }, // DON_VI_HANG_NAM
+    { name: 'file_pdf_nien_han', maxCount: 1 }, // NIEN_HAN
+    { name: 'file_pdf_cong_hien', maxCount: 1 }, // CONG_HIEN
+    { name: 'file_pdf_dot_xuat', maxCount: 1 }, // DOT_XUAT
+    { name: 'file_pdf_nckh', maxCount: 1 }, // NCKH
   ]),
   proposalController.approveProposal
 );

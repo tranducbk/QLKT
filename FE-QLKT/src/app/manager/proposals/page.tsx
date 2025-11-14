@@ -233,7 +233,8 @@ export default function ManagerProposalsPage() {
       width: 260,
       render: (_: any, record: Proposal) => (
         <Space>
-          <Tooltip title="Tải file Excel">
+          {/* Tạm thời ẩn chức năng tải file Excel */}
+          {/* <Tooltip title="Tải file Excel">
             <Button
               icon={<DownloadOutlined />}
               onClick={() => handleDownloadExcel(record.id)}
@@ -242,7 +243,7 @@ export default function ManagerProposalsPage() {
             >
               Tải file
             </Button>
-          </Tooltip>
+          </Tooltip> */}
           <Button
             type="primary"
             icon={<EyeOutlined />}

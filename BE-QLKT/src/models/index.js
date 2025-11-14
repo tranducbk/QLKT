@@ -145,13 +145,25 @@ TheoDoiKhenThuongDonVi.belongsTo(DonViTrucThuoc, {
   foreignKey: 'don_vi_truc_thuoc_id',
   as: 'donViTrucThuoc',
 });
+TheoDoiKhenThuongDonVi.belongsTo(CoQuanDonVi, {
+  foreignKey: 'co_quan_don_vi_cha_id',
+  as: 'coQuanDonViCha',
+});
 TheoDoiKhenThuongDonVi.belongsTo(TaiKhoan, {
   foreignKey: 'nguoi_tao_id',
   as: 'nguoiTao',
 });
+TheoDoiKhenThuongDonVi.belongsTo(TaiKhoan, {
+  foreignKey: 'nguoi_duyet_id',
+  as: 'nguoiDuyet',
+});
 TaiKhoan.hasMany(TheoDoiKhenThuongDonVi, {
   foreignKey: 'nguoi_tao_id',
   as: 'theoDoiKhenThuongTao',
+});
+TaiKhoan.hasMany(TheoDoiKhenThuongDonVi, {
+  foreignKey: 'nguoi_duyet_id',
+  as: 'theoDoiKhenThuongDuyet',
 });
 
 // ============================================

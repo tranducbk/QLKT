@@ -166,6 +166,38 @@ class UnitController {
       });
     }
   }
+
+  /**
+   * GET /api/units/my-units
+   * Lấy đơn vị của Manager và các đơn vị con
+   * Access: MANAGER
+   */
+  async getMyUnits(req, res) {
+    try {
+      const userQuanNhanId = req.user.quan_nhan_id;
+
+      if (!userQuanNhanId) {
+        return res.status(400).json({
+          success: false,
+          message: 'Không tìm thấy thông tin quân nhân của tài khoản',
+        });
+      }
+
+      const result = await unitService.getManagerUnits(userQuanNhanId);
+
+      return res.status(200).json({
+        success: true,
+        message: 'Lấy danh sách đơn vị thành công',
+        data: result,
+      });
+    } catch (error) {
+      console.error('Get my units error:', error);
+      return res.status(500).json({
+        success: false,
+        message: error.message || 'Lấy danh sách đơn vị thất bại',
+      });
+    }
+  }
 }
 
 module.exports = new UnitController();

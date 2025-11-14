@@ -3,20 +3,21 @@ const { prisma } = require('../models');
 class UnitAnnualAwardService {
   /**
    * Tính số năm liên tục theo các bản ghi đã có của đơn vị đến năm N
-   * Quy ước: có bản ghi năm X với tong_so_quan_nhan > 0 thì tính là đạt năm đó
+   * Quy ước: có bản ghi năm X với danh_hieu không null và không rỗng thì tính là đạt năm đó
    */
   async calculateContinuousYears(donViId, year) {
     const records = await prisma.theoDoiKhenThuongDonVi.findMany({
       where: { don_vi_id: donViId, nam: { lte: year } },
       orderBy: { nam: 'desc' },
-      select: { nam: true, tong_so_quan_nhan: true },
+      select: { nam: true, danh_hieu: true },
     });
 
     let continuous = 0;
     let current = year;
     for (const r of records) {
       if (r.nam !== current) continue; // chỉ xét chuỗi liên tiếp từ năm hiện tại trở lùi
-      if ((r.tong_so_quan_nhan ?? 0) > 0) {
+      // Có danh hiệu nếu có danh_hieu không null và không rỗng
+      if (r.danh_hieu && r.danh_hieu.trim() !== '') {
         continuous += 1;
         current -= 1;
       } else {
@@ -38,15 +39,13 @@ class UnitAnnualAwardService {
   }
 
   /** Manager đề xuất (status=PENDING) */
-  async propose({ don_vi_id, nam, tong_so_quan_nhan = 0, chi_tiet, ghi_chu, nguoi_tao_id }) {
+  async propose({ don_vi_id, nam, ghi_chu, nguoi_tao_id }) {
     const year = Number(nam);
     const unitId = don_vi_id; // Giữ nguyên UUID string
 
     const base = {
       don_vi_id: unitId,
       nam: year,
-      tong_so_quan_nhan: Number(tong_so_quan_nhan) || 0,
-      chi_tiet: chi_tiet ?? null,
       ghi_chu: ghi_chu ?? null,
       nguoi_tao_id: Number(nguoi_tao_id),
       status: 'PENDING',
@@ -188,24 +187,19 @@ class UnitAnnualAwardService {
   async upsert({
     don_vi_id,
     nam,
-    tong_so_quan_nhan = 0,
     so_quyet_dinh,
     ten_file_pdf,
-    chi_tiet,
     ghi_chu,
     nguoi_tao_id,
   }) {
     const year = Number(nam);
     const unitId = don_vi_id; // Giữ nguyên UUID string
 
-    // Tạm thời set 0, sẽ cập nhật lại sau khi upsert
     const dataBase = {
       don_vi_id: unitId,
       nam: year,
-      tong_so_quan_nhan: Number(tong_so_quan_nhan) || 0,
       so_quyet_dinh: so_quyet_dinh ?? null,
       ten_file_pdf: ten_file_pdf ?? null,
-      chi_tiet: chi_tiet ?? null,
       ghi_chu: ghi_chu ?? null,
       nguoi_tao_id: Number(nguoi_tao_id),
     };

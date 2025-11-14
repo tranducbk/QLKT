@@ -33,6 +33,7 @@ import type { ColumnsType } from 'antd/es/table';
 import { apiClient } from '@/lib/api-client';
 import axiosInstance from '@/utils/axiosInstance';
 import Step2SelectPersonnel from './components/Step2SelectPersonnel';
+import Step2SelectUnits from './components/Step2SelectUnits';
 import Step3SetTitles from './components/Step3SetTitles';
 
 const { Title, Paragraph, Text } = Typography;
@@ -64,9 +65,10 @@ export default function CreateProposalPage() {
   // Step 1: Proposal Type
   const [proposalType, setProposalType] = useState<ProposalType>('CA_NHAN_HANG_NAM');
 
-  // Step 2: Select Personnel
+  // Step 2: Select Personnel/Units
   const [nam, setNam] = useState(new Date().getFullYear());
   const [selectedPersonnelIds, setSelectedPersonnelIds] = useState<string[]>([]);
+  const [selectedUnitIds, setSelectedUnitIds] = useState<string[]>([]);
 
   // Step 3: Set Titles
   const [titleData, setTitleData] = useState<any[]>([]);
@@ -74,8 +76,9 @@ export default function CreateProposalPage() {
   // Step 4: Upload Files
   const [attachedFiles, setAttachedFiles] = useState<UploadFile[]>([]); // File đính kèm (optional)
 
-  // Step 5: Personnel details for review
+  // Step 5: Personnel/Unit details for review
   const [personnelDetails, setPersonnelDetails] = useState<Personnel[]>([]);
+  const [unitDetails, setUnitDetails] = useState<any[]>([]);
 
   // Proposal type config
   const proposalTypeConfig: Record<
@@ -115,20 +118,28 @@ export default function CreateProposalPage() {
   };
 
   // Steps config
-  const steps = [
-    { title: 'Chọn loại', icon: <TrophyOutlined /> },
-    { title: 'Chọn quân nhân', icon: <TeamOutlined /> },
-    { title: 'Set danh hiệu', icon: <CheckCircleOutlined /> },
-    { title: 'Upload file', icon: <UploadOutlined /> },
-    { title: 'Xem lại & Gửi', icon: <CheckCircleOutlined /> },
-  ];
+  const getSteps = () => {
+    const step2Title = proposalType === 'DON_VI_HANG_NAM' ? 'Chọn đơn vị' : 'Chọn quân nhân';
+    return [
+      { title: 'Chọn loại', icon: <TrophyOutlined /> },
+      { title: step2Title, icon: <TeamOutlined /> },
+      { title: 'Set danh hiệu', icon: <CheckCircleOutlined /> },
+      { title: 'Upload file', icon: <UploadOutlined /> },
+      { title: 'Xem lại & Gửi', icon: <CheckCircleOutlined /> },
+    ];
+  };
+  const steps = getSteps();
 
-  // Fetch personnel details when reaching Step 5 (Review)
+  // Fetch personnel/unit details when reaching Step 5 (Review)
   useEffect(() => {
-    if (currentStep === 4 && selectedPersonnelIds.length > 0) {
-      fetchPersonnelDetails();
+    if (currentStep === 4) {
+      if (proposalType === 'DON_VI_HANG_NAM' && selectedUnitIds.length > 0) {
+        fetchUnitDetails();
+      } else if (selectedPersonnelIds.length > 0) {
+        fetchPersonnelDetails();
+      }
     }
-  }, [currentStep]);
+  }, [currentStep, proposalType, selectedUnitIds, selectedPersonnelIds]);
 
   const fetchPersonnelDetails = async () => {
     try {
@@ -141,16 +152,44 @@ export default function CreateProposalPage() {
     }
   };
 
+  const fetchUnitDetails = async () => {
+    try {
+      console.log('Fetching unit details for review, selectedUnitIds:', selectedUnitIds);
+      // Gọi API để lấy đơn vị của Manager
+      const unitsRes = await apiClient.getMyUnits();
+      console.log('Units API response:', unitsRes);
+      
+      if (unitsRes.success) {
+        const unitsData = unitsRes.data || [];
+        console.log('All manager units:', unitsData);
+        
+        // Lọc các đơn vị đã chọn
+        const selectedUnits = unitsData.filter((unit: any) => selectedUnitIds.includes(unit.id));
+        console.log('Selected units for review:', selectedUnits);
+        setUnitDetails(selectedUnits);
+      } else {
+        console.error('Failed to fetch units:', unitsRes.message);
+      }
+    } catch (error) {
+      console.error('Error fetching unit details:', error);
+    }
+  };
+
   // Validate current step
   const canProceedToNextStep = () => {
     switch (currentStep) {
       case 0: // Step 1: Type selected (always true)
         return true;
-      case 1: // Step 2: Must select at least 1 personnel
+      case 1: // Step 2: Must select at least 1 personnel/unit
+        if (proposalType === 'DON_VI_HANG_NAM') {
+          return selectedUnitIds.length > 0;
+        }
         return selectedPersonnelIds.length > 0;
-      case 2: // Step 3: All personnel must have titles set
+      case 2: // Step 3: All personnel/units must have titles set
+        const expectedLength =
+          proposalType === 'DON_VI_HANG_NAM' ? selectedUnitIds.length : selectedPersonnelIds.length;
         return (
-          titleData.length === selectedPersonnelIds.length &&
+          titleData.length === expectedLength &&
           titleData.every(d => {
             if (proposalType === 'NCKH') {
               return d.loai && d.mo_ta;
@@ -173,7 +212,11 @@ export default function CreateProposalPage() {
     } else {
       switch (currentStep) {
         case 1:
-          antMessage.warning('Vui lòng chọn ít nhất một quân nhân!');
+          if (proposalType === 'DON_VI_HANG_NAM') {
+            antMessage.warning('Vui lòng chọn ít nhất một đơn vị!');
+          } else {
+            antMessage.warning('Vui lòng chọn ít nhất một quân nhân!');
+          }
           break;
         case 2:
           antMessage.warning('Vui lòng chọn danh hiệu cho tất cả quân nhân!');
@@ -199,7 +242,13 @@ export default function CreateProposalPage() {
       const formData = new FormData();
       formData.append('type', proposalType);
       formData.append('nam', String(nam));
-      formData.append('selected_personnel', JSON.stringify(selectedPersonnelIds));
+      
+      if (proposalType === 'DON_VI_HANG_NAM') {
+        formData.append('selected_units', JSON.stringify(selectedUnitIds));
+      } else {
+        formData.append('selected_personnel', JSON.stringify(selectedPersonnelIds));
+      }
+      
       formData.append('title_data', JSON.stringify(titleData));
 
       // Upload các file đính kèm (optional, multiple)
@@ -223,8 +272,11 @@ export default function CreateProposalPage() {
       setCurrentStep(0);
       setProposalType('CA_NHAN_HANG_NAM');
       setSelectedPersonnelIds([]);
+      setSelectedUnitIds([]);
       setTitleData([]);
       setAttachedFiles([]);
+      setPersonnelDetails([]);
+      setUnitDetails([]);
     } catch (error: any) {
       antMessage.error(error.message || 'Lỗi khi gửi đề xuất');
     } finally {
@@ -260,12 +312,14 @@ export default function CreateProposalPage() {
                   >
                     <Space direction="vertical" size="small">
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        {React.cloneElement(config.icon as React.ReactElement, {
-                          style: {
+                        <span
+                          style={{
                             fontSize: 20,
                             color: proposalType === key ? '#1890ff' : '#8c8c8c',
-                          },
-                        })}
+                          }}
+                        >
+                          {config.icon}
+                        </span>
                         <Text strong style={{ fontSize: 16 }}>
                           {config.label}
                         </Text>
@@ -284,7 +338,17 @@ export default function CreateProposalPage() {
           </div>
         );
 
-      case 1: // Step 2: Select Personnel
+      case 1: // Step 2: Select Personnel/Units
+        if (proposalType === 'DON_VI_HANG_NAM') {
+          return (
+            <Step2SelectUnits
+              selectedUnitIds={selectedUnitIds}
+              onUnitChange={setSelectedUnitIds}
+              nam={nam}
+              onNamChange={setNam}
+            />
+          );
+        }
         return (
           <Step2SelectPersonnel
             selectedPersonnelIds={selectedPersonnelIds}
@@ -298,6 +362,7 @@ export default function CreateProposalPage() {
         return (
           <Step3SetTitles
             selectedPersonnelIds={selectedPersonnelIds}
+            selectedUnitIds={selectedUnitIds}
             proposalType={proposalType}
             titleData={titleData}
             onTitleDataChange={setTitleData}
@@ -336,51 +401,104 @@ export default function CreateProposalPage() {
         );
 
       case 4: // Step 5: Review & Submit
-        // Merge personnel details with title data
-        const reviewTableData = personnelDetails.map(p => {
-          const titleInfo = titleData.find(t => t.personnel_id === p.id);
-          return {
-            ...p,
-            ...titleInfo,
-          };
-        });
+        // Merge personnel/unit details with title data
+        let reviewTableData: any[] = [];
+        
+        if (proposalType === 'DON_VI_HANG_NAM') {
+          reviewTableData = unitDetails.map(unit => {
+            const titleInfo = titleData.find(t => t.don_vi_id === unit.id);
+            return {
+              ...unit,
+              ...titleInfo,
+            };
+          });
+        } else {
+          reviewTableData = personnelDetails.map(p => {
+            const titleInfo = titleData.find(t => t.personnel_id === p.id);
+            return {
+              ...p,
+              ...titleInfo,
+            };
+          });
+        }
 
         // Build table columns based on proposal type
-        const reviewColumns: ColumnsType<any> = [
-          {
-            title: 'STT',
-            key: 'index',
-            width: 60,
-            align: 'center',
-            render: (_, __, index) => index + 1,
-          },
-          {
-            title: 'Họ và tên',
-            dataIndex: 'ho_ten',
-            key: 'ho_ten',
-            width: 180,
-            render: (text: string) => <Text strong>{text}</Text>,
-          },
-          {
-            title: 'CCCD',
-            dataIndex: 'cccd',
-            key: 'cccd',
-            width: 140,
-            render: (text: string) => <Text code>{text}</Text>,
-          },
-          {
-            title: 'Cơ quan đơn vị',
-            key: 'co_quan_don_vi',
-            width: 150,
-            render: (_, record) => record.CoQuanDonVi?.ten_don_vi || '-',
-          },
-          {
-            title: 'Đơn vị trực thuộc',
-            key: 'don_vi_truc_thuoc',
-            width: 150,
-            render: (_, record) => record.DonViTrucThuoc?.ten_don_vi || '-',
-          },
-        ];
+        const reviewColumns: ColumnsType<any> = [];
+        
+        if (proposalType === 'DON_VI_HANG_NAM') {
+          reviewColumns.push(
+            {
+              title: 'STT',
+              key: 'index',
+              width: 60,
+              align: 'center',
+              render: (_, __, index) => index + 1,
+            },
+            {
+              title: 'Loại đơn vị',
+              key: 'type',
+              width: 150,
+              render: (_, record) => {
+                const type = record.co_quan_don_vi_id || record.CoQuanDonVi ? 'DON_VI_TRUC_THUOC' : 'CO_QUAN_DON_VI';
+                return (
+                  <Tag color={type === 'CO_QUAN_DON_VI' ? 'blue' : 'green'}>
+                    {type === 'CO_QUAN_DON_VI' ? 'Cơ quan đơn vị' : 'Đơn vị trực thuộc'}
+                  </Tag>
+                );
+              },
+            },
+            {
+              title: 'Mã đơn vị',
+              dataIndex: 'ma_don_vi',
+              key: 'ma_don_vi',
+              width: 150,
+              render: (text: string) => <Text code>{text}</Text>,
+            },
+            {
+              title: 'Tên đơn vị',
+              dataIndex: 'ten_don_vi',
+              key: 'ten_don_vi',
+              width: 250,
+              render: (text: string) => <Text strong>{text}</Text>,
+            }
+          );
+        } else {
+          reviewColumns.push(
+            {
+              title: 'STT',
+              key: 'index',
+              width: 60,
+              align: 'center',
+              render: (_, __, index) => index + 1,
+            },
+            {
+              title: 'Họ và tên',
+              dataIndex: 'ho_ten',
+              key: 'ho_ten',
+              width: 180,
+              render: (text: string) => <Text strong>{text}</Text>,
+            },
+            {
+              title: 'CCCD',
+              dataIndex: 'cccd',
+              key: 'cccd',
+              width: 140,
+              render: (text: string) => <Text code>{text}</Text>,
+            },
+            {
+              title: 'Cơ quan đơn vị',
+              key: 'co_quan_don_vi',
+              width: 150,
+              render: (_, record) => record.CoQuanDonVi?.ten_don_vi || '-',
+            },
+            {
+              title: 'Đơn vị trực thuộc',
+              key: 'don_vi_truc_thuoc',
+              width: 150,
+              render: (_, record) => record.DonViTrucThuoc?.ten_don_vi || '-',
+            }
+          );
+        }
 
         // Add title/achievement columns based on type
         if (proposalType === 'NCKH') {
@@ -408,8 +526,33 @@ export default function CreateProposalPage() {
             title: 'Danh hiệu đề xuất',
             dataIndex: 'danh_hieu',
             key: 'danh_hieu',
-            width: 200,
-            render: (danh_hieu: string) => <Tag color="green">{danh_hieu}</Tag>,
+            width: 250,
+            render: (danh_hieu: string) => {
+              // Map mã danh hiệu sang tên đầy đủ
+              const danhHieuMap: Record<string, string> = {
+                // Cá nhân Hằng năm
+                'CSTDCS': 'Chiến sĩ thi đua cơ sở (CSTDCS)',
+                'CSTT': 'Chiến sĩ tiên tiến (CSTT)',
+                'BKBQP': 'Bằng khen của Bộ trưởng Bộ Quốc phòng (BKBQP)',
+                'CSTDTQ': 'Chiến sĩ thi đua toàn quân (CSTDTQ)',
+                // Đơn vị Hằng năm - BKBQP cũng dùng chung tên này
+                // Đơn vị Hằng năm
+                'ĐVQT': 'Đơn vị Quyết thắng (ĐVQT)',
+                'ĐVTT': 'Đơn vị Tiên tiến (ĐVTT)',
+                'BKTTCP': 'Bằng khen Thủ tướng Chính phủ (BKTTCP)',
+                // Niên hạn
+                'HCCSVV_HANG_BA': 'Huân chương Chiến sỹ Vẻ vang Hạng Ba',
+                'HCCSVV_HANG_NHI': 'Huân chương Chiến sỹ Vẻ vang Hạng Nhì',
+                'HCCSVV_HANG_NHAT': 'Huân chương Chiến sỹ Vẻ vang Hạng Nhất',
+                // Cống hiến
+                'HCBVTQ_HANG_BA': 'Huân chương Bảo vệ Tổ quốc Hạng Ba',
+                'HCBVTQ_HANG_NHI': 'Huân chương Bảo vệ Tổ quốc Hạng Nhì',
+                'HCBVTQ_HANG_NHAT': 'Huân chương Bảo vệ Tổ quốc Hạng Nhất',
+              };
+              
+              const fullName = danhHieuMap[danh_hieu] || danh_hieu;
+              return <Text>{fullName}</Text>;
+            },
           });
         }
 
@@ -426,23 +569,21 @@ export default function CreateProposalPage() {
             <Card title="Tóm tắt đề xuất" style={{ marginBottom: 16 }}>
               <Descriptions bordered column={2}>
                 <Descriptions.Item label="Loại khen thưởng" span={2}>
-                  <Tag color="blue" icon={proposalTypeConfig[proposalType].icon}>
+                  <Tag icon={proposalTypeConfig[proposalType].icon}>
                     {proposalTypeConfig[proposalType].label}
                   </Tag>
                 </Descriptions.Item>
                 <Descriptions.Item label="Năm đề xuất">
                   <Text strong>{nam}</Text>
                 </Descriptions.Item>
-                <Descriptions.Item label="Số quân nhân">
-                  <Text strong style={{ color: '#1890ff' }}>
-                    {selectedPersonnelIds.length}
+                <Descriptions.Item label={proposalType === 'DON_VI_HANG_NAM' ? 'Số đơn vị' : 'Số quân nhân'}>
+                  <Text strong>
+                    {proposalType === 'DON_VI_HANG_NAM' ? selectedUnitIds.length : selectedPersonnelIds.length}
                   </Text>
                 </Descriptions.Item>
                 <Descriptions.Item label="File đính kèm" span={2}>
                   {attachedFiles.length > 0 ? (
-                    <Text strong style={{ color: '#52c41a' }}>
-                      {attachedFiles.length} file
-                    </Text>
+                    <Text strong>{attachedFiles.length} file</Text>
                   ) : (
                     <Text type="secondary">Không có file</Text>
                   )}
@@ -450,7 +591,7 @@ export default function CreateProposalPage() {
               </Descriptions>
             </Card>
 
-            <Card title="Danh sách cán bộ và danh hiệu">
+            <Card title={proposalType === 'DON_VI_HANG_NAM' ? 'Danh sách đơn vị và danh hiệu' : 'Danh sách cán bộ và danh hiệu'}>
               <Table
                 columns={reviewColumns}
                 dataSource={reviewTableData}
@@ -508,7 +649,7 @@ export default function CreateProposalPage() {
       <Card style={{ marginBottom: 24, minHeight: 400 }}>{renderStepContent()}</Card>
 
       {/* Navigation */}
-      <Card>
+          <Card>
         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
           <Button size="large" onClick={handlePrev} disabled={currentStep === 0}>
             Quay lại
@@ -536,7 +677,7 @@ export default function CreateProposalPage() {
             )}
           </div>
         </div>
-      </Card>
+          </Card>
     </div>
   );
 }

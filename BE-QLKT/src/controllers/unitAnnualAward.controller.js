@@ -37,10 +37,8 @@ exports.upsert = async (req, res) => {
     const payload = {
       don_vi_id: body.don_vi_id,
       nam: body.nam,
-      tong_so_quan_nhan: body.tong_so_quan_nhan,
       so_quyet_dinh: body.so_quyet_dinh,
       ten_file_pdf: body.ten_file_pdf,
-      chi_tiet: body.chi_tiet,
       ghi_chu: body.ghi_chu,
       nguoi_tao_id: req.user?.id || body.nguoi_tao_id, // fallback nếu chưa gắn middleware auth
     };
@@ -60,8 +58,6 @@ exports.propose = async (req, res) => {
     const data = await service.propose({
       don_vi_id: body.don_vi_id,
       nam: body.nam,
-      tong_so_quan_nhan: body.tong_so_quan_nhan,
-      chi_tiet: body.chi_tiet,
       ghi_chu: body.ghi_chu,
       nguoi_tao_id: req.user?.id || body.nguoi_tao_id,
     });

@@ -287,7 +287,12 @@ export default function NCKHProposalForm({
               name="loai"
               rules={[{ required: true, message: 'Vui lòng chọn loại!' }]}
             >
-              <Select placeholder="Chọn loại" size="large">
+              <Select
+                placeholder="Chọn loại"
+                size="large"
+                popupMatchSelectWidth={false}
+                styles={{ popup: { root: { minWidth: 'max-content' } } }}
+              >
                 <Select.Option value="NCKH">Nghiên cứu Khoa học (NCKH)</Select.Option>
                 <Select.Option value="SKKH">Sáng kiến Kinh nghiệm (SKKH)</Select.Option>
               </Select>

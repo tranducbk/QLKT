@@ -9,7 +9,7 @@ import {
   Upload,
   Button,
   Select,
-  message,
+  App,
   Space,
   AutoComplete,
   Spin,
@@ -35,6 +35,16 @@ interface DecisionModalProps {
   onClose: () => void;
   onSuccess: (decision: Decision, isNewDecision?: boolean) => void;
   loaiKhenThuong?: string; // Pre-fill loại khen thưởng
+  initialDecision?: {
+    id?: string; // Decision ID for edit mode
+    so_quyet_dinh: string;
+    nam: number;
+    ngay_ky: dayjs.Dayjs;
+    nguoi_ky: string;
+    file_path?: string | null;
+    loai_khen_thuong?: string;
+    ghi_chu?: string;
+  }; // For edit mode
 }
 
 export default function DecisionModal({
@@ -42,7 +52,9 @@ export default function DecisionModal({
   onClose,
   onSuccess,
   loaiKhenThuong,
+  initialDecision,
 }: DecisionModalProps) {
+  const { message } = App.useApp();
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [searching, setSearching] = useState(false);
@@ -53,6 +65,28 @@ export default function DecisionModal({
 
   useEffect(() => {
     if (visible) {
+      if (initialDecision) {
+        // Edit mode
+        form.setFieldsValue({
+          so_quyet_dinh: initialDecision.so_quyet_dinh,
+          nam: initialDecision.nam,
+          ngay_ky: initialDecision.ngay_ky,
+          nguoi_ky: initialDecision.nguoi_ky,
+          loai_khen_thuong: initialDecision.loai_khen_thuong,
+          ghi_chu: initialDecision.ghi_chu,
+        });
+        setIsEditing(true);
+        if (initialDecision.file_path) {
+          setFileList([
+            {
+              uid: '-1',
+              name: initialDecision.file_path.split('/').pop() || 'file.pdf',
+              status: 'done',
+            },
+          ]);
+        }
+      } else {
+        // Create mode
       form.resetFields();
       setFileList([]);
       setSelectedDecision(null);
@@ -61,7 +95,8 @@ export default function DecisionModal({
         form.setFieldsValue({ loai_khen_thuong: loaiKhenThuong });
       }
     }
-  }, [visible, loaiKhenThuong, form]);
+    }
+  }, [visible, loaiKhenThuong, initialDecision, form]);
 
   // Autocomplete search
   const handleSearch = async (value: string) => {
@@ -153,13 +188,30 @@ export default function DecisionModal({
       let response;
       let isNewDecision = false;
 
-      if (saveChanges && selectedDecision) {
-        // Update existing decision
+      // Check if editing (from initialDecision prop)
+      if (initialDecision) {
+        // Edit mode: use ID from initialDecision or get by so_quyet_dinh
+        let decisionId = initialDecision.id;
+        if (!decisionId) {
+          const decisionResponse = await apiClient.getDecisionBySoQuyetDinh(values.so_quyet_dinh);
+          if (decisionResponse.success && decisionResponse.data) {
+            decisionId = decisionResponse.data.id;
+          } else {
+            throw new Error('Không tìm thấy quyết định để cập nhật');
+          }
+        }
+        response = await apiClient.updateDecision(decisionId, formData);
+        message.success('Đã cập nhật quyết định thành công');
+      } else if (saveChanges && selectedDecision) {
+        // Update existing decision from autocomplete
         response = await apiClient.updateDecision(selectedDecision.id!, formData);
         message.success('Đã cập nhật quyết định thành công');
       } else if (!selectedDecision || saveChanges) {
         // Create new decision
         response = await apiClient.createDecision(formData);
+        if (!response.success) {
+          throw new Error(response.message || 'Lỗi khi tạo quyết định');
+        }
         isNewDecision = true;
         message.success('Đã thêm quyết định mới thành công');
       } else {
@@ -205,17 +257,21 @@ export default function DecisionModal({
       title={
         <Space>
           <FileTextOutlined />
-          <span>Thêm Số Quyết định Khen thưởng</span>
+          <span>{initialDecision ? 'Sửa Quyết định Khen thưởng' : 'Thêm Số Quyết định Khen thưởng'}</span>
         </Space>
       }
       open={visible}
       onCancel={onClose}
       width={700}
+      centered
+      style={{ borderRadius: 8 }}
+      styles={{ body: { borderRadius: 8 } }}
       footer={[
         <Button key="cancel" onClick={onClose}>
           Hủy
         </Button>,
-        selectedDecision && (
+        // Show "Use existing" button only when not in edit mode and has selectedDecision from autocomplete
+        selectedDecision && !initialDecision && (
           <Button
             key="use"
             type="primary"
@@ -226,7 +282,8 @@ export default function DecisionModal({
             Thêm quyết định
           </Button>
         ),
-        (isEditing || !selectedDecision) && (
+        // Show save button when editing or creating new
+        (isEditing || !selectedDecision || initialDecision) && (
           <Button
             key="save"
             type="primary"
@@ -235,7 +292,7 @@ export default function DecisionModal({
             icon={<SaveOutlined />}
             style={{ background: '#52c41a', borderColor: '#52c41a' }}
           >
-            {selectedDecision ? 'Lưu thay đổi' : 'Thêm mới và Lưu'}
+            {initialDecision ? 'Lưu thay đổi' : selectedDecision ? 'Lưu thay đổi' : 'Thêm mới và Lưu'}
           </Button>
         ),
       ]}
@@ -253,17 +310,20 @@ export default function DecisionModal({
             onSelect={handleSelect}
             placeholder="Nhập số quyết định (VD: 123/QĐ-BQP)"
             notFoundContent={searching ? <Spin size="small" /> : null}
+            style={{ width: '100%' }}
+            disabled={!!initialDecision}
           >
-            <Input prefix={<FileTextOutlined />} />
+            <Input size="large" disabled={!!initialDecision} style={{ fontSize: '14px', height: '40px' }} />
           </AutoComplete>
         </Form.Item>
 
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
         <Form.Item
           name="nam"
           label="Năm"
           rules={[{ required: true, message: 'Vui lòng nhập năm' }]}
         >
-          <Input type="number" placeholder="2024" />
+            <Input type="number" placeholder="2024" size="large" />
         </Form.Item>
 
         <Form.Item
@@ -271,39 +331,48 @@ export default function DecisionModal({
           label="Ngày ký quyết định"
           rules={[{ required: true, message: 'Vui lòng chọn ngày ký' }]}
         >
-          <DatePicker format="DD/MM/YYYY" style={{ width: '100%' }} placeholder="Chọn ngày ký" />
+            <DatePicker format="DD/MM/YYYY" style={{ width: '100%' }} placeholder="Chọn ngày ký" size="large" />
         </Form.Item>
+        </div>
 
         <Form.Item
           name="nguoi_ky"
           label="Người ký quyết định"
           rules={[{ required: true, message: 'Vui lòng nhập người ký' }]}
         >
-          <Input placeholder="VD: Trung tướng Nguyễn Văn A - Chính ủy" />
+          <Input placeholder="VD: Trung tướng Nguyễn Văn A - Chính ủy" size="large" />
         </Form.Item>
 
         <Form.Item name="loai_khen_thuong" label="Loại khen thưởng">
-          <Select placeholder="Chọn loại khen thưởng" options={loaiKhenThuongOptions} />
+          <Select
+            placeholder="Chọn loại khen thưởng"
+            options={loaiKhenThuongOptions}
+            popupMatchSelectWidth={false}
+            styles={{ popup: { root: { minWidth: 'max-content' } } }}
+            size="large"
+          />
         </Form.Item>
 
         <Form.Item name="ghi_chu" label="Ghi chú">
-          <Input.TextArea rows={3} placeholder="Ghi chú bổ sung (không bắt buộc)" />
+          <Input.TextArea rows={2} placeholder="Ghi chú bổ sung (không bắt buộc)" />
         </Form.Item>
 
-        <Form.Item label="File PDF/Word quyết định" extra="Chấp nhận file PDF, DOC, DOCX">
+        <Form.Item label="File quyết định" extra="Chấp nhận file PDF.">
+          <div style={{ display: 'flex', justifyContent: 'center' }}>
           <Upload
             fileList={fileList}
             onChange={({ fileList }) => setFileList(fileList)}
             beforeUpload={() => false}
-            accept=".pdf,.doc,.docx"
+              accept=".pdf"
             maxCount={1}
           >
-            <Button icon={<UploadOutlined />}>
+              <Button icon={<UploadOutlined />} size="large" style={{ fontSize: '16px', padding: '8px 48px', height: 'auto', minWidth: '200px' }}>
               {selectedDecision?.file_path ? 'Thay đổi file' : 'Chọn file'}
             </Button>
           </Upload>
+          </div>
           {selectedDecision?.file_path && !fileList.length && (
-            <div style={{ marginTop: 8, color: '#52c41a' }}>
+            <div style={{ marginTop: 8, color: '#52c41a', textAlign: 'center' }}>
               ✓ Đã có file: {selectedDecision.file_path.split('/').pop()}
             </div>
           )}

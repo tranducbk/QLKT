@@ -221,20 +221,24 @@ class ProposalController {
         data_thanh_tich: JSON.parse(req.body.data_thanh_tich || '[]'),
       };
 
-      // Lấy số quyết định
+      // Lấy số quyết định cho từng loại đề xuất
       const decisions = {
-        so_quyet_dinh_cstt: req.body.so_quyet_dinh_cstt,
-        so_quyet_dinh_cstdcs: req.body.so_quyet_dinh_cstdcs,
-        so_quyet_dinh_bkbqp: req.body.so_quyet_dinh_bkbqp,
-        so_quyet_dinh_cstdtq: req.body.so_quyet_dinh_cstdtq,
+        so_quyet_dinh_ca_nhan_hang_nam: req.body.so_quyet_dinh_ca_nhan_hang_nam,
+        so_quyet_dinh_don_vi_hang_nam: req.body.so_quyet_dinh_don_vi_hang_nam,
+        so_quyet_dinh_nien_han: req.body.so_quyet_dinh_nien_han,
+        so_quyet_dinh_cong_hien: req.body.so_quyet_dinh_cong_hien,
+        so_quyet_dinh_dot_xuat: req.body.so_quyet_dinh_dot_xuat,
+        so_quyet_dinh_nckh: req.body.so_quyet_dinh_nckh,
       };
 
-      // Lấy file PDF
+      // Lấy file PDF cho từng loại đề xuất
       const pdfFiles = {
-        file_pdf_cstt: req.files?.file_pdf_cstt?.[0],
-        file_pdf_cstdcs: req.files?.file_pdf_cstdcs?.[0],
-        file_pdf_bkbqp: req.files?.file_pdf_bkbqp?.[0],
-        file_pdf_cstdtq: req.files?.file_pdf_cstdtq?.[0],
+        file_pdf_ca_nhan_hang_nam: req.files?.file_pdf_ca_nhan_hang_nam?.[0], // CA_NHAN_HANG_NAM
+        file_pdf_don_vi_hang_nam: req.files?.file_pdf_don_vi_hang_nam?.[0], // DON_VI_HANG_NAM
+        file_pdf_nien_han: req.files?.file_pdf_nien_han?.[0], // NIEN_HAN
+        file_pdf_cong_hien: req.files?.file_pdf_cong_hien?.[0], // CONG_HIEN
+        file_pdf_dot_xuat: req.files?.file_pdf_dot_xuat?.[0], // DOT_XUAT
+        file_pdf_nckh: req.files?.file_pdf_nckh?.[0], // NCKH
       };
 
       // Lấy ghi chú (optional)

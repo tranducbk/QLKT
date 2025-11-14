@@ -6,7 +6,6 @@ import {
   Card,
   Button,
   Table,
-  Tabs,
   Alert,
   Typography,
   Breadcrumb,
@@ -28,37 +27,84 @@ import {
   ArrowLeftOutlined,
   WarningOutlined,
   FileTextOutlined,
+  DownloadOutlined,
 } from '@ant-design/icons';
 import { EditableCell } from '@/components/EditableCell';
 import DecisionModal from '@/components/DecisionModal';
 import { format } from 'date-fns';
 import { apiClient } from '@/lib/api-client';
+import axiosInstance from '@/utils/axiosInstance';
 
 const { Title, Paragraph, Text } = Typography;
 
 interface DanhHieuItem {
-  cccd: string;
-  ho_ten: string;
+  personnel_id?: string;
+  don_vi_id?: string;
+  don_vi_type?: 'CO_QUAN_DON_VI' | 'DON_VI_TRUC_THUOC';
+  ho_ten?: string;
+  ten_don_vi?: string;
+  ma_don_vi?: string;
   nam: number;
   danh_hieu: string | null;
-  nhan_bkbqp: boolean;
-  so_quyet_dinh_bkbqp: string | null;
-  nhan_cstdtq: boolean;
-  so_quyet_dinh_cstdtq: string | null;
+  so_quyet_dinh?: string | null;
+  nhan_bkbqp?: boolean;
+  so_quyet_dinh_bkbqp?: string | null;
+  nhan_cstdtq?: boolean;
+  so_quyet_dinh_cstdtq?: string | null;
+  file_quyet_dinh?: string | null;
+  file_quyet_dinh_bkbqp?: string | null;
+  file_quyet_dinh_cstdtq?: string | null;
+  co_quan_don_vi?: {
+    id: string;
+    ten_don_vi: string;
+    ma_don_vi: string;
+  } | null;
+  don_vi_truc_thuoc?: {
+    id: string;
+    ten_don_vi: string;
+    ma_don_vi: string;
+    co_quan_don_vi?: {
+      id: string;
+      ten_don_vi: string;
+      ma_don_vi: string;
+    } | null;
+  } | null;
+  co_quan_don_vi_cha?: {
+    id: string;
+    ten_don_vi: string;
+    ma_don_vi: string;
+  } | null;
 }
 
 interface ThanhTichItem {
-  cccd: string;
+  personnel_id: string;
   ho_ten: string;
   nam: number;
   loai: string;
   mo_ta: string;
   status: string;
   so_quyet_dinh?: string;
+  file_quyet_dinh?: string | null;
+  co_quan_don_vi?: {
+    id: string;
+    ten_don_vi: string;
+    ma_don_vi: string;
+  } | null;
+  don_vi_truc_thuoc?: {
+    id: string;
+    ten_don_vi: string;
+    ma_don_vi: string;
+    co_quan_don_vi?: {
+      id: string;
+      ten_don_vi: string;
+      ma_don_vi: string;
+    } | null;
+  } | null;
 }
 
 interface ProposalDetail {
   id: number;
+  loai_de_xuat: string;
   don_vi: {
     id: number;
     ma_don_vi: string;
@@ -72,6 +118,12 @@ interface ProposalDetail {
   status: string;
   data_danh_hieu: DanhHieuItem[];
   data_thanh_tich: ThanhTichItem[];
+  files_attached?: Array<{
+    filename: string;
+    originalName: string;
+    size?: number;
+    uploadedAt?: string;
+  }>;
   ghi_chu: string | null;
   nguoi_duyet: any;
   ngay_duyet: string | null;
@@ -178,18 +230,81 @@ export default function ProposalDetailPage() {
   };
 
   const handleApprove = async () => {
+    // Kiểm tra tất cả danh hiệu/thành tích đã có số quyết định chưa
+    let missingDecisions: string[] = [];
+    
+    if (editedDanhHieu.length > 0) {
+      editedDanhHieu.forEach((item, index) => {
+        if (proposal.loai_de_xuat === 'DON_VI_HANG_NAM') {
+          // Với đề xuất đơn vị hằng năm, kiểm tra so_quyet_dinh
+          if (!item.so_quyet_dinh || item.so_quyet_dinh.trim() === '') {
+            missingDecisions.push(`Đơn vị ${index + 1}: ${item.ten_don_vi || 'N/A'}`);
+          }
+        } else {
+          // Với đề xuất cá nhân, kiểm tra so_quyet_dinh (bắt buộc)
+          // Nếu có danh hiệu BKBQP thì cần thêm so_quyet_dinh_bkbqp
+          if (!item.so_quyet_dinh || item.so_quyet_dinh.trim() === '') {
+            missingDecisions.push(`Cán bộ ${index + 1}: ${item.ho_ten || 'N/A'}`);
+          }
+          // Kiểm tra BKBQP nếu có
+          if (item.danh_hieu === 'BKBQP' && (!item.so_quyet_dinh_bkbqp || item.so_quyet_dinh_bkbqp.trim() === '')) {
+            missingDecisions.push(`Cán bộ ${index + 1} (${item.ho_ten || 'N/A'}): Thiếu số quyết định BKBQP`);
+          }
+        }
+      });
+    }
+    
+    if (editedThanhTich.length > 0) {
+      editedThanhTich.forEach((item, index) => {
+        if (!item.so_quyet_dinh || item.so_quyet_dinh.trim() === '') {
+          missingDecisions.push(`Thành tích ${index + 1}: ${item.ho_ten || 'N/A'}`);
+        }
+      });
+    }
+    
+    // Nếu thiếu số quyết định, hiển thị cảnh báo
+    if (missingDecisions.length > 0) {
+      Modal.warning({
+        title: 'Thiếu số quyết định',
+        content: (
+          <div>
+            <p style={{ marginBottom: 12 }}>
+              Vui lòng thêm số quyết định cho tất cả các mục trước khi phê duyệt:
+            </p>
+            <ul style={{ marginLeft: 20, marginBottom: 0 }}>
+              {missingDecisions.slice(0, 10).map((item, idx) => (
+                <li key={idx} style={{ marginBottom: 4 }}>{item}</li>
+              ))}
+              {missingDecisions.length > 10 && (
+                <li>... và {missingDecisions.length - 10} mục khác</li>
+              )}
+            </ul>
+          </div>
+        ),
+        okText: 'Đã hiểu',
+        width: 600,
+        centered: true,
+      });
+      return;
+    }
+    
     Modal.confirm({
       title: 'Xác nhận phê duyệt',
       content: (
         <div>
           <p>Bạn có chắc chắn muốn phê duyệt đề xuất này? Dữ liệu sẽ được import vào hệ thống.</p>
           <p style={{ marginTop: 12, color: '#666' }}>
-            Sau khi phê duyệt, bạn có thể chọn cán bộ và thêm số quyết định khen thưởng.
+            Tất cả các mục đã có số quyết định. Sau khi phê duyệt, dữ liệu sẽ được import vào hệ thống.
           </p>
         </div>
       ),
       okText: 'Phê duyệt',
       cancelText: 'Hủy',
+      closable: true,
+      centered: true,
+      width: 500,
+      style: { borderRadius: 8 },
+      styles: { body: { borderRadius: 8 } },
       onOk: async () => {
         try {
           setApproving(true);
@@ -203,13 +318,27 @@ export default function ProposalDetailPage() {
 
           if (response.success) {
             const importedData = response.data || {};
-            message.success(
-              `Đã phê duyệt đề xuất. Import ${importedData.imported_danh_hieu || 0}/${
-                importedData.total_danh_hieu || 0
-              } danh hiệu và ${importedData.imported_thanh_tich || 0}/${
-                importedData.total_thanh_tich || 0
-              } thành tích.`
-            );
+            const importedDanhHieu = importedData.imported_danh_hieu || 0;
+            const totalDanhHieu = importedData.total_danh_hieu || 0;
+            const importedThanhTich = importedData.imported_thanh_tich || 0;
+            const totalThanhTich = importedData.total_thanh_tich || 0;
+            
+            // Hiển thị thông báo thành công hoặc cảnh báo
+            if (importedData.errors && importedData.errors.length > 0) {
+              message.warning(
+                `Đã phê duyệt đề xuất. Import ${importedDanhHieu}/${totalDanhHieu} danh hiệu và ${importedThanhTich}/${totalThanhTich} thành tích. Có ${importedData.errors.length} lỗi xảy ra.`,
+                5
+              );
+              // Hiển thị errors chi tiết
+              setMessageAlert({
+                type: 'error',
+                text: `Có ${importedData.errors.length} lỗi khi import:\n${importedData.errors.slice(0, 5).join('\n')}${importedData.errors.length > 5 ? '\n...' : ''}`,
+              });
+            } else {
+              message.success(
+                `Đã phê duyệt đề xuất. Import ${importedDanhHieu}/${totalDanhHieu} danh hiệu và ${importedThanhTich}/${totalThanhTich} thành tích.`
+              );
+            }
 
             // Refresh data
             await fetchProposalDetail();
@@ -230,17 +359,29 @@ export default function ProposalDetailPage() {
       // Apply decision to selected danh hieu
       const updatedDanhHieu = editedDanhHieu.map((item, index) => {
         if (selectedRowKeys.includes(index)) {
-          return {
-            ...item,
-            so_quyet_dinh_bkbqp: decision.so_quyet_dinh,
-          };
+          // Với đề xuất đơn vị hằng năm, dùng so_quyet_dinh
+          // Với đề xuất cá nhân có BKBQP, dùng so_quyet_dinh_bkbqp
+          if (proposal.loai_de_xuat === 'DON_VI_HANG_NAM') {
+            return {
+              ...item,
+              so_quyet_dinh: decision.so_quyet_dinh,
+              file_quyet_dinh: decision.file_path || null,
+            };
+          } else {
+            return {
+              ...item,
+              so_quyet_dinh_bkbqp: decision.so_quyet_dinh,
+              file_quyet_dinh_bkbqp: decision.file_path || null,
+            };
+          }
         }
         return item;
       });
 
       setEditedDanhHieu(updatedDanhHieu);
+      const count = selectedRowKeys.length;
       setSelectedRowKeys([]);
-      message.success(`Đã áp dụng số quyết định cho ${selectedRowKeys.length} cán bộ`);
+      message.success(`Đã áp dụng số quyết định cho ${count} ${proposal.loai_de_xuat === 'DON_VI_HANG_NAM' ? 'đơn vị' : 'cán bộ'}`);
     } else {
       // Apply decision to selected thanh tich
       const updatedThanhTich = editedThanhTich.map((item, index) => {
@@ -248,6 +389,7 @@ export default function ProposalDetailPage() {
           return {
             ...item,
             so_quyet_dinh: decision.so_quyet_dinh,
+            file_quyet_dinh: decision.file_path || null,
           };
         }
         return item;
@@ -269,6 +411,46 @@ export default function ProposalDetailPage() {
     const newData = [...editedThanhTich];
     newData[index] = { ...newData[index], [field]: value };
     setEditedThanhTich(newData);
+  };
+
+  // Hàm để tải file quyết định
+  const handleOpenDecisionFile = async (soQuyetDinh: string, filePath?: string | null) => {
+    try {
+      let filename: string | null = null;
+
+      // Nếu đã có file_path trong record, dùng luôn
+      if (filePath) {
+        filename = filePath.split('/').pop() || null;
+      } else {
+        // Nếu chưa có file_path, tìm từ DB dựa trên số quyết định
+        const response = await apiClient.getDecisionBySoQuyetDinh(soQuyetDinh);
+        if (response.success && response.data?.file_path) {
+          filename = response.data.file_path.split('/').pop() || null;
+        }
+      }
+
+      if (filename) {
+        // Tải file về bằng axios với responseType: 'blob'
+        const response = await axiosInstance.get(`/api/proposals/uploads/${filename}`, {
+          responseType: 'blob',
+        });
+        const blob = response.data;
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename || `${soQuyetDinh}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+        message.success('Tải file thành công');
+      } else {
+        message.warning('Không tìm thấy file quyết định');
+      }
+    } catch (error: any) {
+      console.error('Error downloading decision file:', error);
+      message.error('Lỗi khi tải file quyết định');
+    }
   };
 
   if (loading) {
@@ -304,6 +486,7 @@ export default function ProposalDetailPage() {
     );
   }
 
+  // Columns cho đề xuất cá nhân
   const danhHieuColumns = [
     {
       title: 'STT',
@@ -313,18 +496,34 @@ export default function ProposalDetailPage() {
       render: (_: any, __: any, index: number) => index + 1,
     },
     {
-      title: 'CCCD',
-      dataIndex: 'cccd',
-      key: 'cccd',
-      width: 120,
-      render: (text: string) => (
-        <span style={{ fontFamily: 'monospace', fontSize: '14px' }}>{text}</span>
-      ),
-    },
-    {
       title: 'Họ tên',
       dataIndex: 'ho_ten',
       key: 'ho_ten',
+    },
+    {
+      title: 'Cơ quan đơn vị',
+      key: 'co_quan_don_vi',
+      width: 200,
+      render: (_: any, record: DanhHieuItem) => {
+        if (record.don_vi_truc_thuoc?.co_quan_don_vi) {
+          return record.don_vi_truc_thuoc.co_quan_don_vi.ten_don_vi;
+        }
+        if (record.co_quan_don_vi) {
+          return record.co_quan_don_vi.ten_don_vi;
+        }
+        return '-';
+      },
+    },
+    {
+      title: 'Đơn vị trực thuộc',
+      key: 'don_vi_truc_thuoc',
+      width: 200,
+      render: (_: any, record: DanhHieuItem) => {
+        if (record.don_vi_truc_thuoc) {
+          return record.don_vi_truc_thuoc.ten_don_vi;
+        }
+        return '-';
+      },
     },
     {
       title: 'Năm',
@@ -361,14 +560,165 @@ export default function ProposalDetailPage() {
     },
     {
       title: 'Số quyết định',
-      dataIndex: 'so_quyet_dinh_bkbqp',
+      dataIndex: 'so_quyet_dinh',
       key: 'so_quyet_dinh',
+      width: 180,
+      render: (_: any, record: DanhHieuItem, index: number) => {
+        const soQuyetDinh = record.so_quyet_dinh;
+        if (!soQuyetDinh || (typeof soQuyetDinh === 'string' && soQuyetDinh.trim() === '')) {
+          return <span style={{ color: '#999', fontWeight: 400 }}>Chưa có</span>;
+        }
+        return (
+          <a
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleOpenDecisionFile(soQuyetDinh, record.file_quyet_dinh);
+            }}
+            style={{ color: '#52c41a', fontWeight: 500, textDecoration: 'underline', cursor: 'pointer' }}
+          >
+            {soQuyetDinh}
+          </a>
+        );
+      },
+    },
+    {
+      title: 'Số quyết định BKBQP',
+      dataIndex: 'so_quyet_dinh_bkbqp',
+      key: 'so_quyet_dinh_bkbqp',
+      width: 180,
+      render: (_: any, record: DanhHieuItem, index: number) => {
+        const soQuyetDinhBKBQP = record.so_quyet_dinh_bkbqp;
+        if (!soQuyetDinhBKBQP || (typeof soQuyetDinhBKBQP === 'string' && soQuyetDinhBKBQP.trim() === '')) {
+          return <span style={{ color: '#999', fontWeight: 400 }}>Chưa có</span>;
+        }
+        return (
+          <a
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleOpenDecisionFile(soQuyetDinhBKBQP, record.file_quyet_dinh_bkbqp);
+            }}
+            style={{ color: '#52c41a', fontWeight: 500, textDecoration: 'underline', cursor: 'pointer' }}
+          >
+            {soQuyetDinhBKBQP}
+          </a>
+        );
+      },
+    },
+  ];
+
+  // Columns cho đề xuất đơn vị hằng năm
+  const donViHangNamColumns = [
+    {
+      title: 'STT',
+      key: 'stt',
+      width: 60,
+      align: 'center' as const,
+      render: (_: any, __: any, index: number) => index + 1,
+    },
+    {
+      title: 'Loại đơn vị',
+      key: 'loai_don_vi',
       width: 150,
-      render: (text: string) => (
-        <span style={{ color: text ? '#52c41a' : '#999', fontWeight: text ? 500 : 400 }}>
-          {text || 'Chưa có'}
-        </span>
+      render: (_: any, record: DanhHieuItem) => {
+        const type = record.don_vi_type || (record.co_quan_don_vi_cha ? 'DON_VI_TRUC_THUOC' : 'CO_QUAN_DON_VI');
+        return (
+          <Tag color={type === 'CO_QUAN_DON_VI' ? 'blue' : 'green'}>
+            {type === 'CO_QUAN_DON_VI' ? 'Cơ quan đơn vị' : 'Đơn vị trực thuộc'}
+          </Tag>
+        );
+      },
+    },
+    {
+      title: 'Mã đơn vị',
+      dataIndex: 'ma_don_vi',
+      key: 'ma_don_vi',
+      width: 150,
+      render: (text: string) => <Text code>{text || '-'}</Text>,
+    },
+    {
+      title: 'Tên đơn vị',
+      dataIndex: 'ten_don_vi',
+      key: 'ten_don_vi',
+      width: 250,
+      render: (text: string) => <Text strong>{text || '-'}</Text>,
+    },
+    {
+      title: 'Năm',
+      dataIndex: 'nam',
+      key: 'nam',
+      width: 80,
+      render: (_: any, record: DanhHieuItem, index: number) => (
+        <EditableCell
+          value={record.nam}
+          type="number"
+          onSave={val => updateDanhHieu(index, 'nam', parseInt(val))}
+          editable={proposal.status === 'PENDING'}
+        />
       ),
+    },
+    {
+      title: 'Danh hiệu',
+      dataIndex: 'danh_hieu',
+      key: 'danh_hieu',
+      width: 200,
+      render: (_: any, record: DanhHieuItem, index: number) => {
+        // Map mã danh hiệu sang tên đầy đủ để hiển thị
+        const danhHieuMap: Record<string, string> = {
+          'ĐVQT': 'Đơn vị Quyết thắng (ĐVQT)',
+          'ĐVTT': 'Đơn vị Tiên tiến (ĐVTT)',
+          'BKBQP': 'Bằng khen của Bộ trưởng Bộ Quốc phòng (BKBQP)',
+          'BKTTCP': 'Bằng khen Thủ tướng Chính phủ (BKTTCP)',
+        };
+        
+        const fullName = danhHieuMap[record.danh_hieu || ''] || record.danh_hieu || '';
+        
+        // Nếu không editable, hiển thị tên đầy đủ
+        if (proposal.status !== 'PENDING') {
+          return <Text>{fullName || '-'}</Text>;
+        }
+        
+        return (
+          <EditableCell
+            value={record.danh_hieu || ''}
+            type="select"
+            options={[
+              { label: 'Đơn vị Quyết thắng (ĐVQT)', value: 'ĐVQT' },
+              { label: 'Đơn vị Tiên tiến (ĐVTT)', value: 'ĐVTT' },
+              { label: 'Bằng khen của Bộ trưởng Bộ Quốc phòng (BKBQP)', value: 'BKBQP' },
+              { label: 'Bằng khen Thủ tướng Chính phủ (BKTTCP)', value: 'BKTTCP' },
+              { label: 'Không đạt', value: '' },
+            ]}
+            onSave={val => updateDanhHieu(index, 'danh_hieu', val || null)}
+            editable={true}
+          />
+        );
+      },
+    },
+    {
+      title: 'Số quyết định',
+      dataIndex: 'so_quyet_dinh',
+      key: 'so_quyet_dinh',
+      width: 180,
+      render: (_: any, record: DanhHieuItem, index: number) => {
+        const soQuyetDinh = record.so_quyet_dinh;
+        if (!soQuyetDinh || (typeof soQuyetDinh === 'string' && soQuyetDinh.trim() === '')) {
+          return <span style={{ color: '#999', fontWeight: 400 }}>Chưa có</span>;
+        }
+        return (
+          <a
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleOpenDecisionFile(soQuyetDinh, record.file_quyet_dinh);
+            }}
+            style={{ color: '#52c41a', fontWeight: 500, textDecoration: 'underline', cursor: 'pointer' }}
+          >
+            {soQuyetDinh}
+          </a>
+        );
+      },
     },
   ];
 
@@ -381,18 +731,34 @@ export default function ProposalDetailPage() {
       render: (_: any, __: any, index: number) => index + 1,
     },
     {
-      title: 'CCCD',
-      dataIndex: 'cccd',
-      key: 'cccd',
-      width: 120,
-      render: (text: string) => (
-        <span style={{ fontFamily: 'monospace', fontSize: '14px' }}>{text}</span>
-      ),
-    },
-    {
       title: 'Họ tên',
       dataIndex: 'ho_ten',
       key: 'ho_ten',
+    },
+    {
+      title: 'Cơ quan đơn vị',
+      key: 'co_quan_don_vi',
+      width: 200,
+      render: (_: any, record: ThanhTichItem) => {
+        if (record.don_vi_truc_thuoc?.co_quan_don_vi) {
+          return record.don_vi_truc_thuoc.co_quan_don_vi.ten_don_vi;
+        }
+        if (record.co_quan_don_vi) {
+          return record.co_quan_don_vi.ten_don_vi;
+        }
+        return '-';
+      },
+    },
+    {
+      title: 'Đơn vị trực thuộc',
+      key: 'don_vi_truc_thuoc',
+      width: 200,
+      render: (_: any, record: ThanhTichItem) => {
+        if (record.don_vi_truc_thuoc) {
+          return record.don_vi_truc_thuoc.ten_don_vi;
+        }
+        return '-';
+      },
     },
     {
       title: 'Năm',
@@ -443,12 +809,25 @@ export default function ProposalDetailPage() {
       title: 'Số quyết định',
       dataIndex: 'so_quyet_dinh',
       key: 'so_quyet_dinh',
-      width: 150,
-      render: (text: string) => (
-        <span style={{ color: text ? '#52c41a' : '#999', fontWeight: text ? 500 : 400 }}>
-          {text || 'Chưa có'}
-        </span>
-      ),
+      width: 180,
+      render: (_: any, record: ThanhTichItem, index: number) => {
+        const soQuyetDinh = record.so_quyet_dinh;
+        if (!soQuyetDinh || (typeof soQuyetDinh === 'string' && soQuyetDinh.trim() === '')) {
+          return <span style={{ color: '#999', fontWeight: 400 }}>Chưa có</span>;
+        }
+        return (
+          <a
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleOpenDecisionFile(soQuyetDinh, record.file_quyet_dinh);
+            }}
+            style={{ color: '#52c41a', fontWeight: 500, textDecoration: 'underline', cursor: 'pointer' }}
+          >
+            {soQuyetDinh}
+          </a>
+        );
+      },
     },
   ];
 
@@ -466,98 +845,6 @@ export default function ProposalDetailPage() {
     },
   };
 
-  const tabItems = [
-    {
-      key: 'danh_hieu',
-      label: (
-        <span>
-          <TrophyOutlined style={{ marginRight: 8 }} />
-          Danh Hiệu ({editedDanhHieu.length})
-        </span>
-      ),
-      children: (
-        <Card
-          title="Danh Hiệu Hằng Năm"
-          extra={
-            proposal.status === 'PENDING' &&
-            selectedRowKeys.length > 0 && (
-              <Button
-                type="primary"
-                icon={<FileTextOutlined />}
-                onClick={() => {
-                  setDecisionModalType('danh_hieu');
-                  setDecisionModalVisible(true);
-                }}
-              >
-                Thêm số quyết định ({selectedRowKeys.length} người)
-              </Button>
-            )
-          }
-        >
-          {editedDanhHieu.length === 0 ? (
-            <Empty
-              image={<WarningOutlined style={{ fontSize: 48, color: '#d9d9d9' }} />}
-              description="Không có dữ liệu danh hiệu"
-            />
-          ) : (
-            <Table
-              rowSelection={proposal.status === 'PENDING' ? rowSelection : undefined}
-              columns={danhHieuColumns}
-              dataSource={editedDanhHieu}
-              rowKey={(_, index) => index}
-              pagination={false}
-              scroll={{ x: true }}
-            />
-          )}
-        </Card>
-      ),
-    },
-    {
-      key: 'thanh_tich',
-      label: (
-        <span>
-          <BookOutlined style={{ marginRight: 8 }} />
-          Thành Tích ({editedThanhTich.length})
-        </span>
-      ),
-      children: (
-        <Card
-          title="Thành Tích Khoa Học"
-          extra={
-            proposal.status === 'PENDING' &&
-            selectedThanhTichKeys.length > 0 && (
-              <Button
-                type="primary"
-                icon={<FileTextOutlined />}
-                onClick={() => {
-                  setDecisionModalType('thanh_tich');
-                  setDecisionModalVisible(true);
-                }}
-              >
-                Thêm số quyết định ({selectedThanhTichKeys.length} thành tích)
-              </Button>
-            )
-          }
-        >
-          {editedThanhTich.length === 0 ? (
-            <Empty
-              image={<WarningOutlined style={{ fontSize: 48, color: '#d9d9d9' }} />}
-              description="Không có dữ liệu thành tích"
-            />
-          ) : (
-            <Table
-              rowSelection={proposal.status === 'PENDING' ? thanhTichRowSelection : undefined}
-              columns={thanhTichColumns}
-              dataSource={editedThanhTich}
-              rowKey={(_, index) => index}
-              pagination={false}
-              scroll={{ x: true }}
-            />
-          )}
-        </Card>
-      ),
-    },
-  ];
 
   return (
     <div style={{ padding: '24px', maxWidth: '1600px', margin: '0 auto' }}>
@@ -645,13 +932,149 @@ export default function ProposalDetailPage() {
             </div>
           </div>
         </div>
+        
+        {/* File đính kèm */}
+        {proposal.files_attached && proposal.files_attached.length > 0 && (
+          <div style={{ marginTop: '24px', paddingTop: '24px', borderTop: '1px solid rgba(0, 0, 0, 0.06)' }}>
+            <Text type="secondary" style={{ fontSize: '14px', display: 'block', marginBottom: '12px' }}>
+              File đính kèm ({proposal.files_attached.length} file)
+            </Text>
+            <Space direction="vertical" style={{ width: '100%' }} size="small">
+              {proposal.files_attached.map((file: any, index: number) => (
+                <div
+                  key={index}
+                  className="file-attachment-item"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '8px 12px',
+                    backgroundColor: 'rgba(0, 0, 0, 0.02)',
+                    border: '1px solid rgba(0, 0, 0, 0.06)',
+                    borderRadius: '4px',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <FileTextOutlined style={{ color: '#1890ff', fontSize: '16px' }} />
+                    <Text style={{ fontSize: '14px' }}>{file.originalName || file.filename}</Text>
+                    {file.size && (
+                      <Text type="secondary" style={{ fontSize: '12px' }}>
+                        ({(file.size / 1024).toFixed(2)} KB)
+                      </Text>
+                    )}
+                  </div>
+                  <Button
+                    type="link"
+                    icon={<DownloadOutlined />}
+                    style={{ padding: '0 8px', borderRadius: '6px' }}
+                    onClick={async () => {
+                      try {
+                        const filename = file.filename;
+                        const response = await axiosInstance.get(`/api/proposals/uploads/${filename}`, {
+                          responseType: 'blob',
+                        });
+                        const blob = response.data;
+                        const url = window.URL.createObjectURL(blob);
+                        const link = document.createElement('a');
+                        link.href = url;
+                        link.download = file.originalName || filename;
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                        window.URL.revokeObjectURL(url);
+                        message.success('Tải file thành công');
+                      } catch (error) {
+                        message.error('Lỗi khi tải file');
+                        console.error('Download error:', error);
+                      }
+                    }}
+                  >
+                    Tải về
+                  </Button>
+                </div>
+              ))}
+            </Space>
+          </div>
+        )}
       </Card>
 
-      <Tabs defaultActiveKey="danh_hieu" items={tabItems} />
+      {/* Hiển thị theo loại đề xuất - không chia tab */}
+      {proposal.loai_de_xuat === 'NCKH' ? (
+        // Component cho đề xuất NCKH (ĐTKH/SKKH) - chỉ hiển thị Thành Tích
+        <Card
+          title="Thành Tích Khoa Học"
+          extra={
+            proposal.status === 'PENDING' &&
+            selectedThanhTichKeys.length > 0 && (
+              <Button
+                type="primary"
+                icon={<FileTextOutlined />}
+                onClick={() => {
+                  setDecisionModalType('thanh_tich');
+                  setDecisionModalVisible(true);
+                }}
+              >
+                Thêm số quyết định ({selectedThanhTichKeys.length} thành tích)
+              </Button>
+            )
+          }
+        >
+          {editedThanhTich.length === 0 ? (
+            <Empty
+              image={<WarningOutlined style={{ fontSize: 48, color: '#d9d9d9' }} />}
+              description="Không có dữ liệu thành tích"
+            />
+          ) : (
+            <Table
+              rowSelection={proposal.status === 'PENDING' ? thanhTichRowSelection : undefined}
+              columns={thanhTichColumns}
+              dataSource={editedThanhTich}
+              rowKey={(_, index) => index}
+              pagination={false}
+              scroll={{ x: true }}
+            />
+          )}
+        </Card>
+      ) : editedDanhHieu.length > 0 ? (
+        // Component cho đề xuất có danh hiệu - chỉ hiển thị Danh Hiệu
+        <Card
+          title={proposal.loai_de_xuat === 'DON_VI_HANG_NAM' ? 'Danh Hiệu Đơn Vị Hằng Năm' : 'Danh Hiệu Hằng Năm'}
+          extra={
+            proposal.status === 'PENDING' &&
+            selectedRowKeys.length > 0 && (
+              <Button
+                type="primary"
+                icon={<FileTextOutlined />}
+                onClick={() => {
+                  setDecisionModalType('danh_hieu');
+                  setDecisionModalVisible(true);
+                }}
+              >
+                Thêm số quyết định ({selectedRowKeys.length} {proposal.loai_de_xuat === 'DON_VI_HANG_NAM' ? 'đơn vị' : 'người'})
+              </Button>
+            )
+          }
+        >
+          {editedDanhHieu.length === 0 ? (
+            <Empty
+              image={<WarningOutlined style={{ fontSize: 48, color: '#d9d9d9' }} />}
+              description="Không có dữ liệu danh hiệu"
+            />
+          ) : (
+            <Table
+              rowSelection={proposal.status === 'PENDING' ? rowSelection : undefined}
+              columns={proposal.loai_de_xuat === 'DON_VI_HANG_NAM' ? donViHangNamColumns : danhHieuColumns}
+              dataSource={editedDanhHieu}
+              rowKey={(_, index) => index}
+              pagination={false}
+              scroll={{ x: true }}
+            />
+          )}
+        </Card>
+      ) : null}
 
       {proposal.status === 'PENDING' && (
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: 24 }}>
-          <Button onClick={() => router.push('/admin/proposals/review')}>Hủy</Button>
           <Button
             danger
             icon={<CloseCircleOutlined />}

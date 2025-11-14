@@ -196,38 +196,38 @@ export default function CategoriesPage() {
                         alignItems: 'flex-end',
                         flexWrap: 'wrap',
                       }}
-                    >
-                      <div style={{ flex: 1, minWidth: 300 }}>
-                        <Text type="secondary" style={{ marginBottom: 8, display: 'block' }}>
+                      >
+                        <div style={{ flex: 1, minWidth: 300 }}>
+                          <Text type="secondary" style={{ marginBottom: 8, display: 'block' }}>
                           Cơ quan đơn vị
-                        </Text>
-                        <Select
-                          value={selectedUnit}
-                          onChange={setSelectedUnit}
-                          style={{ width: '100%' }}
-                          size="large"
+                          </Text>
+                          <Select
+                            value={selectedUnit}
+                            onChange={setSelectedUnit}
+                            style={{ width: '100%' }}
+                            size="large"
                           placeholder="Chọn Cơ quan đơn vị"
-                        >
+                          >
                           <Option value="ALL">Tất cả Cơ quan đơn vị ({units.length})</Option>
-                          {units.map(unit => (
-                            <Option key={unit.id} value={unit.id.toString()}>
-                              {unit.ten_don_vi}
-                            </Option>
-                          ))}
-                        </Select>
-                      </div>
+                            {units.map(unit => (
+                              <Option key={unit.id} value={unit.id.toString()}>
+                                {unit.ten_don_vi}
+                              </Option>
+                            ))}
+                          </Select>
+                        </div>
                       <div>
                         <div style={{ height: '22px', marginBottom: 8 }}></div>
-                        <Button
-                          type="primary"
-                          size="large"
-                          icon={<PlusOutlined />}
-                          onClick={() => handleOpenDialog('position')}
+                          <Button
+                            type="primary"
+                            size="large"
+                            icon={<PlusOutlined />}
+                            onClick={() => handleOpenDialog('position')}
                           style={{ minWidth: 'auto' }}
-                        >
-                          Thêm Chức vụ
-                        </Button>
-                      </div>
+                          >
+                            Thêm Chức vụ
+                          </Button>
+                        </div>
                     </div>
                   </Card>
 

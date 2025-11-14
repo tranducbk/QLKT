@@ -24,6 +24,11 @@ interface Personnel {
     id: string;
     ten_don_vi: string;
     ma_don_vi: string;
+    CoQuanDonVi?: {
+      id: string;
+      ten_don_vi: string;
+      ma_don_vi: string;
+    };
   };
   ChucVu?: {
     id: string;
@@ -98,8 +103,7 @@ export default function Step2SelectPersonnel({
     // Search filter
     const matchesSearch =
       searchText === '' ||
-      p.ho_ten.toLowerCase().includes(searchText.toLowerCase()) ||
-      p.cccd.includes(searchText);
+      p.ho_ten.toLowerCase().includes(searchText.toLowerCase());
 
     // Unit filter
     let matchesUnit = true;
@@ -125,12 +129,6 @@ export default function Step2SelectPersonnel({
       key: 'ho_ten',
       width: 200,
       render: (text) => <Text strong>{text}</Text>,
-    },
-    {
-      title: 'CCCD',
-      dataIndex: 'cccd',
-      key: 'cccd',
-      width: 140,
     },
     {
       title: 'Cơ quan đơn vị',
@@ -207,7 +205,7 @@ export default function Step2SelectPersonnel({
         </div>
 
         <Input
-          placeholder="Tìm theo tên hoặc CCCD"
+          placeholder="Tìm theo tên"
           prefix={<SearchOutlined />}
           value={searchText}
           onChange={(e) => setSearchText(e.target.value)}

@@ -14,7 +14,6 @@ import {
   message,
   Divider,
   Table,
-  Tabs,
   ConfigProvider,
   theme as antdTheme,
 } from 'antd';
@@ -91,6 +90,7 @@ interface ProposalDetail {
   status: 'PENDING' | 'APPROVED' | 'REJECTED';
   data_danh_hieu: DanhHieuItem[];
   data_thanh_tich: ThanhTichItem[];
+  data_nien_han?: DanhHieuItem[];
   files_attached: AttachedFile[];
   nguoi_duyet: any;
   ngay_duyet: string | null;
@@ -255,7 +255,8 @@ export default function ManagerProposalDetailPage() {
               Chi tiết đề xuất {getProposalTypeLabel(proposal.loai_de_xuat)}
             </Title>
           </div>
-          <Button
+          {/* Tạm thời ẩn chức năng tải file Excel */}
+          {/* <Button
             type="primary"
             icon={<DownloadOutlined />}
             onClick={handleDownloadExcel}
@@ -263,7 +264,7 @@ export default function ManagerProposalDetailPage() {
             size="large"
           >
             Tải file Excel
-          </Button>
+          </Button> */}
         </div>
 
         {/* Status Alert */}
@@ -443,141 +444,169 @@ export default function ManagerProposalDetailPage() {
           </Card>
         )}
 
-        {/* Data Tables */}
-        <Card className="shadow-sm">
-          <Tabs
-            defaultActiveKey="danh_hieu"
-            items={[
-              {
-                key: 'danh_hieu',
-                label: (
-                  <span>
-                    <TrophyOutlined style={{ marginRight: 8 }} />
-                    Danh Hiệu ({proposal.data_danh_hieu?.length || 0})
-                  </span>
-                ),
-                children: (
-                  <Table
-                    dataSource={proposal.data_danh_hieu || []}
-                    rowKey={(_, index) => `dh_${index}`}
-                    pagination={false}
-                    scroll={{ x: 900 }}
-                    columns={[
-                      {
-                        title: 'STT',
-                        key: 'index',
-                        width: 60,
-                        align: 'center',
-                        render: (_, __, index) => index + 1,
-                      },
-                      {
-                        title: 'CCCD',
-                        dataIndex: 'cccd',
-                        key: 'cccd',
-                        width: 140,
-                        render: text => <Text code>{text || '-'}</Text>,
-                      },
-                      {
-                        title: 'Họ và tên',
-                        dataIndex: 'ho_ten',
-                        key: 'ho_ten',
-                        width: 200,
-                        render: text => <Text strong>{text || '-'}</Text>,
-                      },
-                      {
-                        title: 'Năm',
-                        dataIndex: 'nam',
-                        key: 'nam',
-                        width: 100,
-                        align: 'center',
-                      },
-                      {
-                        title: 'Danh hiệu đề xuất',
-                        dataIndex: 'danh_hieu',
-                        key: 'danh_hieu',
-                        width: 180,
-                        render: text =>
-                          text ? <Tag color="green">{text}</Tag> : <Text type="secondary">-</Text>,
-                      },
-                    ]}
-                  />
-                ),
-              },
-              {
-                key: 'thanh_tich',
-                label: (
-                  <span>
-                    <BookOutlined style={{ marginRight: 8 }} />
-                    Thành Tích ({proposal.data_thanh_tich?.length || 0})
-                  </span>
-                ),
-                children: (
-                  <Table
-                    dataSource={proposal.data_thanh_tich || []}
-                    rowKey={(_, index) => `tt_${index}`}
-                    pagination={false}
-                    scroll={{ x: 1200 }}
-                    columns={[
-                      {
-                        title: 'STT',
-                        key: 'index',
-                        width: 60,
-                        align: 'center',
-                        render: (_, __, index) => index + 1,
-                      },
-                      {
-                        title: 'CCCD',
-                        dataIndex: 'cccd',
-                        key: 'cccd',
-                        width: 160,
-                        render: text => <Text code>{text || '-'}</Text>,
-                      },
-                      {
-                        title: 'Họ tên',
-                        dataIndex: 'ho_ten',
-                        key: 'ho_ten',
-                        width: 150,
-                        render: text => <Text strong>{text || '-'}</Text>,
-                      },
-                      {
-                        title: 'Năm',
-                        dataIndex: 'nam',
-                        key: 'nam',
-                        width: 100,
-                        align: 'center',
-                      },
-                      {
-                        title: 'Loại',
-                        dataIndex: 'loai',
-                        key: 'loai',
-                        width: 150,
-                        render: text => (
-                          <Tag color={text === 'NCKH' ? 'blue' : 'green'}>
-                            {text === 'NCKH' ? 'Đề tài khoa học' : 'Sáng kiến khoa học'}
-                          </Tag>
-                        ),
-                      },
-                      {
-                        title: 'Mô tả',
-                        dataIndex: 'mo_ta',
-                        key: 'mo_ta',
-                        width: 300,
-                        render: text => <Text>{text || '-'}</Text>,
-                      },
-                      {
-                        title: 'Số quyết định',
-                        dataIndex: 'so_quyet_dinh',
-                        key: 'so_quyet_dinh',
-                        width: 180,
-                        render: text => <Text>{text || '-'}</Text>,
-                      },
-                    ]}
-                  />
-                ),
-              },
-            ]}
-          />
-        </Card>
+        {/* Data Tables - Hiển thị theo loại đề xuất */}
+        {proposal.loai_de_xuat === 'NCKH' ? (
+          // Component cho đề xuất NCKH (ĐTKH/SKKH)
+          <Card className="shadow-sm" title={<span><BookOutlined style={{ marginRight: 8 }} />Thành Tích Khoa Học ({proposal.data_thanh_tich?.length || 0})</span>}>
+            <Table
+              dataSource={proposal.data_thanh_tich || []}
+              rowKey={(_, index) => `tt_${index}`}
+              pagination={false}
+              scroll={{ x: 1200 }}
+              columns={[
+                {
+                  title: 'STT',
+                  key: 'index',
+                  width: 60,
+                  align: 'center',
+                  render: (_, __, index) => index + 1,
+                },
+                {
+                  title: 'CCCD',
+                  dataIndex: 'cccd',
+                  key: 'cccd',
+                  width: 160,
+                  render: text => <Text code>{text || '-'}</Text>,
+                },
+                {
+                  title: 'Họ tên',
+                  dataIndex: 'ho_ten',
+                  key: 'ho_ten',
+                  width: 150,
+                  render: text => <Text strong>{text || '-'}</Text>,
+                },
+                {
+                  title: 'Năm',
+                  dataIndex: 'nam',
+                  key: 'nam',
+                  width: 100,
+                  align: 'center',
+                },
+                {
+                  title: 'Loại',
+                  dataIndex: 'loai',
+                  key: 'loai',
+                  width: 150,
+                  render: text => (
+                    <Tag color={text === 'NCKH' ? 'blue' : 'green'}>
+                      {text === 'NCKH' ? 'Đề tài khoa học' : 'Sáng kiến khoa học'}
+                    </Tag>
+                  ),
+                },
+                {
+                  title: 'Mô tả',
+                  dataIndex: 'mo_ta',
+                  key: 'mo_ta',
+                  width: 300,
+                  render: text => <Text>{text || '-'}</Text>,
+                },
+                {
+                  title: 'Số quyết định',
+                  dataIndex: 'so_quyet_dinh',
+                  key: 'so_quyet_dinh',
+                  width: 180,
+                  render: text => <Text>{text || '-'}</Text>,
+                },
+              ]}
+            />
+          </Card>
+        ) : proposal.data_danh_hieu && proposal.data_danh_hieu.length > 0 ? (
+          // Component cho đề xuất có danh hiệu (CA_NHAN_HANG_NAM, DON_VI_HANG_NAM, NIEN_HAN, CONG_HIEN, DOT_XUAT)
+          <Card className="shadow-sm" title={<span><TrophyOutlined style={{ marginRight: 8 }} />Danh Hiệu Hằng Năm ({proposal.data_danh_hieu?.length || 0})</span>}>
+            <Table
+              dataSource={proposal.data_danh_hieu || []}
+              rowKey={(_, index) => `dh_${index}`}
+              pagination={false}
+              scroll={{ x: 900 }}
+              columns={[
+                {
+                  title: 'STT',
+                  key: 'index',
+                  width: 60,
+                  align: 'center',
+                  render: (_, __, index) => index + 1,
+                },
+                {
+                  title: 'CCCD',
+                  dataIndex: 'cccd',
+                  key: 'cccd',
+                  width: 140,
+                  render: text => <Text code>{text || '-'}</Text>,
+                },
+                {
+                  title: 'Họ và tên',
+                  dataIndex: 'ho_ten',
+                  key: 'ho_ten',
+                  width: 200,
+                  render: text => <Text strong>{text || '-'}</Text>,
+                },
+                {
+                  title: 'Năm',
+                  dataIndex: 'nam',
+                  key: 'nam',
+                  width: 100,
+                  align: 'center',
+                },
+                {
+                  title: 'Danh hiệu đề xuất',
+                  dataIndex: 'danh_hieu',
+                  key: 'danh_hieu',
+                  width: 180,
+                  render: text =>
+                    text ? <Tag color="green">{text}</Tag> : <Text type="secondary">-</Text>,
+                },
+              ]}
+            />
+          </Card>
+        ) : proposal.data_nien_han && proposal.data_nien_han.length > 0 ? (
+          // Component cho đề xuất niên hạn
+          <Card className="shadow-sm" title={<span><ClockCircleOutlined style={{ marginRight: 8 }} />Niên Hạn ({proposal.data_nien_han?.length || 0})</span>}>
+            <Table
+              dataSource={proposal.data_nien_han || []}
+              rowKey={(_, index) => `nh_${index}`}
+              pagination={false}
+              scroll={{ x: 900 }}
+              columns={[
+                {
+                  title: 'STT',
+                  key: 'index',
+                  width: 60,
+                  align: 'center',
+                  render: (_, __, index) => index + 1,
+                },
+                {
+                  title: 'CCCD',
+                  dataIndex: 'cccd',
+                  key: 'cccd',
+                  width: 140,
+                  render: text => <Text code>{text || '-'}</Text>,
+                },
+                {
+                  title: 'Họ và tên',
+                  dataIndex: 'ho_ten',
+                  key: 'ho_ten',
+                  width: 200,
+                  render: text => <Text strong>{text || '-'}</Text>,
+                },
+                {
+                  title: 'Năm',
+                  dataIndex: 'nam',
+                  key: 'nam',
+                  width: 100,
+                  align: 'center',
+                },
+                {
+                  title: 'Danh hiệu đề xuất',
+                  dataIndex: 'danh_hieu',
+                  key: 'danh_hieu',
+                  width: 180,
+                  render: text =>
+                    text ? <Tag color="green">{text}</Tag> : <Text type="secondary">-</Text>,
+                },
+              ]}
+            />
+          </Card>
+        ) : null}
 
         {/* Action Buttons */}
         {proposal.status === 'REJECTED' && (

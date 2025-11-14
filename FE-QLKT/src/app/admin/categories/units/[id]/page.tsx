@@ -235,13 +235,13 @@ export default function UnitDetailPage() {
                     </Descriptions.Item>
                     {/* Chỉ hiển thị "Cơ quan đơn vị" nếu đơn vị là đơn vị trực thuộc (có co_quan_don_vi_id) */}
                     {isDonViTrucThuoc && (
-                      <Descriptions.Item label="Cơ quan đơn vị" span={1}>
-                        {unit.CoQuanDonVi ? (
-                          <Link href={`/admin/categories/units/${unit.CoQuanDonVi.id}`}>
-                            {unit.CoQuanDonVi.ten_don_vi}
-                          </Link>
-                        ) : null}
-                      </Descriptions.Item>
+                    <Descriptions.Item label="Cơ quan đơn vị" span={1}>
+                      {unit.CoQuanDonVi ? (
+                        <Link href={`/admin/categories/units/${unit.CoQuanDonVi.id}`}>
+                          {unit.CoQuanDonVi.ten_don_vi}
+                        </Link>
+                      ) : null}
+                    </Descriptions.Item>
                     )}
                     {/* Chỉ hiển thị "Số đơn vị trực thuộc" nếu đơn vị là cơ quan đơn vị (không có co_quan_don_vi_id) */}
                     {!isDonViTrucThuoc && (

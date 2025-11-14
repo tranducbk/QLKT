@@ -24,13 +24,13 @@ class DecisionService {
       }
 
       const [decisions, total] = await Promise.all([
-        prisma.quyetDinhKhenThuong.findMany({
+        prisma.fileQuyetDinh.findMany({
           where: whereClause,
           orderBy: [{ nam: 'desc' }, { ngay_ky: 'desc' }, { so_quyet_dinh: 'desc' }],
           skip,
           take: limit,
         }),
-        prisma.quyetDinhKhenThuong.count({ where: whereClause }),
+        prisma.fileQuyetDinh.count({ where: whereClause }),
       ]);
 
       return {
@@ -58,7 +58,7 @@ class DecisionService {
         return [];
       }
 
-      const decisions = await prisma.quyetDinhKhenThuong.findMany({
+      const decisions = await prisma.fileQuyetDinh.findMany({
         where: {
           so_quyet_dinh: {
             contains: query.trim(),
@@ -81,7 +81,7 @@ class DecisionService {
    */
   async getDecisionById(id) {
     try {
-      const decision = await prisma.quyetDinhKhenThuong.findUnique({
+      const decision = await prisma.fileQuyetDinh.findUnique({
         where: { id },
       });
 
@@ -101,7 +101,7 @@ class DecisionService {
    */
   async getDecisionBySoQuyetDinh(soQuyetDinh) {
     try {
-      const decision = await prisma.quyetDinhKhenThuong.findUnique({
+      const decision = await prisma.fileQuyetDinh.findUnique({
         where: { so_quyet_dinh: soQuyetDinh },
       });
 
@@ -121,7 +121,7 @@ class DecisionService {
         data;
 
       // Kiểm tra số quyết định đã tồn tại chưa
-      const existingDecision = await prisma.quyetDinhKhenThuong.findUnique({
+      const existingDecision = await prisma.fileQuyetDinh.findUnique({
         where: { so_quyet_dinh },
       });
 
@@ -135,7 +135,7 @@ class DecisionService {
       }
 
       // Tạo quyết định mới
-      const newDecision = await prisma.quyetDinhKhenThuong.create({
+      const newDecision = await prisma.fileQuyetDinh.create({
         data: {
           so_quyet_dinh: so_quyet_dinh.trim(),
           nam: parseInt(nam),
@@ -161,7 +161,7 @@ class DecisionService {
   async updateDecision(id, data) {
     try {
       // Kiểm tra quyết định có tồn tại không
-      const existingDecision = await prisma.quyetDinhKhenThuong.findUnique({
+      const existingDecision = await prisma.fileQuyetDinh.findUnique({
         where: { id },
       });
 
@@ -174,7 +174,7 @@ class DecisionService {
 
       // Nếu thay đổi số quyết định, kiểm tra trùng
       if (so_quyet_dinh && so_quyet_dinh !== existingDecision.so_quyet_dinh) {
-        const duplicateDecision = await prisma.quyetDinhKhenThuong.findUnique({
+        const duplicateDecision = await prisma.fileQuyetDinh.findUnique({
           where: { so_quyet_dinh },
         });
 
@@ -194,7 +194,7 @@ class DecisionService {
       if (ghi_chu !== undefined) updateData.ghi_chu = ghi_chu;
 
       // Cập nhật
-      const updatedDecision = await prisma.quyetDinhKhenThuong.update({
+      const updatedDecision = await prisma.fileQuyetDinh.update({
         where: { id },
         data: updateData,
       });
@@ -212,7 +212,7 @@ class DecisionService {
   async deleteDecision(id) {
     try {
       // Kiểm tra quyết định có tồn tại không
-      const existingDecision = await prisma.quyetDinhKhenThuong.findUnique({
+      const existingDecision = await prisma.fileQuyetDinh.findUnique({
         where: { id },
       });
 
@@ -224,7 +224,7 @@ class DecisionService {
       // Nếu có, không cho phép xóa
 
       // Xóa quyết định
-      await prisma.quyetDinhKhenThuong.delete({
+      await prisma.fileQuyetDinh.delete({
         where: { id },
       });
 
@@ -239,7 +239,7 @@ class DecisionService {
    */
   async getAvailableYears() {
     try {
-      const years = await prisma.quyetDinhKhenThuong.findMany({
+      const years = await prisma.fileQuyetDinh.findMany({
         select: {
           nam: true,
         },
@@ -260,7 +260,7 @@ class DecisionService {
    */
   async getAwardTypes() {
     try {
-      const types = await prisma.quyetDinhKhenThuong.findMany({
+      const types = await prisma.fileQuyetDinh.findMany({
         select: {
           loai_khen_thuong: true,
         },

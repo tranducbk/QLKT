@@ -178,6 +178,15 @@ export const apiClient = {
     }
   },
 
+  async getMyUnits(): Promise<ApiResponse> {
+    try {
+      const res = await axiosInstance.get('/api/units/my-units');
+      return { success: true, data: res.data?.data || res.data };
+    } catch (e: any) {
+      return { success: false, message: e?.response?.data?.message || e.message };
+    }
+  },
+
   async getUnitById(id: string): Promise<ApiResponse> {
     try {
       const res = await axiosInstance.get(`/api/units/${id}`);
@@ -711,10 +720,15 @@ export const apiClient = {
     search?: string;
     page?: number;
     limit?: number;
-  }): Promise<ApiResponse> {
+  }): Promise<ApiResponse & { pagination?: any }> {
     try {
       const res = await axiosInstance.get('/api/decisions', { params });
-      return { success: true, data: res.data?.data || res.data };
+      // Backend trả về: { success: true, data: [...], pagination: {...} }
+      return { 
+        success: true, 
+        data: res.data?.data || res.data,
+        pagination: res.data?.pagination 
+      };
     } catch (e: any) {
       return { success: false, message: e?.response?.data?.message || e.message };
     }

@@ -302,7 +302,12 @@ export default function ScientificAchievementsPage() {
             label="Loại thành tích"
             rules={[{ required: true, message: 'Vui lòng chọn loại thành tích' }]}
           >
-            <Select placeholder="Chọn loại thành tích" size="large">
+            <Select
+              placeholder="Chọn loại thành tích"
+              size="large"
+              popupMatchSelectWidth={false}
+              styles={{ popup: { root: { minWidth: 'max-content' } } }}
+            >
               <Select.Option value="NCKH">Nghiên cứu khoa học (NCKH)</Select.Option>
               <Select.Option value="SKKH">Sáng kiến khoa học (SKKH)</Select.Option>
             </Select>
