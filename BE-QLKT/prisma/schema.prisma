@@ -10,7 +10,7 @@ datasource db {
 
 // 1. Bảng Cơ quan đơn vị
 model CoQuanDonVi {
-  id         String   @id @default(cuid2()) @db.VarChar(30)
+  id         String   @id @default(cuid()) @db.VarChar(30)
   ma_don_vi  String   @unique @db.VarChar(50)
   ten_don_vi String   @db.VarChar(255)
   so_luong   Int      @default(0)
@@ -29,7 +29,7 @@ model CoQuanDonVi {
 
 // 2. Bảng Đơn vị trực thuộc
 model DonViTrucThuoc {
-  id                String   @id @default(cuid2()) @db.VarChar(30)
+  id                String   @id @default(cuid()) @db.VarChar(30)
   co_quan_don_vi_id String   @db.VarChar(30) // ID cơ quan đơn vị
   ma_don_vi         String   @unique @db.VarChar(50)
   ten_don_vi        String   @db.VarChar(255)
@@ -49,7 +49,7 @@ model DonViTrucThuoc {
 
 // 3. Bảng Chức vụ
 model ChucVu {
-  id                   String   @id @default(cuid2()) @db.VarChar(30)
+  id                   String   @id @default(cuid()) @db.VarChar(30)
   co_quan_don_vi_id     String?  @db.VarChar(30) // ID cơ quan đơn vị (nullable)
   don_vi_truc_thuoc_id  String?  @db.VarChar(30) // ID đơn vị trực thuộc (nullable)
   ten_chuc_vu           String   @db.VarChar(255)
@@ -71,7 +71,7 @@ model ChucVu {
 
 // 4. Bảng Quân nhân
 model QuanNhan {
-  id                       String    @id @default(cuid2()) @db.VarChar(30)
+  id                       String    @id @default(cuid()) @db.VarChar(30)
   cccd                     String?   @unique @db.VarChar(20)
   ho_ten                   String    @db.VarChar(255)
   ngay_sinh                DateTime? @db.Date
@@ -108,7 +108,7 @@ model QuanNhan {
 
 // 5. Bảng Tài khoản
 model TaiKhoan {
-  id            String   @id @default(cuid2()) @db.VarChar(30)
+  id            String   @id @default(cuid()) @db.VarChar(30)
   quan_nhan_id  String?  @unique @db.VarChar(30)
   username      String   @unique @db.VarChar(100)
   password_hash String   @db.VarChar(255)
@@ -131,7 +131,7 @@ model TaiKhoan {
 
 // 6. Bảng Lịch sử chức vụ (INPUT - để tính cống hiến)
 model LichSuChucVu {
-  id            String    @id @default(cuid2()) @db.VarChar(30)
+  id            String    @id @default(cuid()) @db.VarChar(30)
   quan_nhan_id  String    @db.VarChar(30)
   chuc_vu_id    String    @db.VarChar(30)
   ngay_bat_dau  DateTime  @db.Date
@@ -148,7 +148,7 @@ model LichSuChucVu {
 
 // 7. Bảng Thành tích khoa học (INPUT)
 model ThanhTichKhoaHoc {
-  id           String   @id @default(cuid2()) @db.VarChar(30)
+  id           String   @id @default(cuid()) @db.VarChar(30)
   quan_nhan_id String   @db.VarChar(30)
   nam          Int
   loai         String   @db.VarChar(10) // NCKH, SKKH
@@ -165,7 +165,7 @@ model ThanhTichKhoaHoc {
 
 // 8. Bảng Danh hiệu hằng năm (INPUT + OUTPUT)
 model DanhHieuHangNam {
-  id                     String   @id @default(cuid2()) @db.VarChar(30)
+  id                     String   @id @default(cuid()) @db.VarChar(30)
   quan_nhan_id           String   @db.VarChar(30)
   nam                    Int
   danh_hieu              String?  @db.VarChar(20) // CSTDCS, CSTT (null = không đạt)
@@ -189,7 +189,7 @@ model DanhHieuHangNam {
 
 // 9. Bảng Hồ sơ Niên hạn (OUTPUT)
 model HoSoNienHan {
-  id           String @id @default(cuid2()) @db.VarChar(30)
+  id           String @id @default(cuid()) @db.VarChar(30)
   quan_nhan_id String @unique @db.VarChar(30)
 
   // Huân chương Chiến sĩ vẻ vang (HCCSVV)
@@ -218,7 +218,7 @@ model HoSoNienHan {
 
 // 10. Bảng Hồ sơ Hằng năm (OUTPUT)
 model HoSoHangNam {
-  id                  String   @id @default(cuid2()) @db.VarChar(30)
+  id                  String   @id @default(cuid()) @db.VarChar(30)
   quan_nhan_id        String   @unique @db.VarChar(30)
   tong_cstdcs         Int      @default(0)
   tong_nckh           Int      @default(0)
@@ -237,7 +237,7 @@ model HoSoHangNam {
 
 // 11. Bảng Nhật ký hệ thống
 model SystemLog {
-  id                String   @id @default(cuid2()) @db.VarChar(30)
+  id                String   @id @default(cuid()) @db.VarChar(30)
   nguoi_thuc_hien_id String   @db.VarChar(30) // ID của người thực hiện hành động
   actor_role        String   @db.VarChar(20) // SUPER_ADMIN, ADMIN, MANAGER, USER
   action            String   @db.VarChar(50) // CREATE, UPDATE, DELETE, LOGIN, LOGOUT, etc.
@@ -287,7 +287,7 @@ model ThongBao {
 
 // 12. Bảng Đề xuất Khen thưởng (Proposals)
 model BangDeXuat {
-  id                String    @id @default(cuid2()) @db.VarChar(30)
+  id                String    @id @default(cuid()) @db.VarChar(30)
   co_quan_don_vi_id String?   @db.VarChar(30) // ID cơ quan đơn vị của Manager nộp đề xuất (nullable)
   don_vi_truc_thuoc_id String? @db.VarChar(30) // ID đơn vị trực thuộc của Manager nộp đề xuất (nullable)
   nguoi_de_xuat_id  String    @db.VarChar(30) // ID tài khoản người đề xuất
@@ -315,7 +315,7 @@ model BangDeXuat {
 
 // 13. Bảng Theo dõi Khen thưởng Đơn vị
 model TheoDoiKhenThuongDonVi {
-  id                        String    @id @default(cuid2()) @db.VarChar(30)
+  id                        String    @id @default(cuid()) @db.VarChar(30)
   co_quan_don_vi_id         String?   @db.VarChar(30) // ID cơ quan đơn vị được khen thưởng (nullable)
   don_vi_truc_thuoc_id      String?   @db.VarChar(30) // ID đơn vị trực thuộc được khen thưởng (nullable)
   nam                       Int // Năm khen thưởng (chỉ hằng năm)

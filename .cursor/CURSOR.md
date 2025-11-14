@@ -7,12 +7,12 @@
 - **Project**: QLKT (Quản lý Khen thưởng)
 - **Frontend**: Next.js 14 + TypeScript + TailwindCSS
 - **Backend**: Express + Prisma + PostgreSQL
-- **ID Format**: `cuid2()` - String VarChar(30) (không có dấu gạch ngang)
+- **ID Format**: `cuid()` - String VarChar(30) (không có dấu gạch ngang)
 
 ## Key Rules
 
 1. **Database**: Luôn dùng Prisma, KHÔNG raw SQL
-2. **ID**: Tất cả ID là `cuid2()` String VarChar(30)
+2. **ID**: Tất cả ID là `cuid()` String VarChar(30)
 3. **Response Format**: `{ success: true/false, data/error, message? }`
 4. **Auth**: Check role trước mọi thao tác
 5. **Constants**: Notification types trong `BE-QLKT/src/constants/notificationTypes.js`

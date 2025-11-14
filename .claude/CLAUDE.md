@@ -22,7 +22,7 @@
 ## Database Schema
 
 ### ID System
-- **Tất cả ID**: Sử dụng `cuid2()` - chuỗi không có dấu gạch ngang
+- **Tất cả ID**: Sử dụng `cuid()` - chuỗi không có dấu gạch ngang
 - **Kiểu dữ liệu**: `String @db.VarChar(30)`
 - **Ví dụ**: `clxx90y9w000108l0chox5y0x`
 
@@ -128,7 +128,7 @@ export default function ComponentName() {
 ## Important Notes
 
 1. **Database**: Luôn dùng Prisma, KHÔNG dùng raw SQL
-2. **ID System**: Tất cả ID là `cuid2()` String VarChar(30)
+2. **ID System**: Tất cả ID là `cuid()` String VarChar(30)
 3. **INPUT tables**: Chỉ nhập dữ liệu vào LichSuChucVu, ThanhTichKhoaHoc, DanhHieuHangNam
 4. **OUTPUT tables**: HoSoNienHan, HoSoHangNam - chỉ đọc, tính toán qua endpoint `/api/profiles/recalculate`
 5. **CCCD**: Primary key cho Import/Export operations

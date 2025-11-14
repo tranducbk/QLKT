@@ -70,7 +70,7 @@ Always check user roles for protected routes:
 ### Database Operations
 - Use Prisma for ALL database operations
 - NEVER use raw SQL queries
-- All IDs use `cuid2()` - String VarChar(30) (no dashes)
+- All IDs use `cuid()` - String VarChar(30) (no dashes)
 - INPUT tables: LichSuChucVu, ThanhTichKhoaHoc, DanhHieuHangNam
 - OUTPUT tables: HoSoNienHan, HoSoHangNam (don't modify directly, use recalculate endpoint)
 - CCCD is the primary key for Import/Export operations
