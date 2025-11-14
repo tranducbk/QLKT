@@ -31,7 +31,9 @@ class PositionHistoryController {
 
   async createPositionHistory(req, res) {
     try {
-      const { personnel_id, chuc_vu_id, ngay_bat_dau, ngay_ket_thuc } = req.body;
+      // personnel_id lấy từ URL params (nested route: /api/personnel/:personnelId/position-history)
+      const personnel_id = req.params.personnelId || req.body.personnel_id;
+      const { chuc_vu_id, ngay_bat_dau, ngay_ket_thuc } = req.body;
 
       if (!personnel_id || !chuc_vu_id || !ngay_bat_dau) {
         return res.status(400).json({

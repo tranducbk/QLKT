@@ -250,7 +250,23 @@ export default function CategoriesPage() {
           onCancel={handleCloseDialog}
           footer={null}
           width={800}
+          centered
           style={{ maxHeight: '90vh' }}
+          styles={{
+            content: {
+              borderRadius: '12px !important',
+              overflow: 'hidden',
+            },
+            header: {
+              borderRadius: '12px 12px 0 0 !important',
+            },
+            body: {
+              borderRadius: '0 0 12px 12px !important',
+            },
+          }}
+          maskStyle={{
+            borderRadius: '12px',
+          }}
           title={
             dialogType === 'unit'
               ? editingItem

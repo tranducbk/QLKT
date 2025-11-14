@@ -26,7 +26,7 @@ export function PositionForm({ position, units = [], onSuccess, onClose }: Posit
         don_vi_id: position.don_vi_id?.toString() || undefined,
         ten_chuc_vu: position.ten_chuc_vu || '',
         // Nếu là đơn vị trực thuộc thì luôn set is_manager = false
-        is_manager: isDonViTrucThuoc ? false : (position.is_manager || false),
+        is_manager: isDonViTrucThuoc ? false : position.is_manager || false,
         he_so_luong: position.he_so_luong || undefined,
       });
     } else if (units.length === 1) {
@@ -53,11 +53,15 @@ export function PositionForm({ position, units = [], onSuccess, onClose }: Posit
       const payload: any = {
         ten_chuc_vu: values.ten_chuc_vu,
         // Nếu là đơn vị trực thuộc thì luôn is_manager = false, không có chỉ huy
-        is_manager: isDonViTrucThuoc ? false : (values.is_manager || false),
+        is_manager: isDonViTrucThuoc ? false : values.is_manager || false,
       };
 
       // Add optional fields
-      if (values.he_so_luong !== undefined && values.he_so_luong !== null && values.he_so_luong !== '') {
+      if (
+        values.he_so_luong !== undefined &&
+        values.he_so_luong !== null &&
+        values.he_so_luong !== ''
+      ) {
         payload.he_so_luong = parseFloat(values.he_so_luong);
       }
 
@@ -171,7 +175,7 @@ export function PositionForm({ position, units = [], onSuccess, onClose }: Posit
       {isDonViTrucThuoc && (
         <Form.Item>
           <Text type="secondary" style={{ fontSize: '13px' }}>
-            ℹ️ Đơn vị trực thuộc không có chức vụ chỉ huy. Chỉ cơ quan đơn vị mới có chỉ huy.
+            Đơn vị trực thuộc không có chức vụ chỉ huy. Chỉ cơ quan đơn vị mới có chỉ huy.
           </Text>
         </Form.Item>
       )}

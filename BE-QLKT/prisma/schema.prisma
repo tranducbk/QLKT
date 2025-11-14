@@ -135,8 +135,10 @@ model LichSuChucVu {
   id            String    @id @default(cuid()) @db.VarChar(30)
   quan_nhan_id  String    @db.VarChar(30)
   chuc_vu_id    String    @db.VarChar(30)
+  he_so_luong   Float     @default(0) // Hệ số lương tại thời điểm đó (lưu snapshot)
   ngay_bat_dau  DateTime  @db.Date
   ngay_ket_thuc DateTime? @db.Date
+  so_thang      Int?      // Số tháng giữ chức vụ (tính từ ngày bắt đầu đến ngày kết thúc, tính tới tháng)
   createdAt     DateTime  @default(now()) @db.Timestamptz(6)
   updatedAt     DateTime  @updatedAt @db.Timestamptz(6)
 

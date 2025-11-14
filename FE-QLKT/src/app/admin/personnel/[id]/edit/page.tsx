@@ -39,7 +39,9 @@ export default function PersonnelEditPage() {
   const [currentUnitName, setCurrentUnitName] = useState<string>('');
   const [personnelRole, setPersonnelRole] = useState<string>(''); // Role của personnel đang edit
   const [selectedCoQuanDonViId, setSelectedCoQuanDonViId] = useState<string | undefined>(undefined);
-  const [selectedDonViTrucThuocId, setSelectedDonViTrucThuocId] = useState<string | undefined>(undefined);
+  const [selectedDonViTrucThuocId, setSelectedDonViTrucThuocId] = useState<string | undefined>(
+    undefined
+  );
   const [currentPositionId, setCurrentPositionId] = useState<string | undefined>(undefined); // Chức vụ hiện tại để luôn hiển thị
 
   useEffect(() => {
@@ -111,10 +113,15 @@ export default function PersonnelEditPage() {
             tru_quan: personnel.tru_quan || '',
             cho_o_hien_nay: personnel.cho_o_hien_nay || '',
             ngay_vao_dang: personnel.ngay_vao_dang ? dayjs(personnel.ngay_vao_dang) : undefined,
-            ngay_vao_dang_chinh_thuc: personnel.ngay_vao_dang_chinh_thuc ? dayjs(personnel.ngay_vao_dang_chinh_thuc) : undefined,
+            ngay_vao_dang_chinh_thuc: personnel.ngay_vao_dang_chinh_thuc
+              ? dayjs(personnel.ngay_vao_dang_chinh_thuc)
+              : undefined,
             so_the_dang_vien: personnel.so_the_dang_vien || '',
             so_dien_thoai: personnel.so_dien_thoai || '',
-            co_quan_don_vi_id: personnel.co_quan_don_vi_id || personnel.DonViTrucThuoc?.co_quan_don_vi_id || undefined,
+            co_quan_don_vi_id:
+              personnel.co_quan_don_vi_id ||
+              personnel.DonViTrucThuoc?.co_quan_don_vi_id ||
+              undefined,
             don_vi_truc_thuoc_id: personnel.don_vi_truc_thuoc_id || undefined,
             chuc_vu_id: personnel.chuc_vu_id || personnel.ChucVu?.id,
           });
@@ -153,7 +160,9 @@ export default function PersonnelEditPage() {
     } else {
       // USER: Chỉ hiện chức vụ của đơn vị trực thuộc
       if (selectedDonViTrucThuocId) {
-        filtered = positions.filter((p: any) => p.don_vi_truc_thuoc_id === selectedDonViTrucThuocId);
+        filtered = positions.filter(
+          (p: any) => p.don_vi_truc_thuoc_id === selectedDonViTrucThuocId
+        );
       }
     }
 
@@ -166,7 +175,14 @@ export default function PersonnelEditPage() {
     }
 
     return filtered;
-  }, [selectedDonViTrucThuocId, selectedCoQuanDonViId, positions, loadingData, currentPositionId, isManagerPersonnel]);
+  }, [
+    selectedDonViTrucThuocId,
+    selectedCoQuanDonViId,
+    positions,
+    loadingData,
+    currentPositionId,
+    isManagerPersonnel,
+  ]);
 
   const onFinish = async (values: any) => {
     try {
@@ -174,7 +190,7 @@ export default function PersonnelEditPage() {
 
       const formattedValues: any = {
         ho_ten: values.ho_ten,
-        cccd: values.cccd,
+        cccd: values.cccd && values.cccd.trim() ? values.cccd.trim() : null,
         ngay_sinh: values.ngay_sinh ? values.ngay_sinh.format('YYYY-MM-DD') : null,
         ngay_nhap_ngu: values.ngay_nhap_ngu ? values.ngay_nhap_ngu.format('YYYY-MM-DD') : null,
         ngay_xuat_ngu: values.ngay_xuat_ngu ? values.ngay_xuat_ngu.format('YYYY-MM-DD') : null,
@@ -183,7 +199,9 @@ export default function PersonnelEditPage() {
         tru_quan: values.tru_quan || null,
         cho_o_hien_nay: values.cho_o_hien_nay || null,
         ngay_vao_dang: values.ngay_vao_dang ? values.ngay_vao_dang.format('YYYY-MM-DD') : null,
-        ngay_vao_dang_chinh_thuc: values.ngay_vao_dang_chinh_thuc ? values.ngay_vao_dang_chinh_thuc.format('YYYY-MM-DD') : null,
+        ngay_vao_dang_chinh_thuc: values.ngay_vao_dang_chinh_thuc
+          ? values.ngay_vao_dang_chinh_thuc.format('YYYY-MM-DD')
+          : null,
         so_the_dang_vien: values.so_the_dang_vien || null,
         so_dien_thoai: values.so_dien_thoai || null,
         chuc_vu_id: values.chuc_vu_id,
@@ -277,12 +295,13 @@ export default function PersonnelEditPage() {
                   <Form.Item
                     name="cccd"
                     label="CCCD"
-                    rules={[
-                      { required: true, message: 'Vui lòng nhập CCCD' },
-                      { len: 12, message: 'CCCD phải có 12 số' },
-                    ]}
+                    rules={[{ len: 12, message: 'CCCD phải có 12 số', whitespace: false }]}
                   >
-                    <Input placeholder="Nhập số CCCD" disabled={loading} maxLength={12} />
+                    <Input
+                      placeholder="Nhập số CCCD (tùy chọn)"
+                      disabled={loading}
+                      maxLength={12}
+                    />
                   </Form.Item>
 
                   <Form.Item name="ngay_sinh" label="Ngày sinh">
@@ -309,7 +328,10 @@ export default function PersonnelEditPage() {
                   </Form.Item>
 
                   <Form.Item name="que_quan_3_cap" label="Quê quán (3 cấp)">
-                    <Input placeholder="VD: Xã An Hoà, huyện Yên Bình, tỉnh Nam Định" disabled={loading} />
+                    <Input
+                      placeholder="VD: Xã An Hoà, huyện Yên Bình, tỉnh Nam Định"
+                      disabled={loading}
+                    />
                   </Form.Item>
 
                   <Form.Item name="tru_quan" label="Trú quán">
@@ -405,7 +427,7 @@ export default function PersonnelEditPage() {
                           disabled={loading}
                           showSearch
                           optionFilterProp="children"
-                          onChange={(value) => {
+                          onChange={value => {
                             setSelectedCoQuanDonViId(value);
                             setSelectedDonViTrucThuocId(undefined);
                             setCurrentPositionId(undefined); // Clear chức vụ hiện tại khi đổi đơn vị
@@ -441,7 +463,7 @@ export default function PersonnelEditPage() {
                             disabled={loading || !selectedCoQuanDonViId}
                             showSearch
                             optionFilterProp="children"
-                            onChange={(value) => {
+                            onChange={value => {
                               setSelectedDonViTrucThuocId(value);
                               setCurrentPositionId(undefined); // Clear chức vụ hiện tại khi đổi đơn vị
                               // Reset chức vụ khi đổi đơn vị trực thuộc
@@ -449,7 +471,9 @@ export default function PersonnelEditPage() {
                             }}
                           >
                             {donViTrucThuocList
-                              .filter((unit: any) => unit.co_quan_don_vi_id === selectedCoQuanDonViId)
+                              .filter(
+                                (unit: any) => unit.co_quan_don_vi_id === selectedCoQuanDonViId
+                              )
                               .map((unit: any) => (
                                 <Select.Option key={unit.id} value={unit.id}>
                                   {unit.ten_don_vi} ({unit.ma_don_vi})
@@ -479,7 +503,7 @@ export default function PersonnelEditPage() {
                       disabled={loading}
                       showSearch
                       optionFilterProp="children"
-                      onChange={(value) => {
+                      onChange={value => {
                         // Update currentPositionId khi user chọn chức vụ mới
                         setCurrentPositionId(value);
                       }}

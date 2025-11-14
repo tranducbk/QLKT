@@ -14,7 +14,6 @@ import {
   Modal,
   message,
   Tag,
-  Popconfirm,
   ConfigProvider,
   theme as antdTheme,
   Popover,
@@ -26,7 +25,6 @@ import {
   HomeOutlined,
   SearchOutlined,
   EyeOutlined,
-  DeleteOutlined,
   FilterOutlined,
 } from '@ant-design/icons';
 import Link from 'next/link';
@@ -179,18 +177,6 @@ export default function PersonnelPage() {
     }
   }
 
-  const handleDelete = async (id: number) => {
-    try {
-      setTableLoading(true);
-      await apiClient.deletePersonnel(id.toString());
-      message.success('Xóa quân nhân thành công');
-      loadData();
-    } catch (error) {
-      message.error('Có lỗi xảy ra khi xóa');
-    } finally {
-      setTableLoading(false);
-    }
-  };
 
   const filteredPersonnel = personnel
     .filter(p => {
@@ -280,31 +266,17 @@ export default function PersonnelPage() {
     {
       title: 'Hành động',
       key: 'action',
-      width: 180,
+      width: 120,
       fixed: 'right',
       render: (_, record) => (
-        <Space size="small">
-          <Button
-            type="primary"
-            icon={<EyeOutlined />}
-            size="small"
-            onClick={() => router.push(`/admin/personnel/${record.id}`)}
-          >
-            Xem
-          </Button>
-          <Popconfirm
-            title="Xác nhận xóa"
-            description="Bạn có chắc chắn muốn xóa quân nhân này?"
-            onConfirm={() => handleDelete(record.id)}
-            okText="Xóa"
-            cancelText="Hủy"
-            okButtonProps={{ danger: true }}
-          >
-            <Button danger icon={<DeleteOutlined />} size="small">
-              Xóa
-            </Button>
-          </Popconfirm>
-        </Space>
+        <Button
+          type="primary"
+          icon={<EyeOutlined />}
+          size="small"
+          onClick={() => router.push(`/admin/personnel/${record.id}`)}
+        >
+          Xem
+        </Button>
       ),
     },
   ];

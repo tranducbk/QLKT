@@ -34,6 +34,7 @@ import {
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { apiClient } from '@/lib/api-client';
+import { formatDate, formatDateTime } from '@/lib/utils';
 import { useTheme } from '@/components/theme-provider';
 
 const { Title, Text, Paragraph } = Typography;
@@ -265,7 +266,7 @@ export default function UserDashboard() {
                 </Descriptions.Item>
                 <Descriptions.Item label="Ngày sinh" labelStyle={{ fontWeight: 500 }}>
                   {personnelInfo.ngay_sinh
-                    ? new Date(personnelInfo.ngay_sinh).toLocaleDateString('vi-VN')
+                    ? formatDate(personnelInfo.ngay_sinh)
                     : 'N/A'}
                 </Descriptions.Item>
                 <Descriptions.Item label="Đơn vị" labelStyle={{ fontWeight: 500 }}>
@@ -283,7 +284,7 @@ export default function UserDashboard() {
                 </Descriptions.Item>
                 <Descriptions.Item label="Ngày nhập ngũ" labelStyle={{ fontWeight: 500 }}>
                   {personnelInfo.ngay_nhap_ngu
-                    ? new Date(personnelInfo.ngay_nhap_ngu).toLocaleDateString('vi-VN')
+                    ? formatDate(personnelInfo.ngay_nhap_ngu)
                     : 'N/A'}
                 </Descriptions.Item>
               </Descriptions>
@@ -675,7 +676,7 @@ export default function UserDashboard() {
           {/* Footer Info */}
           <div className="text-center py-6">
             <Text type="secondary" className="text-sm">
-              Dữ liệu được cập nhật lần cuối: {new Date().toLocaleString('vi-VN')}
+              Dữ liệu được cập nhật lần cuối: {formatDateTime(new Date())}
             </Text>
           </div>
         </div>

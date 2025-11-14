@@ -199,6 +199,8 @@ class PersonnelController {
   /**
    * DELETE /api/personnel/:id
    * Xóa quân nhân
+   * NOTE: Endpoint này không được expose trong route.
+   * Sử dụng DELETE /api/accounts/:id để xóa tài khoản và toàn bộ dữ liệu liên quan.
    */
   async deletePersonnel(req, res) {
     try {

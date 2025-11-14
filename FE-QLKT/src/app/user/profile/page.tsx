@@ -23,7 +23,7 @@ import {
 } from '@ant-design/icons';
 import Link from 'next/link';
 import { apiClient } from '@/lib/api-client';
-import { calculateDuration } from '@/lib/utils';
+import { calculateDuration, formatDate } from '@/lib/utils';
 
 const { Title, Text } = Typography;
 const { TabPane } = Tabs;
@@ -223,13 +223,13 @@ export default function UserProfilePage() {
       title: 'Ngày bắt đầu',
       dataIndex: 'ngay_bat_dau',
       key: 'ngay_bat_dau',
-      render: (date: string) => (date ? new Date(date).toLocaleDateString('vi-VN') : 'N/A'),
+      render: (date: string) => (date ? formatDate(date) : 'N/A'),
     },
     {
       title: 'Ngày kết thúc',
       dataIndex: 'ngay_ket_thuc',
       key: 'ngay_ket_thuc',
-      render: (date: string) => (date ? new Date(date).toLocaleDateString('vi-VN') : 'Hiện tại'),
+      render: (date: string) => (date ? formatDate(date) : 'Hiện tại'),
     },
     {
       title: 'Thời gian',
@@ -426,9 +426,7 @@ export default function UserProfilePage() {
                         {serviceProfile.hccsvv_hang_ba_ngay && (
                           <div className="text-xs text-gray-600 dark:text-gray-300">
                             Ngày:{' '}
-                            {new Date(serviceProfile.hccsvv_hang_ba_ngay).toLocaleDateString(
-                              'vi-VN'
-                            )}
+                            {formatDate(serviceProfile.hccsvv_hang_ba_ngay)}
                           </div>
                         )}
                       </div>
@@ -469,9 +467,7 @@ export default function UserProfilePage() {
                         {serviceProfile.hccsvv_hang_nhi_ngay && (
                           <div className="text-xs text-gray-600 dark:text-gray-300">
                             Ngày:{' '}
-                            {new Date(serviceProfile.hccsvv_hang_nhi_ngay).toLocaleDateString(
-                              'vi-VN'
-                            )}
+                            {formatDate(serviceProfile.hccsvv_hang_nhi_ngay)}
                           </div>
                         )}
                       </div>
@@ -512,9 +508,7 @@ export default function UserProfilePage() {
                         {serviceProfile.hccsvv_hang_nhat_ngay && (
                           <div className="text-xs text-gray-600 dark:text-gray-300">
                             Ngày:{' '}
-                            {new Date(serviceProfile.hccsvv_hang_nhat_ngay).toLocaleDateString(
-                              'vi-VN'
-                            )}
+                            {formatDate(serviceProfile.hccsvv_hang_nhat_ngay)}
                           </div>
                         )}
                       </div>

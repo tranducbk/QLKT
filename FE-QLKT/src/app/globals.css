@@ -187,12 +187,44 @@
     @apply bg-blue-600 border-blue-600;
   }
 
+  .ant-modal-root .ant-modal {
+    border-radius: 12px !important;
+    overflow: hidden;
+  }
+
+  .ant-modal-root .ant-modal-wrap {
+    border-radius: 12px !important;
+  }
+
+  .ant-modal-root .ant-modal-content {
+    @apply bg-white;
+    border-radius: 12px !important;
+    overflow: hidden;
+  }
+
   .ant-modal-content {
     @apply bg-white;
+    border-radius: 12px !important;
+    overflow: hidden;
+  }
+
+  /* RC Dialog (underlying library for Ant Design Modal) */
+  .rc-dialog-content {
+    border-radius: 12px !important;
+    overflow: hidden;
+  }
+
+  .rc-dialog-wrap {
+    border-radius: 12px !important;
   }
 
   .ant-modal-header {
     @apply bg-white border-gray-200;
+    border-radius: 12px 12px 0 0 !important;
+  }
+
+  .ant-modal-body {
+    border-radius: 0 0 12px 12px !important;
   }
 
   .ant-modal-title {
@@ -769,12 +801,44 @@
     @apply text-white !important;
   }
 
+  .dark .ant-modal-root .ant-modal {
+    border-radius: 12px !important;
+    overflow: hidden;
+  }
+
+  .dark .ant-modal-root .ant-modal-wrap {
+    border-radius: 12px !important;
+  }
+
+  .dark .ant-modal-root .ant-modal-content {
+    @apply bg-gray-800;
+    border-radius: 12px !important;
+    overflow: hidden;
+  }
+
   .dark .ant-modal-content {
     @apply bg-gray-800;
+    border-radius: 12px !important;
+    overflow: hidden;
+  }
+
+  /* RC Dialog (underlying library for Ant Design Modal) */
+  .dark .rc-dialog-content {
+    border-radius: 12px !important;
+    overflow: hidden;
+  }
+
+  .dark .rc-dialog-wrap {
+    border-radius: 12px !important;
   }
 
   .dark .ant-modal-header {
     @apply bg-gray-800 border-gray-700;
+    border-radius: 12px 12px 0 0 !important;
+  }
+
+  .dark .ant-modal-body {
+    border-radius: 0 0 12px 12px !important;
   }
 
   .dark .ant-modal-title {
@@ -1886,18 +1950,10 @@ button[class*='bg-primary']:hover:not(:disabled) {
   }
 }
 
-/* Action Buttons - chỉ hiện khi hover vào row */
+/* Action Buttons - luôn hiển thị */
 .action-buttons {
-  opacity: 0;
+  opacity: 1;
   transition: opacity 0.2s ease;
-}
-
-tr:hover .action-buttons {
-  opacity: 1;
-}
-
-.dark tr:hover .action-buttons {
-  opacity: 1;
 }
 
 .action-btn {

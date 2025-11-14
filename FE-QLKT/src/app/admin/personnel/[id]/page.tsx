@@ -34,6 +34,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useTheme } from '@/components/theme-provider';
 import { apiClient } from '@/lib/api-client';
+import { formatDate } from '@/lib/utils';
 import styles from './personnel-detail.module.css';
 
 const { Title, Text } = Typography;
@@ -83,9 +84,6 @@ export default function PersonnelDetailPage() {
   }, [personnelId]);
 
   const isDarkMode = currentTheme === 'dark';
-
-  const formatDate = (date?: string | null) =>
-    date ? new Date(date).toLocaleDateString('vi-VN') : '-';
 
   const getStatusTag = (status: string) => {
     const statusMap: Record<string, { label: string; color: string }> = {

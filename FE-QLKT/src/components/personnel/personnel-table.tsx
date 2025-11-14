@@ -1,7 +1,6 @@
 // @ts-nocheck
 'use client';
 
-import { useState } from 'react';
 import {
   Table,
   TableBody,
@@ -11,18 +10,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Eye, Trash2 } from 'lucide-react';
-import { apiClient } from '@/lib/api-client';
-import { useToast } from '@/hooks/use-toast';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+import { Eye } from 'lucide-react';
 import Link from 'next/link';
 
 interface PersonnelTableProps {
@@ -40,31 +28,6 @@ export function PersonnelTable({
   readOnly = false,
   viewLinkPrefix = '/admin/personnel',
 }: PersonnelTableProps) {
-  const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const { toast } = useToast();
-
-  const handleDelete = async () => {
-    if (!deleteId) return;
-    try {
-      setLoading(true);
-      await apiClient.deletePersonnel(deleteId);
-      toast({
-        title: 'Thành công',
-        description: 'Xóa quân nhân thành công',
-      });
-      onRefresh?.();
-      setDeleteId(null);
-    } catch (error) {
-      toast({
-        title: 'Lỗi',
-        description: 'Có lỗi xảy ra khi xóa',
-        variant: 'destructive',
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
 
   return (
     <>
@@ -120,27 +83,16 @@ export function PersonnelTable({
                             Xem
                           </Button>
                         ) : (
-                          <>
-                            <Link href={`${viewLinkPrefix}/${p.id}`}>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="hover:bg-blue-50 hover:border-blue-500 hover:text-blue-600 dark:hover:bg-blue-900/20"
-                              >
-                                <Eye className="h-4 w-4 mr-1" />
-                                Xem
-                              </Button>
-                            </Link>
+                          <Link href={`${viewLinkPrefix}/${p.id}`}>
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => setDeleteId(p.id)}
-                              className="hover:bg-red-50 hover:border-red-500 hover:text-red-600 dark:hover:bg-red-900/20"
+                              className="hover:bg-blue-50 hover:border-blue-500 hover:text-blue-600 dark:hover:bg-blue-900/20"
                             >
-                              <Trash2 className="h-4 w-4 mr-1" />
-                              Xóa
+                              <Eye className="h-4 w-4 mr-1" />
+                              Xem
                             </Button>
-                          </>
+                          </Link>
                         )}
                       </div>
                     </TableCell>
@@ -151,27 +103,6 @@ export function PersonnelTable({
           </TableBody>
         </Table>
       </div>
-
-      <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Xác nhận xóa</AlertDialogTitle>
-            <AlertDialogDescription>
-              Bạn có chắc chắn muốn xóa quân nhân này? Hành động này không thể hoàn tác.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <div className="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 pt-4">
-            <AlertDialogCancel>Hủy</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              disabled={loading}
-              className="bg-red-600 hover:bg-red-700"
-            >
-              {loading ? 'Đang xóa...' : 'Xóa'}
-            </AlertDialogAction>
-          </div>
-        </AlertDialogContent>
-      </AlertDialog>
     </>
   );
 }

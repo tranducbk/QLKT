@@ -28,8 +28,8 @@ router.get('/annual-rewards', verifyToken, requireAuth, (req, res, next) => {
  * @access  Private - ADMIN, MANAGER
  */
 router.post('/annual-rewards', verifyToken, requireManager, (req, res, next) => {
-  // Add personnel_id from URL params to body
-  req.body.personnel_id = Number(req.params.personnelId);
+  // Add personnel_id from URL params to body (CUID string, không phải number)
+  req.body.personnel_id = req.params.personnelId;
   annualRewardController.createAnnualReward(req, res);
 });
 
@@ -51,8 +51,8 @@ router.get('/position-history', verifyToken, requireAuth, (req, res, next) => {
  * @access  Private - ADMIN, MANAGER
  */
 router.post('/position-history', verifyToken, requireManager, (req, res, next) => {
-  // Add personnel_id from URL params to body
-  req.body.personnel_id = Number(req.params.personnelId);
+  // Add personnel_id from URL params to body (CUID string, không phải number)
+  req.body.personnel_id = req.params.personnelId;
   positionHistoryController.createPositionHistory(req, res);
 });
 
@@ -74,8 +74,8 @@ router.get('/scientific-achievements', verifyToken, requireAuth, (req, res, next
  * @access  Private - ADMIN, MANAGER
  */
 router.post('/scientific-achievements', verifyToken, requireManager, (req, res, next) => {
-  // Add personnel_id from URL params to body
-  req.body.personnel_id = Number(req.params.personnelId);
+  // Add personnel_id from URL params to body (CUID string, không phải number)
+  req.body.personnel_id = req.params.personnelId;
   scientificAchievementController.createAchievement(req, res);
 });
 

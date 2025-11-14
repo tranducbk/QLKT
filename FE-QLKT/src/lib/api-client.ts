@@ -149,15 +149,6 @@ export const apiClient = {
     }
   },
 
-  async deletePersonnel(id: string): Promise<ApiResponse> {
-    try {
-      const res = await axiosInstance.delete(`/api/personnel/${id}`);
-      return { success: true, data: res.data?.data || res.data };
-    } catch (e: any) {
-      return { success: false, message: e?.response?.data?.message || e.message };
-    }
-  },
-
   // System logs
   async getSystemLogs(params?: any): Promise<ApiResponse> {
     try {

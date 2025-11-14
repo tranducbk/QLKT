@@ -221,13 +221,22 @@ class PersonnelService {
         },
       });
 
+      // Lấy thông tin chức vụ để lưu hệ số lương
+      const chucVu = await prisma.chucVu.findUnique({
+        where: { id: position_id },
+        select: { he_so_luong: true },
+      });
+
       // Tạo LichSuChucVu cho chức vụ ban đầu
+      const ngayBatDau = new Date();
       await prisma.lichSuChucVu.create({
         data: {
           quan_nhan_id: newPersonnel.id,
           chuc_vu_id: position_id,
-          ngay_bat_dau: new Date(), // Bắt đầu từ ngày tạo
+          he_so_luong: chucVu?.he_so_luong || 0,
+          ngay_bat_dau: ngayBatDau, // Bắt đầu từ ngày tạo
           ngay_ket_thuc: null, // Chức vụ hiện tại
+          so_thang: null, // Chưa kết thúc nên chưa tính được
         },
       });
 
@@ -349,7 +358,10 @@ class PersonnelService {
                 where: { id: personnel.don_vi_truc_thuoc_id },
                 select: { co_quan_don_vi_id: true },
               });
-              if (donViTrucThuoc && donViTrucThuoc.co_quan_don_vi_id === manager.co_quan_don_vi_id) {
+              if (
+                donViTrucThuoc &&
+                donViTrucThuoc.co_quan_don_vi_id === manager.co_quan_don_vi_id
+              ) {
                 hasPermission = true;
               }
             }
@@ -367,7 +379,10 @@ class PersonnelService {
                 where: { id: manager.don_vi_truc_thuoc_id },
                 select: { co_quan_don_vi_id: true },
               });
-              if (managerDonViTrucThuoc && personnel.co_quan_don_vi_id === managerDonViTrucThuoc.co_quan_don_vi_id) {
+              if (
+                managerDonViTrucThuoc &&
+                personnel.co_quan_don_vi_id === managerDonViTrucThuoc.co_quan_don_vi_id
+              ) {
                 hasPermission = true;
               }
             }
@@ -417,17 +432,39 @@ class PersonnelService {
       // Chuẩn bị data update
       const updateData = {
         ho_ten: ho_ten !== undefined ? ho_ten : personnel.ho_ten,
-        ngay_sinh: ngay_sinh !== undefined ? (ngay_sinh ? new Date(ngay_sinh) : null) : personnel.ngay_sinh,
+        ngay_sinh:
+          ngay_sinh !== undefined ? (ngay_sinh ? new Date(ngay_sinh) : null) : personnel.ngay_sinh,
         cccd: cccd !== undefined ? cccd : personnel.cccd,
-        ngay_nhap_ngu: ngay_nhap_ngu !== undefined ? (ngay_nhap_ngu ? new Date(ngay_nhap_ngu) : null) : personnel.ngay_nhap_ngu,
-        ngay_xuat_ngu: ngay_xuat_ngu !== undefined ? (ngay_xuat_ngu ? new Date(ngay_xuat_ngu) : null) : personnel.ngay_xuat_ngu,
+        ngay_nhap_ngu:
+          ngay_nhap_ngu !== undefined
+            ? ngay_nhap_ngu
+              ? new Date(ngay_nhap_ngu)
+              : null
+            : personnel.ngay_nhap_ngu,
+        ngay_xuat_ngu:
+          ngay_xuat_ngu !== undefined
+            ? ngay_xuat_ngu
+              ? new Date(ngay_xuat_ngu)
+              : null
+            : personnel.ngay_xuat_ngu,
         que_quan_2_cap: que_quan_2_cap !== undefined ? que_quan_2_cap : personnel.que_quan_2_cap,
         que_quan_3_cap: que_quan_3_cap !== undefined ? que_quan_3_cap : personnel.que_quan_3_cap,
         tru_quan: tru_quan !== undefined ? tru_quan : personnel.tru_quan,
         cho_o_hien_nay: cho_o_hien_nay !== undefined ? cho_o_hien_nay : personnel.cho_o_hien_nay,
-        ngay_vao_dang: ngay_vao_dang !== undefined ? (ngay_vao_dang ? new Date(ngay_vao_dang) : null) : personnel.ngay_vao_dang,
-        ngay_vao_dang_chinh_thuc: ngay_vao_dang_chinh_thuc !== undefined ? (ngay_vao_dang_chinh_thuc ? new Date(ngay_vao_dang_chinh_thuc) : null) : personnel.ngay_vao_dang_chinh_thuc,
-        so_the_dang_vien: so_the_dang_vien !== undefined ? so_the_dang_vien : personnel.so_the_dang_vien,
+        ngay_vao_dang:
+          ngay_vao_dang !== undefined
+            ? ngay_vao_dang
+              ? new Date(ngay_vao_dang)
+              : null
+            : personnel.ngay_vao_dang,
+        ngay_vao_dang_chinh_thuc:
+          ngay_vao_dang_chinh_thuc !== undefined
+            ? ngay_vao_dang_chinh_thuc
+              ? new Date(ngay_vao_dang_chinh_thuc)
+              : null
+            : personnel.ngay_vao_dang_chinh_thuc,
+        so_the_dang_vien:
+          so_the_dang_vien !== undefined ? so_the_dang_vien : personnel.so_the_dang_vien,
         so_dien_thoai: so_dien_thoai !== undefined ? so_dien_thoai : personnel.so_dien_thoai,
         chuc_vu_id: position_id || personnel.chuc_vu_id,
       };
@@ -435,8 +472,12 @@ class PersonnelService {
       // Xử lý đơn vị: ưu tiên co_quan_don_vi_id và don_vi_truc_thuoc_id từ frontend
       if (co_quan_don_vi_id !== undefined || don_vi_truc_thuoc_id !== undefined) {
         // Frontend gửi explicit co_quan_don_vi_id và don_vi_truc_thuoc_id
-        updateData.co_quan_don_vi_id = co_quan_don_vi_id !== undefined ? co_quan_don_vi_id : personnel.co_quan_don_vi_id;
-        updateData.don_vi_truc_thuoc_id = don_vi_truc_thuoc_id !== undefined ? don_vi_truc_thuoc_id : personnel.don_vi_truc_thuoc_id;
+        updateData.co_quan_don_vi_id =
+          co_quan_don_vi_id !== undefined ? co_quan_don_vi_id : personnel.co_quan_don_vi_id;
+        updateData.don_vi_truc_thuoc_id =
+          don_vi_truc_thuoc_id !== undefined
+            ? don_vi_truc_thuoc_id
+            : personnel.don_vi_truc_thuoc_id;
       } else if (unit_id && unit_id !== currentUnitId) {
         // Legacy: xử lý unit_id (tự động phát hiện loại đơn vị)
         const [coQuanDonVi, donViTrucThuoc] = await Promise.all([
@@ -476,24 +517,49 @@ class PersonnelService {
       if (position_id && position_id !== personnel.chuc_vu_id) {
         const today = new Date();
 
-        // 1. Đóng lịch sử chức vụ cũ (set ngay_ket_thuc = hôm nay)
-        await prisma.lichSuChucVu.updateMany({
+        // 1. Đóng lịch sử chức vụ cũ và tính số tháng
+        const oldHistories = await prisma.lichSuChucVu.findMany({
           where: {
             quan_nhan_id: id,
             ngay_ket_thuc: null, // Chỉ đóng lịch sử đang active
           },
-          data: {
-            ngay_ket_thuc: today,
-          },
         });
 
-        // 2. Tạo lịch sử chức vụ mới
+        // Cập nhật từng lịch sử cũ với số tháng đã tính
+        for (const oldHistory of oldHistories) {
+          const ngayBatDauOld = new Date(oldHistory.ngay_bat_dau);
+          let months = (today.getFullYear() - ngayBatDauOld.getFullYear()) * 12;
+          months += today.getMonth() - ngayBatDauOld.getMonth();
+          // Nếu ngày kết thúc < ngày bắt đầu trong tháng thì trừ 1 tháng
+          if (today.getDate() < ngayBatDauOld.getDate()) {
+            months--;
+          }
+          const soThangOld = Math.max(0, months);
+
+          await prisma.lichSuChucVu.update({
+            where: { id: oldHistory.id },
+            data: {
+              ngay_ket_thuc: today,
+              so_thang: soThangOld,
+            },
+          });
+        }
+
+        // 2. Lấy thông tin chức vụ mới để lưu hệ số lương
+        const newChucVu = await prisma.chucVu.findUnique({
+          where: { id: position_id },
+          select: { he_so_luong: true },
+        });
+
+        // 3. Tạo lịch sử chức vụ mới
         await prisma.lichSuChucVu.create({
           data: {
             quan_nhan_id: id,
             chuc_vu_id: position_id,
+            he_so_luong: newChucVu?.he_so_luong || 0,
             ngay_bat_dau: today,
             ngay_ket_thuc: null, // Chức vụ hiện tại
+            so_thang: null, // Chưa kết thúc nên chưa tính được
           },
         });
       }
@@ -550,6 +616,8 @@ class PersonnelService {
 
   /**
    * Xóa quân nhân
+   * NOTE: Endpoint này không được expose trong route.
+   * Sử dụng DELETE /api/accounts/:id để xóa tài khoản và toàn bộ dữ liệu liên quan.
    */
   async deletePersonnel(id, userRole, userQuanNhanId) {
     try {
@@ -900,13 +968,22 @@ class PersonnelService {
             });
           }
 
-          // Tạo lịch sử chức vụ ban đầu
+          // Lấy thông tin chức vụ để lưu hệ số lương
+          const chucVuForHistory = await prisma.chucVu.findUnique({
+            where: { id: position.id },
+            select: { he_so_luong: true },
+          });
+
+          // Tạo LichSuChucVu cho chức vụ ban đầu
+          const ngayBatDau = ngay_nhap_ngu || new Date();
           await prisma.lichSuChucVu.create({
             data: {
               quan_nhan_id: newPersonnel.id,
               chuc_vu_id: position.id,
-              ngay_bat_dau: ngay_nhap_ngu || new Date(),
+              he_so_luong: chucVuForHistory?.he_so_luong || 0,
+              ngay_bat_dau: ngayBatDau,
               ngay_ket_thuc: null, // Chức vụ hiện tại
+              so_thang: null, // Chưa kết thúc nên chưa tính được
             },
           });
 
@@ -972,24 +1049,49 @@ class PersonnelService {
           if (position.id !== existing.chuc_vu_id) {
             const today = new Date();
 
-            // 1. Đóng lịch sử chức vụ cũ
-            await prisma.lichSuChucVu.updateMany({
+            // 1. Đóng lịch sử chức vụ cũ và tính số tháng
+            const oldHistoriesImport = await prisma.lichSuChucVu.findMany({
               where: {
                 quan_nhan_id: existing.id,
                 ngay_ket_thuc: null,
               },
-              data: {
-                ngay_ket_thuc: today,
-              },
             });
 
-            // 2. Tạo lịch sử chức vụ mới
+            // Cập nhật từng lịch sử cũ với số tháng đã tính
+            for (const oldHistory of oldHistoriesImport) {
+              const ngayBatDauOld = new Date(oldHistory.ngay_bat_dau);
+              let months = (today.getFullYear() - ngayBatDauOld.getFullYear()) * 12;
+              months += today.getMonth() - ngayBatDauOld.getMonth();
+              // Nếu ngày kết thúc < ngày bắt đầu trong tháng thì trừ 1 tháng
+              if (today.getDate() < ngayBatDauOld.getDate()) {
+                months--;
+              }
+              const soThangOld = Math.max(0, months);
+
+              await prisma.lichSuChucVu.update({
+                where: { id: oldHistory.id },
+                data: {
+                  ngay_ket_thuc: today,
+                  so_thang: soThangOld,
+                },
+              });
+            }
+
+            // 2. Lấy thông tin chức vụ mới để lưu hệ số lương
+            const newChucVuForImport = await prisma.chucVu.findUnique({
+              where: { id: position.id },
+              select: { he_so_luong: true },
+            });
+
+            // 3. Tạo lịch sử chức vụ mới
             await prisma.lichSuChucVu.create({
               data: {
                 quan_nhan_id: existing.id,
                 chuc_vu_id: position.id,
+                he_so_luong: newChucVuForImport?.he_so_luong || 0,
                 ngay_bat_dau: today,
                 ngay_ket_thuc: null,
+                so_thang: null, // Chưa kết thúc nên chưa tính được
               },
             });
           }

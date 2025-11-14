@@ -33,6 +33,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useTheme } from './theme-provider';
 import { apiClient } from '@/lib/api-client';
+import { formatDate } from '@/lib/utils';
 
 const { Header, Sider, Content, Footer } = Layout;
 
@@ -49,6 +50,7 @@ export default function MainLayout({ children, role = 'ADMIN' }: MainLayoutProps
   const [notificationCount, setNotificationCount] = useState(0);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [notificationLoading, setNotificationLoading] = useState(false);
+  const [actualRole, setActualRole] = useState<'SUPER_ADMIN' | 'ADMIN' | 'MANAGER' | 'USER'>(role);
   const router = useRouter();
   const { theme, toggle } = useTheme();
 
@@ -64,6 +66,14 @@ export default function MainLayout({ children, role = 'ADMIN' }: MainLayoutProps
   }, []);
 
   useEffect(() => {
+    // Lấy role thực tế từ localStorage (ưu tiên hơn prop)
+    const storedRole = localStorage.getItem('role');
+    if (storedRole && ['SUPER_ADMIN', 'ADMIN', 'MANAGER', 'USER'].includes(storedRole)) {
+      setActualRole(storedRole as 'SUPER_ADMIN' | 'ADMIN' | 'MANAGER' | 'USER');
+    } else {
+      setActualRole(role);
+    }
+
     // Lấy tên người dùng từ localStorage
     const user = localStorage.getItem('user');
     if (user) {
@@ -77,7 +87,7 @@ export default function MainLayout({ children, role = 'ADMIN' }: MainLayoutProps
 
     // Lấy số lượng thông báo chưa đọc
     loadNotificationCount();
-  }, []);
+  }, [role]);
 
   const loadNotificationCount = async () => {
     try {
@@ -121,11 +131,11 @@ export default function MainLayout({ children, role = 'ADMIN' }: MainLayoutProps
       // Navigate to the link if provided
       if (link) {
         // For manager role, if link contains proposal detail, redirect to proposals list
-        if (role === 'MANAGER' && link.match(/\/manager\/proposals\/\d+/)) {
+        if (actualRole === 'MANAGER' && link.match(/\/manager\/proposals\/\d+/)) {
           router.push('/manager/proposals');
         }
         // For admin role, fix proposal detail URL to include /review
-        else if (role === 'ADMIN' && link.match(/\/admin\/proposals\/\d+$/)) {
+        else if (actualRole === 'ADMIN' && link.match(/\/admin\/proposals\/\d+$/)) {
           const proposalId = link.match(/\/admin\/proposals\/(\d+)$/)?.[1];
           if (proposalId) {
             router.push(`/admin/proposals/review/${proposalId}`);
@@ -135,10 +145,10 @@ export default function MainLayout({ children, role = 'ADMIN' }: MainLayoutProps
         } else {
           router.push(link);
         }
-      } else if (role === 'MANAGER') {
+      } else if (actualRole === 'MANAGER') {
         // Default to proposals page for managers
         router.push('/manager/proposals');
-      } else if (role === 'ADMIN') {
+      } else if (actualRole === 'ADMIN') {
         // Default to proposals review page for admin
         router.push('/admin/proposals/review');
       }
@@ -170,7 +180,7 @@ export default function MainLayout({ children, role = 'ADMIN' }: MainLayoutProps
     if (diffMins < 60) return `${diffMins} phút trước`;
     if (diffHours < 24) return `${diffHours} giờ trước`;
     if (diffDays < 7) return `${diffDays} ngày trước`;
-    return date.toLocaleDateString('vi-VN');
+    return formatDate(date);
   };
 
   const handleLogout = () => {
@@ -184,7 +194,7 @@ export default function MainLayout({ children, role = 'ADMIN' }: MainLayoutProps
 
   // Menu items dựa trên vai trò
   const getMenuItems = () => {
-    const roleSlug = role === 'SUPER_ADMIN' ? 'super-admin' : role.toLowerCase();
+    const roleSlug = actualRole === 'SUPER_ADMIN' ? 'super-admin' : actualRole.toLowerCase();
     const baseItems = [
       {
         key: 'dashboard',
@@ -193,7 +203,7 @@ export default function MainLayout({ children, role = 'ADMIN' }: MainLayoutProps
       },
     ];
 
-    if (role === 'SUPER_ADMIN') {
+    if (actualRole === 'SUPER_ADMIN') {
       return [
         ...baseItems,
         {
@@ -209,7 +219,7 @@ export default function MainLayout({ children, role = 'ADMIN' }: MainLayoutProps
       ];
     }
 
-    if (role === 'ADMIN') {
+    if (actualRole === 'ADMIN') {
       return [
         ...baseItems,
         {
@@ -250,7 +260,7 @@ export default function MainLayout({ children, role = 'ADMIN' }: MainLayoutProps
       ];
     }
 
-    if (role === 'MANAGER') {
+    if (actualRole === 'MANAGER') {
       return [
         ...baseItems,
         {
@@ -286,7 +296,7 @@ export default function MainLayout({ children, role = 'ADMIN' }: MainLayoutProps
       ];
     }
 
-    if (role === 'USER') {
+    if (actualRole === 'USER') {
       return [
         ...baseItems,
         {
@@ -311,7 +321,7 @@ export default function MainLayout({ children, role = 'ADMIN' }: MainLayoutProps
       label: 'Hồ sơ',
       icon: <UserOutlined />,
       onClick: () => {
-        const roleSlug = role === 'SUPER_ADMIN' ? 'super-admin' : role.toLowerCase();
+        const roleSlug = actualRole === 'SUPER_ADMIN' ? 'super-admin' : actualRole.toLowerCase();
         router.push(`/${roleSlug}/dashboard`);
       },
     },
@@ -375,10 +385,10 @@ export default function MainLayout({ children, role = 'ADMIN' }: MainLayoutProps
               theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
             }`}
           >
-            {role === 'SUPER_ADMIN' && 'Super Admin'}
-            {role === 'ADMIN' && 'Quản trị viên'}
-            {role === 'MANAGER' && 'Quản lý'}
-            {role === 'USER' && 'Người dùng'}
+            {actualRole === 'SUPER_ADMIN' && 'Super Admin'}
+            {actualRole === 'ADMIN' && 'Quản trị viên'}
+            {actualRole === 'MANAGER' && 'Quản lý'}
+            {actualRole === 'USER' && 'Người dùng'}
           </p>
         )}
       </div>
@@ -428,85 +438,85 @@ export default function MainLayout({ children, role = 'ADMIN' }: MainLayoutProps
     >
       <App>
         <Layout className="min-h-screen">
-        {/* Desktop Sidebar */}
-        {!isMobile && (
-          <Sider
-            collapsible
-            collapsed={collapsed}
-            onCollapse={setCollapsed}
-            breakpoint="lg"
-            collapsedWidth={80}
-            width={250}
-            className={theme === 'dark' ? 'bg-gray-800' : 'bg-white'}
-            style={{
-              overflow: 'auto',
-              height: '100vh',
-              position: 'fixed',
-              left: 0,
-              top: 0,
-              bottom: 0,
-            }}
-          >
-            {siderContent(collapsed)}
-          </Sider>
-        )}
+          {/* Desktop Sidebar */}
+          {!isMobile && (
+            <Sider
+              collapsible
+              collapsed={collapsed}
+              onCollapse={setCollapsed}
+              breakpoint="lg"
+              collapsedWidth={80}
+              width={250}
+              className={theme === 'dark' ? 'bg-gray-800' : 'bg-white'}
+              style={{
+                overflow: 'auto',
+                height: '100vh',
+                position: 'fixed',
+                left: 0,
+                top: 0,
+                bottom: 0,
+              }}
+            >
+              {siderContent(collapsed)}
+            </Sider>
+          )}
 
-        {/* Mobile Drawer */}
-        {isMobile && (
-          <Drawer
-            title="Menu"
-            placement="left"
-            onClose={() => setMobileDrawerOpen(false)}
-            open={mobileDrawerOpen}
-            styles={{ body: { padding: 0 } }}
-          >
-            {siderContent(false)}
-          </Drawer>
-        )}
+          {/* Mobile Drawer */}
+          {isMobile && (
+            <Drawer
+              title="Menu"
+              placement="left"
+              onClose={() => setMobileDrawerOpen(false)}
+              open={mobileDrawerOpen}
+              styles={{ body: { padding: 0 } }}
+            >
+              {siderContent(false)}
+            </Drawer>
+          )}
 
-        <Layout style={{ marginLeft: isMobile ? 0 : collapsed ? 80 : 250 }}>
-          {/* Header */}
-          <Header
-            className={`shadow-sm px-4 flex items-center justify-between ${
-              theme === 'dark' ? 'bg-gray-800 border-b border-gray-700' : 'bg-white'
-            }`}
-            style={{ position: 'sticky', top: 0, zIndex: 10 }}
-          >
-            <div className="flex items-center gap-4">
-              {isMobile && (
-                <Button
-                  type="text"
-                  icon={mobileDrawerOpen ? <CloseOutlined /> : <MenuOutlined />}
-                  onClick={() => setMobileDrawerOpen(!mobileDrawerOpen)}
-                  className={theme === 'dark' ? 'text-gray-300' : ''}
-                />
-              )}
-              {!isMobile && (
-                <Button
-                  type="text"
-                  icon={<MenuOutlined />}
-                  onClick={() => setCollapsed(!collapsed)}
-                  className={theme === 'dark' ? 'text-gray-300' : ''}
-                />
-              )}
-            </div>
+          <Layout style={{ marginLeft: isMobile ? 0 : collapsed ? 80 : 250 }}>
+            {/* Header */}
+            <Header
+              className={`shadow-sm px-4 flex items-center justify-between ${
+                theme === 'dark' ? 'bg-gray-800 border-b border-gray-700' : 'bg-white'
+              }`}
+              style={{ position: 'sticky', top: 0, zIndex: 10 }}
+            >
+              <div className="flex items-center gap-4">
+                {isMobile && (
+                  <Button
+                    type="text"
+                    icon={mobileDrawerOpen ? <CloseOutlined /> : <MenuOutlined />}
+                    onClick={() => setMobileDrawerOpen(!mobileDrawerOpen)}
+                    className={theme === 'dark' ? 'text-gray-300' : ''}
+                  />
+                )}
+                {!isMobile && (
+                  <Button
+                    type="text"
+                    icon={<MenuOutlined />}
+                    onClick={() => setCollapsed(!collapsed)}
+                    className={theme === 'dark' ? 'text-gray-300' : ''}
+                  />
+                )}
+              </div>
 
-            <div className="flex items-center gap-4">
-              {/* Notification Bell */}
-              <Dropdown
-                menu={{
-                  items: notificationLoading
-                    ? [
-                        {
-                          key: 'loading',
-                          label: (
-                            <div className="text-center py-4 text-gray-400 bg-[#2d2d2d]">
-                              Đang tải...
-                            </div>
-                          ),
-                        },
-                      ]
-                    : notifications.length === 0
+              <div className="flex items-center gap-4">
+                {/* Notification Bell */}
+                <Dropdown
+                  menu={{
+                    items: notificationLoading
+                      ? [
+                          {
+                            key: 'loading',
+                            label: (
+                              <div className="text-center py-4 text-gray-400 bg-[#2d2d2d]">
+                                Đang tải...
+                              </div>
+                            ),
+                          },
+                        ]
+                      : notifications.length === 0
                       ? [
                           {
                             key: 'empty',
@@ -537,17 +547,29 @@ export default function MainLayout({ children, role = 'ADMIN' }: MainLayoutProps
                                   )}
                                   <div className="flex-1 min-w-0">
                                     <p
-                                      className={`font-bold text-sm mb-1 ${notif.is_read ? 'text-gray-300 dark:text-gray-300' : 'text-white dark:text-white'}`}
+                                      className={`font-bold text-sm mb-1 ${
+                                        notif.is_read
+                                          ? 'text-gray-300 dark:text-gray-300'
+                                          : 'text-white dark:text-white'
+                                      }`}
                                     >
                                       {notif.title}
                                     </p>
                                     <p
-                                      className={`text-xs mt-1 leading-relaxed ${notif.is_read ? 'text-gray-400 dark:text-gray-400' : 'text-gray-200 dark:text-gray-200'}`}
+                                      className={`text-xs mt-1 leading-relaxed ${
+                                        notif.is_read
+                                          ? 'text-gray-400 dark:text-gray-400'
+                                          : 'text-gray-200 dark:text-gray-200'
+                                      }`}
                                     >
                                       {notif.message}
                                     </p>
                                     <p
-                                      className={`text-xs mt-2 flex items-center gap-1.5 ${notif.is_read ? 'text-gray-500 dark:text-gray-500' : 'text-gray-400 dark:text-gray-400'}`}
+                                      className={`text-xs mt-2 flex items-center gap-1.5 ${
+                                        notif.is_read
+                                          ? 'text-gray-500 dark:text-gray-500'
+                                          : 'text-gray-400 dark:text-gray-400'
+                                      }`}
                                     >
                                       <span>{formatNotificationTime(notif.created_at)}</span>
                                       {notif.is_read && (
@@ -576,83 +598,83 @@ export default function MainLayout({ children, role = 'ADMIN' }: MainLayoutProps
                             ),
                           },
                         ],
-                }}
-                placement="bottomRight"
-                trigger={['click']}
-                onOpenChange={open => {
-                  if (open) {
-                    loadNotifications();
-                  }
-                }}
-                overlayStyle={{ maxWidth: '420px' }}
-                overlayClassName="notification-dropdown"
-              >
-                <div className="relative cursor-pointer group inline-block">
-                  <BellOutlined className="text-xl text-gray-600 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors" />
-                  {notificationCount > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] rounded-full h-5 w-5 flex items-center justify-center font-bold shadow-md animate-pulse">
-                      {notificationCount > 99 ? '99+' : notificationCount}
-                    </span>
-                  )}
-                </div>
-              </Dropdown>
-
-              {/* User Dropdown */}
-              <Dropdown
-                menu={{ items: userMenuItems as any }}
-                placement="bottomRight"
-                trigger={['click']}
-              >
-                <div
-                  className={`flex items-center gap-3 cursor-pointer group px-3 rounded-lg transition-colors ${
-                    theme === 'dark' ? 'hover:bg-gray-700/50' : 'hover:bg-blue-50/50'
-                  }`}
+                  }}
+                  placement="bottomRight"
+                  trigger={['click']}
+                  onOpenChange={open => {
+                    if (open) {
+                      loadNotifications();
+                    }
+                  }}
+                  overlayStyle={{ maxWidth: '420px' }}
+                  overlayClassName="notification-dropdown"
                 >
-                  <Avatar
-                    size="large"
-                    style={{
-                      backgroundColor: '#1890ff',
-                      boxShadow: '0 2px 8px rgba(24, 144, 255, 0.3)',
-                    }}
-                  >
-                    {userName.charAt(0).toUpperCase()}
-                  </Avatar>
-                  <span
-                    className={`text-sm font-semibold ${
-                      theme === 'dark' ? 'text-gray-200' : 'text-gray-700'
+                  <div className="relative cursor-pointer group inline-block">
+                    <BellOutlined className="text-xl text-gray-600 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors" />
+                    {notificationCount > 0 && (
+                      <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] rounded-full h-5 w-5 flex items-center justify-center font-bold shadow-md animate-pulse">
+                        {notificationCount > 99 ? '99+' : notificationCount}
+                      </span>
+                    )}
+                  </div>
+                </Dropdown>
+
+                {/* User Dropdown */}
+                <Dropdown
+                  menu={{ items: userMenuItems as any }}
+                  placement="bottomRight"
+                  trigger={['click']}
+                >
+                  <div
+                    className={`flex items-center gap-3 cursor-pointer group px-3 rounded-lg transition-colors ${
+                      theme === 'dark' ? 'hover:bg-gray-700/50' : 'hover:bg-blue-50/50'
                     }`}
                   >
-                    {userName}
-                  </span>
-                </div>
-              </Dropdown>
-            </div>
-          </Header>
+                    <Avatar
+                      size="large"
+                      style={{
+                        backgroundColor: '#1890ff',
+                        boxShadow: '0 2px 8px rgba(24, 144, 255, 0.3)',
+                      }}
+                    >
+                      {userName.charAt(0).toUpperCase()}
+                    </Avatar>
+                    <span
+                      className={`text-sm font-semibold ${
+                        theme === 'dark' ? 'text-gray-200' : 'text-gray-700'
+                      }`}
+                    >
+                      {userName}
+                    </span>
+                  </div>
+                </Dropdown>
+              </div>
+            </Header>
 
-          {/* Content */}
-          <Content
-            className={`${
-              theme === 'dark' ? 'bg-gray-900' : 'bg-gray-50'
-            } min-h-[calc(100vh-64px-70px)]`}
-          >
-            {children}
-          </Content>
+            {/* Content */}
+            <Content
+              className={`${
+                theme === 'dark' ? 'bg-gray-900' : 'bg-gray-50'
+              } min-h-[calc(100vh-64px-70px)]`}
+            >
+              {children}
+            </Content>
 
-          {/* Footer */}
-          <Footer
-            className={`text-center py-6 ${
-              theme === 'dark'
-                ? 'bg-gray-800 border-t-2 border-blue-700 text-gray-300'
-                : 'bg-white border-t-2 border-blue-200'
-            }`}
-          >
-            <p className="font-medium">© 2025 Học viện Khoa học Quân sự. All rights reserved.</p>
-            <p className="text-xs mt-1 text-gray-500 dark:text-gray-400">
-              Hệ thống Quản lý Khen thưởng
-            </p>
-          </Footer>
+            {/* Footer */}
+            <Footer
+              className={`text-center py-6 ${
+                theme === 'dark'
+                  ? 'bg-gray-800 border-t-2 border-blue-700 text-gray-300'
+                  : 'bg-white border-t-2 border-blue-200'
+              }`}
+            >
+              <p className="font-medium">© 2025 Học viện Khoa học Quân sự. All rights reserved.</p>
+              <p className="text-xs mt-1 text-gray-500 dark:text-gray-400">
+                Hệ thống Quản lý Khen thưởng
+              </p>
+            </Footer>
+          </Layout>
         </Layout>
-      </Layout>
       </App>
     </ConfigProvider>
   );

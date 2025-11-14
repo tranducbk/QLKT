@@ -7,8 +7,7 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
-    "init-super-admin": "node src/scripts/initSuperAdmin.js",
-    "sync-decisions": "node src/scripts/syncDecisions.js"
+    "init-super-admin": "node src/scripts/initSuperAdmin.js"
   },
   "author": "NH1321",
   "license": "ISC",

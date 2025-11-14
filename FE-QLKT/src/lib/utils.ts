@@ -1,5 +1,6 @@
 import { type ClassValue, clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import dayjs from 'dayjs';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -46,4 +47,34 @@ export function calculateDuration(startDate: string | Date, endDate?: string | D
   } else {
     return `${remainingMonths} tháng`;
   }
+}
+
+/**
+ * Format ngày tháng với số 0 đứng trước (VD: 03/05/2010)
+ * @param date - Ngày cần format (string, Date, hoặc null/undefined)
+ * @returns Chuỗi ngày tháng đã format hoặc '-' nếu null/undefined
+ */
+export function formatDate(date: string | Date | null | undefined): string {
+  if (!date) return '-';
+  return dayjs(date).format('DD/MM/YYYY');
+}
+
+/**
+ * Format ngày tháng và giờ với số 0 đứng trước (VD: 03/05/2010 14:30)
+ * @param date - Ngày cần format (string, Date, hoặc null/undefined)
+ * @returns Chuỗi ngày tháng giờ đã format hoặc '-' nếu null/undefined
+ */
+export function formatDateTime(date: string | Date | null | undefined): string {
+  if (!date) return '-';
+  return dayjs(date).format('DD/MM/YYYY HH:mm');
+}
+
+/**
+ * Format ngày tháng và giờ phút giây với số 0 đứng trước (VD: 03/05/2010 14:30:45)
+ * @param date - Ngày cần format (string, Date, hoặc null/undefined)
+ * @returns Chuỗi ngày tháng giờ phút giây đã format hoặc '-' nếu null/undefined
+ */
+export function formatDateTimeFull(date: string | Date | null | undefined): string {
+  if (!date) return '-';
+  return dayjs(date).format('DD/MM/YYYY HH:mm:ss');
 }

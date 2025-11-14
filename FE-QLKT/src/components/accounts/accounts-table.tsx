@@ -19,6 +19,7 @@ import { Button } from '@/components/ui/button';
 import { MoreHorizontal, Trash2 } from 'lucide-react';
 import { apiClient } from '@/lib/api-client';
 import { useToast } from '@/hooks/use-toast';
+import { formatDate } from '@/lib/utils';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -85,7 +86,7 @@ export function AccountsTable({ accounts, onEdit, onRefresh }: AccountsTableProp
                     {account.role}
                   </span>
                 </TableCell>
-                <TableCell>{new Date(account.created_at).toLocaleDateString('vi-VN')}</TableCell>
+                <TableCell>{formatDate(account.created_at)}</TableCell>
                 <TableCell>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>

@@ -21,6 +21,7 @@ import {
 import Link from 'next/link';
 import { useTheme } from '@/components/theme-provider';
 import { apiClient } from '@/lib/api-client';
+import { formatDateTime } from '@/lib/utils';
 
 const { Title } = Typography;
 
@@ -252,7 +253,7 @@ export default function AdminDashboard() {
                 <p
                   className={`text-base font-medium ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}
                 >
-                  {new Date().toLocaleString('vi-VN')}
+                  {formatDateTime(new Date())}
                 </p>
               </div>
               <div className={`p-3 rounded-lg ${theme === 'dark' ? 'bg-gray-800' : 'bg-gray-50'}`}>

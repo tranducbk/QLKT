@@ -254,6 +254,7 @@ class AccountService {
         // Kiểm tra chức vụ có tồn tại không
         const chucVu = await prisma.chucVu.findUnique({
           where: { id: chuc_vu_id },
+          select: { he_so_luong: true },
         });
         if (!chucVu) {
           throw new Error('Chức vụ không tồn tại');
@@ -278,12 +279,15 @@ class AccountService {
         finalPersonnelId = newPersonnel.id;
 
         // Tạo LichSuChucVu cho chức vụ ban đầu
+        const ngayBatDau = new Date();
         await prisma.lichSuChucVu.create({
           data: {
             quan_nhan_id: newPersonnel.id,
             chuc_vu_id: chuc_vu_id,
-            ngay_bat_dau: new Date(),
+            he_so_luong: chucVu?.he_so_luong || 0,
+            ngay_bat_dau: ngayBatDau,
             ngay_ket_thuc: null,
+            so_thang: null, // Chưa kết thúc nên chưa tính được
           },
         });
 
@@ -437,9 +441,11 @@ class AccountService {
   }
 
   /**
-   * Xóa (vô hiệu hóa) tài khoản
+   * Xóa tài khoản và toàn bộ dữ liệu liên quan (bao gồm cả quân nhân nếu có)
+   * @param {string} id - ID tài khoản
+   * @param {boolean} forceDelete - Bắt buộc xóa ngay cả khi có đề xuất PENDING
    */
-  async deleteAccount(id) {
+  async deleteAccount(id, forceDelete = false) {
     try {
       // Kiểm tra tài khoản có tồn tại không
       const account = await prisma.taiKhoan.findUnique({
@@ -458,52 +464,144 @@ class AccountService {
         throw new Error('Không thể xóa tài khoản SUPER_ADMIN');
       }
 
-      // Nếu có QuanNhan liên kết và CCCD = null, xóa luôn QuanNhan (phải xóa trước TaiKhoan)
-      if (account.QuanNhan && !account.QuanNhan.cccd) {
+      let deletedProposals = 0;
+
+      // Nếu có QuanNhan liên kết, xóa toàn bộ dữ liệu liên quan
+      if (account.QuanNhan) {
         const personnelId = account.QuanNhan.id;
         const unitId = account.QuanNhan.co_quan_don_vi_id || account.QuanNhan.don_vi_truc_thuoc_id;
         const isCoQuanDonVi = !!account.QuanNhan.co_quan_don_vi_id;
 
-        // Xóa tài khoản trước (để không vi phạm foreign key)
-        await prisma.taiKhoan.delete({
-          where: { id },
-        });
-
-        // Xóa QuanNhan
-        await prisma.quanNhan.delete({
-          where: { id: personnelId },
-        });
-
-        // Giảm số lượng quân nhân trong đơn vị
-        if (unitId) {
-          if (isCoQuanDonVi) {
-            await prisma.coQuanDonVi.update({
-              where: { id: unitId },
-              data: {
-                so_luong: {
-                  decrement: 1,
+        // Kiểm tra đề xuất chứa quân nhân này
+        const proposals = await prisma.bangDeXuat.findMany({
+          where: {
+            OR: [
+              {
+                data_danh_hieu: {
+                  path: '$[*].personnel_id',
+                  array_contains: personnelId,
                 },
               },
-            });
-          } else {
-            await prisma.donViTrucThuoc.update({
-              where: { id: unitId },
-              data: {
-                so_luong: {
-                  decrement: 1,
+              {
+                data_nien_han: {
+                  path: '$[*].personnel_id',
+                  array_contains: personnelId,
                 },
               },
-            });
-          }
+            ],
+          },
+        });
+
+        // Tìm đề xuất PENDING chứa quân nhân
+        const pendingProposals = proposals.filter(p => p.status === 'PENDING');
+
+        if (pendingProposals.length > 0 && !forceDelete) {
+          throw new Error(
+            `Không thể xóa tài khoản này vì quân nhân đang có ${pendingProposals.length} đề xuất chờ duyệt. ` +
+            `Hãy xử lý các đề xuất trước hoặc sử dụng force delete.`
+          );
         }
+
+        // Sử dụng transaction để đảm bảo data integrity
+        await prisma.$transaction(async (tx) => {
+          // 1. Xóa quân nhân khỏi tất cả đề xuất
+          for (const proposal of proposals) {
+            let updated = false;
+
+            // Xử lý data_danh_hieu
+            if (proposal.data_danh_hieu && Array.isArray(proposal.data_danh_hieu)) {
+              const filtered = proposal.data_danh_hieu.filter(
+                item => item.personnel_id !== personnelId
+              );
+              if (filtered.length !== proposal.data_danh_hieu.length) {
+                proposal.data_danh_hieu = filtered;
+                updated = true;
+              }
+            }
+
+            // Xử lý data_nien_han
+            if (proposal.data_nien_han && Array.isArray(proposal.data_nien_han)) {
+              const filtered = proposal.data_nien_han.filter(
+                item => item.personnel_id !== personnelId
+              );
+              if (filtered.length !== proposal.data_nien_han.length) {
+                proposal.data_nien_han = filtered;
+                updated = true;
+              }
+            }
+
+            // Cập nhật hoặc xóa đề xuất
+            if (updated) {
+              const isEmpty =
+                (!proposal.data_danh_hieu || proposal.data_danh_hieu.length === 0) &&
+                (!proposal.data_nien_han || proposal.data_nien_han.length === 0) &&
+                (!proposal.data_thanh_tich || proposal.data_thanh_tich.length === 0);
+
+              if (isEmpty) {
+                await tx.bangDeXuat.delete({
+                  where: { id: proposal.id },
+                });
+                deletedProposals++;
+              } else {
+                await tx.bangDeXuat.update({
+                  where: { id: proposal.id },
+                  data: {
+                    data_danh_hieu: proposal.data_danh_hieu || [],
+                    data_nien_han: proposal.data_nien_han || [],
+                  },
+                });
+              }
+            }
+          }
+
+          // 2. Xóa tài khoản (Prisma sẽ tự động cascade xóa: SystemLog, ThongBao)
+          await tx.taiKhoan.delete({
+            where: { id },
+          });
+
+          // 3. Xóa quân nhân (Prisma sẽ tự động cascade xóa:
+          //    LichSuChucVu, ThanhTichKhoaHoc, DanhHieuHangNam,
+          //    HoSoNienHan, HoSoHangNam)
+          await tx.quanNhan.delete({
+            where: { id: personnelId },
+          });
+
+          // 4. Giảm số lượng quân nhân trong đơn vị
+          if (unitId) {
+            if (isCoQuanDonVi) {
+              await tx.coQuanDonVi.update({
+                where: { id: unitId },
+                data: {
+                  so_luong: {
+                    decrement: 1,
+                  },
+                },
+              });
+            } else {
+              await tx.donViTrucThuoc.update({
+                where: { id: unitId },
+                data: {
+                  so_luong: {
+                    decrement: 1,
+                  },
+                },
+              });
+            }
+          }
+        });
+
+        return {
+          message: 'Xóa tài khoản và toàn bộ dữ liệu liên quan thành công',
+          deletedProposals,
+        };
       } else {
-        // Chỉ xóa tài khoản, không xóa QuanNhan
+        // Chỉ xóa tài khoản (không có quân nhân liên kết)
         await prisma.taiKhoan.delete({
           where: { id },
         });
-      }
 
-      return { message: 'Xóa tài khoản thành công' };
+        return { message: 'Xóa tài khoản thành công' };
+      }
     } catch (error) {
       throw error;
     }

@@ -253,18 +253,24 @@ class AccountController {
   }
 
   /**
-   * DELETE /api/accounts/:id
-   * Xóa (vô hiệu hóa) tài khoản
+   * DELETE /api/accounts/:id?force=true
+   * Xóa tài khoản và toàn bộ dữ liệu liên quan
+   * Query params:
+   *   - force: true/false - Bắt buộc xóa ngay cả khi có đề xuất PENDING
    */
   async deleteAccount(req, res) {
     try {
       const { id } = req.params;
+      const { force } = req.query;
 
-      const result = await accountService.deleteAccount(id);
+      const forceDelete = force === 'true' || force === '1';
+
+      const result = await accountService.deleteAccount(id, forceDelete);
 
       return res.status(200).json({
         success: true,
         message: result.message,
+        data: result,
       });
     } catch (error) {
       console.error('Delete account error:', error);

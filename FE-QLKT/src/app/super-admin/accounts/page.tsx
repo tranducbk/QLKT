@@ -26,6 +26,7 @@ import {
 import Link from 'next/link';
 import { apiClient } from '@/lib/api-client';
 import { useTheme } from '@/components/theme-provider';
+import { formatDate } from '@/lib/utils';
 
 const { Title } = Typography;
 
@@ -150,7 +151,7 @@ export default function AccountsListPage() {
       key: 'createdAt',
       width: 150,
       align: 'center' as const,
-      render: (date: string) => new Date(date).toLocaleDateString('vi-VN'),
+      render: (date: string) => formatDate(date),
     },
     {
       title: 'Thao tác',

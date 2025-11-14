@@ -20,6 +20,7 @@ import { ArrowLeftOutlined, EditOutlined, ReloadOutlined } from '@ant-design/ico
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { apiClient } from '@/lib/api-client';
+import { formatDate, formatDateTime } from '@/lib/utils';
 import { useTheme } from '@/components/theme-provider';
 import { Loading } from '@/components/ui/loading';
 
@@ -187,10 +188,10 @@ export default function AccountDetailPage() {
               <Tag color={getRoleColor(account.role)}>{getRoleText(account.role)}</Tag>
             </Descriptions.Item>
             <Descriptions.Item label="Ngày tạo" span={1}>
-              {new Date(account.createdAt).toLocaleString('vi-VN')}
+              {formatDateTime(account.createdAt)}
             </Descriptions.Item>
             <Descriptions.Item label="Cập nhật lần cuối" span={2}>
-              {new Date(account.updatedAt).toLocaleString('vi-VN')}
+              {formatDateTime(account.updatedAt)}
             </Descriptions.Item>
           </Descriptions>
         </Card>
@@ -220,12 +221,12 @@ export default function AccountDetailPage() {
               </Descriptions.Item>
               {account.QuanNhan.ngay_sinh && (
                 <Descriptions.Item label="Ngày sinh" span={1}>
-                  {new Date(account.QuanNhan.ngay_sinh).toLocaleDateString('vi-VN')}
+                  {formatDate(account.QuanNhan.ngay_sinh)}
                 </Descriptions.Item>
               )}
               {account.QuanNhan.ngay_nhap_ngu && (
                 <Descriptions.Item label="Ngày nhập ngũ" span={1}>
-                  {new Date(account.QuanNhan.ngay_nhap_ngu).toLocaleDateString('vi-VN')}
+                  {formatDate(account.QuanNhan.ngay_nhap_ngu)}
                 </Descriptions.Item>
               )}
               {account.QuanNhan.DonVi && (
