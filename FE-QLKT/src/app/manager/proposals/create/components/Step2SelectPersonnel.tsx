@@ -5,6 +5,7 @@ import { Table, Input, Select, Space, Alert, Typography, Tag } from 'antd';
 import { SearchOutlined, TeamOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import axiosInstance from '@/utils/axiosInstance';
+import { format } from 'date-fns';
 
 const { Text } = Typography;
 
@@ -15,6 +16,8 @@ interface Personnel {
   co_quan_don_vi_id: string;
   don_vi_truc_thuoc_id: string;
   chuc_vu_id: string;
+  ngay_nhap_ngu?: string | Date | null;
+  ngay_xuat_ngu?: string | Date | null;
   CoQuanDonVi?: {
     id: string;
     ten_don_vi: string;
@@ -41,6 +44,7 @@ interface Step2SelectPersonnelProps {
   onPersonnelChange: (ids: string[]) => void;
   nam: number;
   onNamChange: (nam: number) => void;
+  proposalType?: string; // Để biết khi nào cần hiển thị ngày nhập ngũ/xuất ngũ
 }
 
 export default function Step2SelectPersonnel({
@@ -48,6 +52,7 @@ export default function Step2SelectPersonnel({
   onPersonnelChange,
   nam,
   onNamChange,
+  proposalType,
 }: Step2SelectPersonnelProps) {
   const [loading, setLoading] = useState(false);
   const [personnel, setPersonnel] = useState<Personnel[]>([]);
@@ -156,6 +161,126 @@ export default function Step2SelectPersonnel({
     },
   ];
 
+  // Thêm cột ngày nhập ngũ, xuất ngũ và tổng tháng cho đề xuất niên hạn
+  if (proposalType === 'NIEN_HAN') {
+    // Hàm tính tổng số tháng từ ngày nhập ngũ đến hiện tại (hoặc ngày xuất ngũ)
+    const calculateTotalMonths = (ngayNhapNgu: string | Date | null | undefined, ngayXuatNgu: string | Date | null | undefined) => {
+      if (!ngayNhapNgu) return null;
+      
+      try {
+        const startDate = typeof ngayNhapNgu === 'string' ? new Date(ngayNhapNgu) : ngayNhapNgu;
+        const endDate = ngayXuatNgu 
+          ? (typeof ngayXuatNgu === 'string' ? new Date(ngayXuatNgu) : ngayXuatNgu)
+          : new Date(); // Nếu chưa xuất ngũ thì tính đến hiện tại
+        
+        // Đảm bảo startDate và endDate hợp lệ
+        if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+          return null;
+        }
+        
+        // Tính số năm và tháng chính xác
+        let years = endDate.getFullYear() - startDate.getFullYear();
+        let months = endDate.getMonth() - startDate.getMonth();
+        let days = endDate.getDate() - startDate.getDate();
+        
+        // Điều chỉnh nếu ngày cuối nhỏ hơn ngày đầu
+        if (days < 0) {
+          months -= 1;
+          // Lấy số ngày của tháng trước đó
+          const lastDayOfPrevMonth = new Date(endDate.getFullYear(), endDate.getMonth(), 0).getDate();
+          days += lastDayOfPrevMonth;
+        }
+        
+        // Điều chỉnh nếu tháng cuối nhỏ hơn tháng đầu
+        if (months < 0) {
+          years -= 1;
+          months += 12;
+        }
+        
+        // Tính tổng số tháng (làm tròn xuống)
+        const totalMonths = years * 12 + months;
+        
+        // Tính số năm và tháng còn lại để hiển thị
+        const totalYears = Math.floor(totalMonths / 12);
+        const remainingMonths = totalMonths % 12;
+        
+        // Trả về object với years và months riêng biệt
+        return {
+          years: totalYears,
+          months: remainingMonths,
+          totalMonths: totalMonths,
+        };
+      } catch {
+        return null;
+      }
+    };
+
+    columns.push(
+      {
+        title: 'Ngày nhập ngũ',
+        key: 'ngay_nhap_ngu',
+        width: 150,
+        align: 'center',
+        render: (_, record) => {
+          if (!record.ngay_nhap_ngu) return <Text type="secondary">-</Text>;
+          try {
+            const date = typeof record.ngay_nhap_ngu === 'string' 
+              ? new Date(record.ngay_nhap_ngu) 
+              : record.ngay_nhap_ngu;
+            return format(date, 'dd/MM/yyyy');
+          } catch {
+            return <Text type="secondary">-</Text>;
+          }
+        },
+      },
+      {
+        title: 'Ngày xuất ngũ',
+        key: 'ngay_xuat_ngu',
+        width: 150,
+        align: 'center',
+        render: (_, record) => {
+          if (!record.ngay_xuat_ngu) return <Text type="secondary">Chưa xuất ngũ</Text>;
+          try {
+            const date = typeof record.ngay_xuat_ngu === 'string' 
+              ? new Date(record.ngay_xuat_ngu) 
+              : record.ngay_xuat_ngu;
+            return format(date, 'dd/MM/yyyy');
+          } catch {
+            return <Text type="secondary">-</Text>;
+          }
+        },
+      },
+      {
+        title: 'Tổng tháng',
+        key: 'tong_thang',
+        width: 150,
+        align: 'center',
+        render: (_, record) => {
+          const result = calculateTotalMonths(record.ngay_nhap_ngu, record.ngay_xuat_ngu);
+          if (!result) return <Text type="secondary">-</Text>;
+          
+          // Hiển thị năm ở trên, tháng nhỏ bên dưới
+          if (result.years > 0 && result.months > 0) {
+            return (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <Text strong>{result.years} năm</Text>
+                <Text type="secondary" style={{ fontSize: '12px', lineHeight: '1.2' }}>
+                  {result.months} tháng
+                </Text>
+              </div>
+            );
+          } else if (result.years > 0) {
+            return <Text strong>{result.years} năm</Text>;
+          } else if (result.totalMonths > 0) {
+            return <Text strong>{result.totalMonths} tháng</Text>;
+          } else {
+            return <Text type="secondary">0 tháng</Text>;
+          }
+        },
+      }
+    );
+  }
+
   // Row selection config
   const rowSelection = {
     selectedRowKeys: selectedPersonnelIds,
@@ -255,7 +380,7 @@ export default function Step2SelectPersonnel({
           showTotal: (total) => `Tổng số ${total} quân nhân`,
         }}
         bordered
-        scroll={{ x: 1200 }}
+        scroll={{ x: proposalType === 'NIEN_HAN' ? 1650 : 1200 }}
         locale={{
           emptyText: 'Không có dữ liệu quân nhân',
         }}

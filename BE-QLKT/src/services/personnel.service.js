@@ -334,11 +334,47 @@ class PersonnelService {
         });
 
         if (manager) {
-          // MANAGER thuộc cơ quan đơn vị, chỉ sửa được quân nhân trong cùng cơ quan đơn vị
-          if (manager.co_quan_don_vi_id) {
-            if (personnel.co_quan_don_vi_id !== manager.co_quan_don_vi_id) {
-              throw new Error('Bạn không có quyền sửa thông tin quân nhân ngoài đơn vị');
+          let hasPermission = false;
+
+          // Trường hợp 1: Manager thuộc cơ quan đơn vị (co_quan_don_vi_id)
+          if (manager.co_quan_don_vi_id && !manager.don_vi_truc_thuoc_id) {
+            // Manager có thể sửa:
+            // - Quân nhân trong cùng cơ quan đơn vị
+            // - Quân nhân trong các đơn vị trực thuộc của cơ quan đơn vị đó
+            if (personnel.co_quan_don_vi_id === manager.co_quan_don_vi_id) {
+              hasPermission = true;
+            } else if (personnel.don_vi_truc_thuoc_id) {
+              // Kiểm tra xem đơn vị trực thuộc của quân nhân có thuộc cơ quan đơn vị của manager không
+              const donViTrucThuoc = await prisma.donViTrucThuoc.findUnique({
+                where: { id: personnel.don_vi_truc_thuoc_id },
+                select: { co_quan_don_vi_id: true },
+              });
+              if (donViTrucThuoc && donViTrucThuoc.co_quan_don_vi_id === manager.co_quan_don_vi_id) {
+                hasPermission = true;
+              }
             }
+          }
+          // Trường hợp 2: Manager thuộc đơn vị trực thuộc (don_vi_truc_thuoc_id)
+          else if (manager.don_vi_truc_thuoc_id) {
+            // Manager có thể sửa:
+            // - Quân nhân trong cùng đơn vị trực thuộc
+            // - Quân nhân trong cùng cơ quan đơn vị cha (nếu có)
+            if (personnel.don_vi_truc_thuoc_id === manager.don_vi_truc_thuoc_id) {
+              hasPermission = true;
+            } else if (personnel.co_quan_don_vi_id) {
+              // Kiểm tra xem cơ quan đơn vị của quân nhân có trùng với cơ quan đơn vị cha của manager không
+              const managerDonViTrucThuoc = await prisma.donViTrucThuoc.findUnique({
+                where: { id: manager.don_vi_truc_thuoc_id },
+                select: { co_quan_don_vi_id: true },
+              });
+              if (managerDonViTrucThuoc && personnel.co_quan_don_vi_id === managerDonViTrucThuoc.co_quan_don_vi_id) {
+                hasPermission = true;
+              }
+            }
+          }
+
+          if (!hasPermission) {
+            throw new Error('Bạn không có quyền sửa thông tin quân nhân ngoài đơn vị');
           }
         }
       }

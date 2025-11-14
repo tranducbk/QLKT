@@ -994,8 +994,43 @@ class ProposalService {
             don_vi_truc_thuoc: donViTrucThuoc,
           };
         });
+      } else if (type === 'NIEN_HAN') {
+        // NIEN_HAN: titleData = [{ personnel_id, danh_hieu }]
+        // Không lưu cccd, thêm thông tin đơn vị
+        dataNienHan = titleData.map(item => {
+          const personnel = personnelMap[item.personnel_id];
+          return {
+            personnel_id: item.personnel_id,
+            ho_ten: personnel?.ho_ten || '',
+            nam: nam,
+            danh_hieu: item.danh_hieu,
+            so_quyet_dinh: item.so_quyet_dinh || null,
+            file_quyet_dinh: item.file_quyet_dinh || null,
+            co_quan_don_vi: personnel?.CoQuanDonVi
+              ? {
+                  id: personnel.CoQuanDonVi.id,
+                  ten_co_quan_don_vi: personnel.CoQuanDonVi.ten_don_vi,
+                  ma_co_quan_don_vi: personnel.CoQuanDonVi.ma_don_vi,
+                }
+              : null,
+            don_vi_truc_thuoc: personnel?.DonViTrucThuoc
+              ? {
+                  id: personnel.DonViTrucThuoc.id,
+                  ten_don_vi: personnel.DonViTrucThuoc.ten_don_vi,
+                  ma_don_vi: personnel.DonViTrucThuoc.ma_don_vi,
+                  co_quan_don_vi: personnel.DonViTrucThuoc.CoQuanDonVi
+                    ? {
+                        id: personnel.DonViTrucThuoc.CoQuanDonVi.id,
+                        ten_don_vi_truc: personnel.DonViTrucThuoc.CoQuanDonVi.ten_don_vi,
+                        ma_don_vi: personnel.DonViTrucThuoc.CoQuanDonVi.ma_don_vi,
+                      }
+                    : null,
+                }
+              : null,
+          };
+        });
       } else {
-        // Các loại khác: NIEN_HAN, CONG_HIEN, DOT_XUAT
+        // Các loại khác: CONG_HIEN, DOT_XUAT
         // Không lưu cccd, thêm thông tin đơn vị
         dataDanhHieu = titleData.map(item => {
           const personnel = personnelMap[item.personnel_id];
@@ -1047,6 +1082,36 @@ class ProposalService {
           throw new Error(
             'Không thể đề xuất CSTDCS/CSTT cùng với BKBQP/CSTDTQ trong một đề xuất. ' +
               'Vui lòng tách thành các đề xuất riêng: một đề xuất cho CSTDCS/CSTT, và một đề xuất riêng cho BKBQP/CSTDTQ.'
+          );
+        }
+      }
+
+      // ============================================
+      // VALIDATION cho NIEN_HAN: Đảm bảo chỉ chọn một nhóm
+      // Nhóm 1: Các hạng HCCSVV (HCCSVV_HANG_BA, HCCSVV_HANG_NHI, HCCSVV_HANG_NHAT) đi với nhau
+      // Nhóm 2: HC_QKQT (riêng)
+      // Nhóm 3: KNC_VSNXD_QDNDVN (riêng)
+      // ============================================
+      if (type === 'NIEN_HAN' && dataNienHan && dataNienHan.length > 0) {
+        const danhHieus = dataNienHan.map(item => item.danh_hieu).filter(Boolean);
+
+        // Kiểm tra xem có các hạng HCCSVV không
+        const hasHCCSVV = danhHieus.some(
+          dh => dh === 'HCCSVV_HANG_BA' || dh === 'HCCSVV_HANG_NHI' || dh === 'HCCSVV_HANG_NHAT'
+        );
+
+        // Kiểm tra xem có HC_QKQT không
+        const hasHC_QKQT = danhHieus.some(dh => dh === 'HC_QKQT');
+
+        // Kiểm tra xem có KNC_VSNXD_QDNDVN không
+        const hasKNC = danhHieus.some(dh => dh === 'KNC_VSNXD_QDNDVN');
+
+        // Không cho phép mix các nhóm
+        const groupCount = [hasHCCSVV, hasHC_QKQT, hasKNC].filter(Boolean).length;
+        if (groupCount > 1) {
+          throw new Error(
+            'Không thể đề xuất các nhóm danh hiệu khác nhau trong một đề xuất. ' +
+              'Vui lòng tách thành các đề xuất riêng: một đề xuất cho các hạng HCCSVV, một đề xuất cho HC_QKQT, và một đề xuất cho KNC_VSNXD_QDNDVN.'
           );
         }
       }

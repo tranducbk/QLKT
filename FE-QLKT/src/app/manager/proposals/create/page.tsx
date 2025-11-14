@@ -50,6 +50,8 @@ interface Personnel {
   id: string;
   ho_ten: string;
   cccd: string;
+  ngay_nhap_ngu?: string | Date | null;
+  ngay_xuat_ngu?: string | Date | null;
   CoQuanDonVi?: {
     ten_don_vi: string;
   };
@@ -355,6 +357,7 @@ export default function CreateProposalPage() {
             onPersonnelChange={setSelectedPersonnelIds}
             nam={nam}
             onNamChange={setNam}
+            proposalType={proposalType}
           />
         );
 
@@ -509,6 +512,81 @@ export default function CreateProposalPage() {
               },
             }
           );
+          
+          // Thêm cột Tổng tháng cho đề xuất Niên hạn
+          if (proposalType === 'NIEN_HAN') {
+            // Hàm tính tổng số tháng
+            const calculateTotalMonths = (ngayNhapNgu: string | Date | null | undefined, ngayXuatNgu: string | Date | null | undefined) => {
+              if (!ngayNhapNgu) return null;
+              
+              try {
+                const startDate = typeof ngayNhapNgu === 'string' ? new Date(ngayNhapNgu) : ngayNhapNgu;
+                const endDate = ngayXuatNgu 
+                  ? (typeof ngayXuatNgu === 'string' ? new Date(ngayXuatNgu) : ngayXuatNgu)
+                  : new Date();
+                
+                if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+                  return null;
+                }
+                
+                let years = endDate.getFullYear() - startDate.getFullYear();
+                let months = endDate.getMonth() - startDate.getMonth();
+                let days = endDate.getDate() - startDate.getDate();
+                
+                if (days < 0) {
+                  months -= 1;
+                  const lastDayOfPrevMonth = new Date(endDate.getFullYear(), endDate.getMonth(), 0).getDate();
+                  days += lastDayOfPrevMonth;
+                }
+                
+                if (months < 0) {
+                  years -= 1;
+                  months += 12;
+                }
+                
+                const totalMonths = years * 12 + months;
+                const totalYears = Math.floor(totalMonths / 12);
+                const remainingMonths = totalMonths % 12;
+                
+                return {
+                  years: totalYears,
+                  months: remainingMonths,
+                  totalMonths: totalMonths,
+                };
+              } catch {
+                return null;
+              }
+            };
+            
+            reviewColumns.push({
+              title: 'Tổng tháng',
+              key: 'tong_thang',
+              width: 150,
+              align: 'center' as const,
+              render: (_: any, record: any) => {
+                const result = calculateTotalMonths(record.ngay_nhap_ngu, record.ngay_xuat_ngu);
+                if (!result) return <Text type="secondary">-</Text>;
+                
+                // Hiển thị năm ở trên, tháng nhỏ bên dưới
+                if (result.years > 0 && result.months > 0) {
+                  return (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                      <Text strong>{result.years} năm</Text>
+                      <Text type="secondary" style={{ fontSize: '12px', lineHeight: '1.2' }}>
+                        {result.months} tháng
+                      </Text>
+                    </div>
+                  );
+                } else if (result.years > 0) {
+                  return <Text strong>{result.years} năm</Text>;
+                } else if (result.totalMonths > 0) {
+                  return <Text strong>{result.totalMonths} tháng</Text>;
+                } else {
+                  return <Text type="secondary">0 tháng</Text>;
+                }
+              },
+            });
+          }
         }
 
         // Add title/achievement columns based on type
@@ -610,7 +688,7 @@ export default function CreateProposalPage() {
                 pagination={false}
                 size="small"
                 bordered
-                scroll={{ x: proposalType === 'NCKH' ? 1100 : 1000 }}
+                scroll={{ x: proposalType === 'NCKH' ? 1100 : proposalType === 'NIEN_HAN' ? 1150 : 1000 }}
                 locale={{
                   emptyText: 'Không có dữ liệu',
                 }}

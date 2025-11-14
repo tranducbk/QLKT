@@ -117,7 +117,12 @@ const formatAddressInput = (input: string): string => {
   return formattedParts.join(', ');
 };
 
-export default function ProfileEditForm() {
+interface ProfileEditFormProps {
+  personnelId?: string; // Optional: nếu không có thì lấy từ token
+  onSuccess?: () => void; // Callback khi cập nhật thành công
+}
+
+export default function ProfileEditForm({ personnelId: externalPersonnelId, onSuccess }: ProfileEditFormProps = {}) {
   const [form] = Form.useForm();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
@@ -138,31 +143,38 @@ export default function ProfileEditForm() {
 
   useEffect(() => {
     loadPersonnelData();
-  }, []);
+  }, [externalPersonnelId]);
 
   const loadPersonnelData = async () => {
     try {
       setLoading(true);
 
-      // Lấy thông tin user từ token
-      const token = localStorage.getItem('accessToken');
-      if (!token) {
-        message.error('Vui lòng đăng nhập lại');
-        router.push('/login');
-        return;
-      }
+      // Nếu có externalPersonnelId thì dùng nó, không thì lấy từ token
+      let targetPersonnelId = externalPersonnelId;
 
-      // Decode JWT để lấy quan_nhan_id
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      const { quan_nhan_id } = payload;
+      if (!targetPersonnelId) {
+        // Lấy thông tin user từ token
+        const token = localStorage.getItem('accessToken');
+        if (!token) {
+          message.error('Vui lòng đăng nhập lại');
+          router.push('/login');
+          return;
+        }
 
-      if (!quan_nhan_id) {
-        message.error('Không tìm thấy thông tin quân nhân');
-        return;
+        // Decode JWT để lấy quan_nhan_id
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        const { quan_nhan_id } = payload;
+
+        if (!quan_nhan_id) {
+          message.error('Không tìm thấy thông tin quân nhân');
+          return;
+        }
+
+        targetPersonnelId = String(quan_nhan_id);
       }
 
       // Lấy thông tin personnel
-      const response = await apiClient.getPersonnelById(String(quan_nhan_id));
+      const response = await apiClient.getPersonnelById(targetPersonnelId);
 
       if (response.success && response.data) {
         setPersonnelData(response.data);
@@ -259,6 +271,11 @@ export default function ProfileEditForm() {
 
         // Reload data
         await loadPersonnelData();
+
+        // Gọi callback nếu có
+        if (onSuccess) {
+          onSuccess();
+        }
       } else {
         message.error(response.message || 'Cập nhật thất bại');
       }

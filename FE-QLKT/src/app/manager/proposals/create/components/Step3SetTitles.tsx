@@ -14,6 +14,8 @@ interface Personnel {
   id: string;
   ho_ten: string;
   cccd: string;
+  ngay_nhap_ngu?: string | Date | null;
+  ngay_xuat_ngu?: string | Date | null;
   CoQuanDonVi?: {
     ten_don_vi: string;
   };
@@ -178,6 +180,38 @@ export default function Step3SetTitles({
     return null;
   };
 
+  const getSelectedNienHanType = () => {
+    if (proposalType !== 'NIEN_HAN') return null;
+    
+    const selectedDanhHieus = titleData
+      .map(item => item.danh_hieu)
+      .filter(Boolean);
+    
+    if (selectedDanhHieus.length === 0) return null;
+    
+    // Kiểm tra xem có các hạng HCCSVV không
+    const hasHCCSVV = selectedDanhHieus.some(dh => 
+      dh === 'HCCSVV_HANG_BA' || 
+      dh === 'HCCSVV_HANG_NHI' || 
+      dh === 'HCCSVV_HANG_NHAT'
+    );
+    
+    // Kiểm tra xem có HC_QKQT không
+    const hasHC_QKQT = selectedDanhHieus.some(dh => dh === 'HC_QKQT');
+    
+    // Kiểm tra xem có KNC_VSNXD_QDNDVN không
+    const hasKNC = selectedDanhHieus.some(dh => dh === 'KNC_VSNXD_QDNDVN');
+    
+    if (hasHCCSVV) {
+      return 'hcsvv'; // Các hạng HCCSVV đi với nhau
+    } else if (hasHC_QKQT) {
+      return 'hc_qkqt'; // HC_QKQT riêng
+    } else if (hasKNC) {
+      return 'knc'; // KNC_VSNXD_QDNDVN riêng
+    }
+    return null;
+  };
+
   const getDanhHieuOptions = () => {
     switch (proposalType) {
       case 'CA_NHAN_HANG_NAM':
@@ -206,11 +240,31 @@ export default function Step3SetTitles({
           { label: 'Bằng khen Thủ tướng Chính phủ (BKTTCP)', value: 'BKTTCP' },
         ];
       case 'NIEN_HAN':
-        return [
+        const nienHanSelectedType = getSelectedNienHanType();
+        const nienHanAllOptions = [
           { label: 'Huân chương Chiến sỹ Vẻ vang Hạng Ba', value: 'HCCSVV_HANG_BA' },
           { label: 'Huân chương Chiến sỹ Vẻ vang Hạng Nhì', value: 'HCCSVV_HANG_NHI' },
           { label: 'Huân chương Chiến sỹ Vẻ vang Hạng Nhất', value: 'HCCSVV_HANG_NHAT' },
+          { label: 'Huy chương Quân kỳ quyết thắng', value: 'HC_QKQT' },
+          { label: 'Kỷ niệm chương vì sự nghiệp xây dựng QĐNDVN', value: 'KNC_VSNXD_QDNDVN' },
         ];
+        
+        // Nếu đã chọn các hạng HCCSVV, chỉ hiển thị các hạng HCCSVV
+        // Nếu đã chọn HC_QKQT, chỉ hiển thị HC_QKQT
+        // Nếu đã chọn KNC_VSNXD_QDNDVN, chỉ hiển thị KNC_VSNXD_QDNDVN
+        if (nienHanSelectedType === 'hcsvv') {
+          return nienHanAllOptions.filter(opt => 
+            opt.value === 'HCCSVV_HANG_BA' || 
+            opt.value === 'HCCSVV_HANG_NHI' || 
+            opt.value === 'HCCSVV_HANG_NHAT'
+          );
+        } else if (nienHanSelectedType === 'hc_qkqt') {
+          return nienHanAllOptions.filter(opt => opt.value === 'HC_QKQT');
+        } else if (nienHanSelectedType === 'knc') {
+          return nienHanAllOptions.filter(opt => opt.value === 'KNC_VSNXD_QDNDVN');
+        }
+        
+        return nienHanAllOptions;
       case 'CONG_HIEN':
         return [
           { label: 'Huân chương Bảo vệ Tổ quốc Hạng Ba', value: 'HCBVTQ_HANG_BA' },
@@ -247,6 +301,47 @@ export default function Step3SetTitles({
         if (!currentData || !currentData.danh_hieu) {
           message.warning(
             'Không thể đề xuất CSTDCS/CSTT cùng với BKBQP/CSTDTQ trong một đề xuất. ' +
+            'Vui lòng tạo đề xuất riêng cho loại danh hiệu này.'
+          );
+          return;
+        }
+      }
+    }
+
+    // Validation cho NIEN_HAN: Kiểm tra nếu đang chọn danh hiệu và đã có danh hiệu khác nhóm
+    if (field === 'danh_hieu' && proposalType === 'NIEN_HAN' && value) {
+      const selectedType = getSelectedNienHanType();
+      const isHCCSVV = value === 'HCCSVV_HANG_BA' || value === 'HCCSVV_HANG_NHI' || value === 'HCCSVV_HANG_NHAT';
+      const isHC_QKQT = value === 'HC_QKQT';
+      const isKNC = value === 'KNC_VSNXD_QDNDVN';
+      
+      // Kiểm tra xem có mix các nhóm không
+      if (selectedType === 'hcsvv' && (isHC_QKQT || isKNC)) {
+        // Đã có các hạng HCCSVV, không cho phép thêm HC_QKQT hoặc KNC_VSNXD_QDNDVN
+        const currentData = titleData.find(d => d.personnel_id === id);
+        if (!currentData || !currentData.danh_hieu) {
+          message.warning(
+            'Không thể đề xuất các hạng HCCSVV cùng với các loại khác trong một đề xuất. ' +
+            'Vui lòng tạo đề xuất riêng cho loại danh hiệu này.'
+          );
+          return;
+        }
+      } else if (selectedType === 'hc_qkqt' && (isHCCSVV || isKNC)) {
+        // Đã có HC_QKQT, không cho phép thêm các hạng HCCSVV hoặc KNC_VSNXD_QDNDVN
+        const currentData = titleData.find(d => d.personnel_id === id);
+        if (!currentData || !currentData.danh_hieu) {
+          message.warning(
+            'Không thể đề xuất HC_QKQT cùng với các loại khác trong một đề xuất. ' +
+            'Vui lòng tạo đề xuất riêng cho loại danh hiệu này.'
+          );
+          return;
+        }
+      } else if (selectedType === 'knc' && (isHCCSVV || isHC_QKQT)) {
+        // Đã có KNC_VSNXD_QDNDVN, không cho phép thêm các hạng HCCSVV hoặc HC_QKQT
+        const currentData = titleData.find(d => d.personnel_id === id);
+        if (!currentData || !currentData.danh_hieu) {
+          message.warning(
+            'Không thể đề xuất KNC_VSNXD_QDNDVN cùng với các loại khác trong một đề xuất. ' +
             'Vui lòng tạo đề xuất riêng cho loại danh hiệu này.'
           );
           return;
@@ -367,6 +462,58 @@ export default function Step3SetTitles({
     },
   ];
 
+  // Hàm tính tổng số tháng từ ngày nhập ngũ đến hiện tại (hoặc ngày xuất ngũ)
+  const calculateTotalMonths = (ngayNhapNgu: string | Date | null | undefined, ngayXuatNgu: string | Date | null | undefined) => {
+    if (!ngayNhapNgu) return null;
+    
+    try {
+      const startDate = typeof ngayNhapNgu === 'string' ? new Date(ngayNhapNgu) : ngayNhapNgu;
+      const endDate = ngayXuatNgu 
+        ? (typeof ngayXuatNgu === 'string' ? new Date(ngayXuatNgu) : ngayXuatNgu)
+        : new Date(); // Nếu chưa xuất ngũ thì tính đến hiện tại
+      
+      // Đảm bảo startDate và endDate hợp lệ
+      if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+        return null;
+      }
+      
+      // Tính số năm và tháng chính xác
+      let years = endDate.getFullYear() - startDate.getFullYear();
+      let months = endDate.getMonth() - startDate.getMonth();
+      let days = endDate.getDate() - startDate.getDate();
+      
+      // Điều chỉnh nếu ngày cuối nhỏ hơn ngày đầu
+      if (days < 0) {
+        months -= 1;
+        // Lấy số ngày của tháng trước đó
+        const lastDayOfPrevMonth = new Date(endDate.getFullYear(), endDate.getMonth(), 0).getDate();
+        days += lastDayOfPrevMonth;
+      }
+      
+      // Điều chỉnh nếu tháng cuối nhỏ hơn tháng đầu
+      if (months < 0) {
+        years -= 1;
+        months += 12;
+      }
+      
+      // Tính tổng số tháng (làm tròn xuống)
+      const totalMonths = years * 12 + months;
+      
+      // Tính số năm và tháng còn lại để hiển thị
+      const totalYears = Math.floor(totalMonths / 12);
+      const remainingMonths = totalMonths % 12;
+      
+      // Trả về object với years và months riêng biệt
+      return {
+        years: totalYears,
+        months: remainingMonths,
+        totalMonths: totalMonths,
+      };
+    } catch {
+      return null;
+    }
+  };
+
   // Columns for CA_NHAN_HANG_NAM, NIEN_HAN, CONG_HIEN
   const standardColumns: ColumnsType<Personnel> = [
     {
@@ -395,6 +542,35 @@ export default function Step3SetTitles({
       width: 140,
       render: (_, record) => record.DonViTrucThuoc?.ten_don_vi || '-',
     },
+    // Thêm cột Tổng tháng cho đề xuất Niên hạn
+    ...(proposalType === 'NIEN_HAN' ? [{
+      title: 'Tổng tháng',
+      key: 'tong_thang',
+      width: 150,
+      align: 'center' as const,
+      render: (_: any, record: Personnel) => {
+        const result = calculateTotalMonths(record.ngay_nhap_ngu, record.ngay_xuat_ngu);
+        if (!result) return <Text type="secondary">-</Text>;
+        
+        // Hiển thị năm ở trên, tháng nhỏ bên dưới
+        if (result.years > 0 && result.months > 0) {
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              <Text strong>{result.years} năm</Text>
+              <Text type="secondary" style={{ fontSize: '12px', lineHeight: '1.2' }}>
+                {result.months} tháng
+              </Text>
+            </div>
+          );
+        } else if (result.years > 0) {
+          return <Text strong>{result.years} năm</Text>;
+        } else if (result.totalMonths > 0) {
+          return <Text strong>{result.totalMonths} tháng</Text>;
+        } else {
+          return <Text type="secondary">0 tháng</Text>;
+        }
+      },
+    }] : []),
     {
       title: (
         <span>

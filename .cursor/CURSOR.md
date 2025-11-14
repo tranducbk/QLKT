@@ -64,10 +64,38 @@ await prisma.thongBao.create({
 - `ThongBao` - Thông báo
 - `SystemLog` - Nhật ký hệ thống
 - `BangDeXuat` - Đề xuất khen thưởng
+- `TheoDoiKhenThuongDonVi` - Theo dõi khen thưởng đơn vị
+
+## Proposal Types & Award Groups
+
+### CA_NHAN_HANG_NAM
+- **Nhóm 1**: CSTDCS, CSTT (đi với nhau)
+- **Nhóm 2**: BKBQP, CSTDTQ (đi với nhau)
+- ❌ Không mix Nhóm 1 với Nhóm 2
+
+### NIEN_HAN
+- **Nhóm 1**: HCCSVV_HANG_BA, HCCSVV_HANG_NHI, HCCSVV_HANG_NHAT (các hạng đi với nhau)
+- **Nhóm 2**: HC_QKQT (riêng)
+- **Nhóm 3**: KNC_VSNXD_QDNDVN (riêng)
+- ❌ Chỉ chọn một nhóm trong một đề xuất
+- 📊 Hiển thị "Tổng tháng" từ `ngay_nhap_ngu` đến hiện tại/xuất ngũ
+
+### DON_VI_HANG_NAM
+- ĐVQT, ĐVTT, BKBQP, BKTTCP
+- ⚠️ Chỉ đề xuất cho năm sau (nam = năm hiện tại + 1)
 
 ## Role Permissions
 
 - **SUPER_ADMIN**: Manage accounts + all ADMIN
-- **ADMIN**: Manage all data
-- **MANAGER**: Manage own unit only
+- **ADMIN**: Manage all data + approve proposals
+- **MANAGER**: 
+  - Manage own unit personnel only
+  - Edit personnel info in own unit
+  - Create proposals (except DOT_XUAT)
 - **USER**: View own profile only
+
+## Validation Rules
+
+- **Frontend**: Filter dropdown options based on selected group
+- **Backend**: Validate on submit to prevent mixing groups
+- **Manager Edit**: Only edit personnel in same `co_quan_don_vi_id` or `don_vi_truc_thuoc_id`
