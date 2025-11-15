@@ -58,6 +58,21 @@ class ScientificAchievementService {
         },
       });
 
+      // Tự động cập nhật lại hồ sơ hằng năm (chỉ khi status = APPROVED)
+      const finalStatus = status || 'PENDING';
+      if (finalStatus === 'APPROVED') {
+        try {
+          const profileService = require('./profile.service');
+          await profileService.recalculateAnnualProfile(personnel_id);
+        } catch (recalcError) {
+          console.error(
+            `⚠️ Failed to auto-recalculate annual profile for personnel ${personnel_id}:`,
+            recalcError.message
+          );
+          // Không throw error, chỉ log để không ảnh hưởng đến việc tạo thành tích
+        }
+      }
+
       return newAchievement;
     } catch (error) {
       throw error;
@@ -100,6 +115,21 @@ class ScientificAchievementService {
         },
       });
 
+      // Tự động cập nhật lại hồ sơ hằng năm (chỉ khi status = APPROVED)
+      const finalStatus = status || achievement.status;
+      if (finalStatus === 'APPROVED') {
+        try {
+          const profileService = require('./profile.service');
+          await profileService.recalculateAnnualProfile(achievement.quan_nhan_id);
+        } catch (recalcError) {
+          console.error(
+            `⚠️ Failed to auto-recalculate annual profile for personnel ${achievement.quan_nhan_id}:`,
+            recalcError.message
+          );
+          // Không throw error, chỉ log để không ảnh hưởng đến việc cập nhật thành tích
+        }
+      }
+
       return updatedAchievement;
     } catch (error) {
       throw error;
@@ -116,9 +146,26 @@ class ScientificAchievementService {
         throw new Error('Thành tích không tồn tại');
       }
 
+      const personnelId = achievement.quan_nhan_id;
+      const wasApproved = achievement.status === 'APPROVED';
+
       await prisma.thanhTichKhoaHoc.delete({
         where: { id },
       });
+
+      // Tự động cập nhật lại hồ sơ hằng năm (chỉ khi thành tích đã được duyệt)
+      if (wasApproved) {
+        try {
+          const profileService = require('./profile.service');
+          await profileService.recalculateAnnualProfile(personnelId);
+        } catch (recalcError) {
+          console.error(
+            `⚠️ Failed to auto-recalculate annual profile for personnel ${personnelId}:`,
+            recalcError.message
+          );
+          // Không throw error, chỉ log để không ảnh hưởng đến việc xóa thành tích
+        }
+      }
 
       return { message: 'Xóa thành tích thành công' };
     } catch (error) {

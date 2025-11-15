@@ -89,7 +89,7 @@ export default function ApproveModal({ visible, proposal, onClose, onSuccess }: 
 
   // Search decisions
   const handleSearchDecision = async (searchText: string) => {
-    if (!searchText || searchText.length < 2) {
+    if (!searchText || searchText.trim().length === 0) {
       setDecisionOptions([]);
       return;
     }
@@ -97,7 +97,7 @@ export default function ApproveModal({ visible, proposal, onClose, onSuccess }: 
     try {
       setSearchingDecision(true);
       const response = await axiosInstance.get('/api/decisions/autocomplete', {
-        params: { q: searchText, limit: 10 },
+        params: { q: searchText.trim(), limit: 10 },
       });
 
       if (response.data.success) {
@@ -107,9 +107,12 @@ export default function ApproveModal({ visible, proposal, onClose, onSuccess }: 
           data: d,
         }));
         setDecisionOptions(options);
+      } else {
+        setDecisionOptions([]);
       }
     } catch (error) {
       console.error('Error searching decisions:', error);
+      setDecisionOptions([]);
     } finally {
       setSearchingDecision(false);
     }
@@ -163,7 +166,10 @@ export default function ApproveModal({ visible, proposal, onClose, onSuccess }: 
         ghi_chu: values.ghi_chu || null,
       };
 
-      const response = await axiosInstance.post(`/api/proposals/${proposal.id}/approve`, approveData);
+      const response = await axiosInstance.post(
+        `/api/proposals/${proposal.id}/approve`,
+        approveData
+      );
 
       if (response.data.success) {
         message.success('Đã phê duyệt đề xuất thành công!');
@@ -206,7 +212,7 @@ export default function ApproveModal({ visible, proposal, onClose, onSuccess }: 
         render: (text: string) => <Tag color="blue">{text}</Tag>,
       },
       {
-        title: 'Số cán bộ',
+        title: 'Số quân nhân',
         dataIndex: 'count',
         key: 'count',
         width: 120,
@@ -219,7 +225,7 @@ export default function ApproveModal({ visible, proposal, onClose, onSuccess }: 
       <div>
         <Alert
           message="Bước 1: Xem lại danh sách"
-          description="Kiểm tra danh sách danh hiệu và số lượng cán bộ trước khi thêm quyết định"
+          description="Kiểm tra danh sách danh hiệu và số lượng quân nhân trước khi thêm quyết định"
           type="info"
           showIcon
           style={{ marginBottom: 16 }}
@@ -227,7 +233,7 @@ export default function ApproveModal({ visible, proposal, onClose, onSuccess }: 
         <Table
           columns={columns}
           dataSource={groupedList}
-          rowKey={(record) => record.danh_hieu}
+          rowKey={record => record.danh_hieu}
           pagination={false}
           size="small"
           bordered
@@ -293,10 +299,7 @@ export default function ApproveModal({ visible, proposal, onClose, onSuccess }: 
             name="nguoi_ky"
             rules={[{ required: true, message: 'Vui lòng nhập người ký!' }]}
           >
-            <Input
-              size="large"
-              placeholder="Ví dụ: Thiếu tướng Nguyễn Văn A - Giám đốc Học viện"
-            />
+            <Input size="large" placeholder="Ví dụ: Thiếu tướng Nguyễn Văn A - Giám đốc Học viện" />
           </Form.Item>
 
           <Form.Item label="Ghi chú" name="ghi_chu">

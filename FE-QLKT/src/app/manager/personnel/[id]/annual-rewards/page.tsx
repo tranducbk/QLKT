@@ -20,7 +20,7 @@ import {
   ConfigProvider,
   theme as antdTheme,
 } from 'antd';
-import type { ColumnsType } from 'antd';
+import type { ColumnsType } from 'antd/es/table';
 import {
   LeftOutlined,
   PlusOutlined,
@@ -179,7 +179,9 @@ export default function AnnualRewardsPage() {
 
         // Nếu có file PDF, hiển thị link để xem
         if (record.file_quyet_dinh) {
-          const pdfUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000'}/api/annual-rewards/decision-files/${record.file_quyet_dinh}`;
+          const pdfUrl = `${
+            process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000'
+          }/api/annual-rewards/decision-files/${record.file_quyet_dinh}`;
           return (
             <a
               href={pdfUrl}
@@ -372,4 +374,3 @@ export default function AnnualRewardsPage() {
     </ConfigProvider>
   );
 }
-

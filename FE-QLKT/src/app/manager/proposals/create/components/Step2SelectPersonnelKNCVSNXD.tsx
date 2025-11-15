@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Table, Input, Select, Space, Alert, Typography, InputNumber, message } from 'antd';
-import { SearchOutlined, TeamOutlined } from '@ant-design/icons';
+import { SearchOutlined, TrophyOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import axiosInstance from '@/utils/axiosInstance';
 import { formatDate } from '@/lib/utils';
@@ -13,6 +13,7 @@ interface Personnel {
   id: string;
   ho_ten: string;
   cccd: string;
+  gioi_tinh?: string | null;
   co_quan_don_vi_id: string;
   don_vi_truc_thuoc_id: string;
   chuc_vu_id: string;
@@ -39,19 +40,19 @@ interface Personnel {
   };
 }
 
-interface Step2SelectPersonnelNienHanProps {
+interface Step2SelectPersonnelKNCVSNXDProps {
   selectedPersonnelIds: string[];
   onPersonnelChange: (ids: string[]) => void;
   nam: number;
   onNamChange: (nam: number) => void;
 }
 
-export default function Step2SelectPersonnelNienHan({
+export default function Step2SelectPersonnelKNCVSNXD({
   selectedPersonnelIds,
   onPersonnelChange,
   nam,
   onNamChange,
-}: Step2SelectPersonnelNienHanProps) {
+}: Step2SelectPersonnelKNCVSNXDProps) {
   const [loading, setLoading] = useState(false);
   const [personnel, setPersonnel] = useState<Personnel[]>([]);
   const [searchText, setSearchText] = useState('');
@@ -80,9 +81,17 @@ export default function Step2SelectPersonnelNienHan({
       if (response.data.success) {
         const personnelData = response.data.data?.personnel || response.data.data || [];
         setPersonnel(personnelData);
+        if (personnelData.length === 0) {
+          message.warning('Không có quân nhân nào trong đơn vị của bạn.');
+        }
+      } else {
+        message.error(response.data.message || 'Không thể lấy danh sách quân nhân');
       }
     } catch (error: any) {
       console.error('Error fetching personnel:', error);
+      message.error(
+        error?.response?.data?.message || error?.message || 'Lỗi khi tải danh sách quân nhân'
+      );
     } finally {
       setLoading(false);
     }
@@ -161,6 +170,36 @@ export default function Step2SelectPersonnelNienHan({
     }
   };
 
+  // Kiểm tra quân nhân có đủ điều kiện đề xuất KNC_VSNXD_QDNDVN không
+  const checkEligibleForKNCVSNXD = (record: Personnel): { eligible: boolean; reason?: string } => {
+    // Kiểm tra giới tính
+    if (!record.gioi_tinh || (record.gioi_tinh !== 'NAM' && record.gioi_tinh !== 'NU')) {
+      return { eligible: false, reason: 'Chưa cập nhật giới tính' };
+    }
+
+    // Kiểm tra ngày nhập ngũ
+    if (!record.ngay_nhap_ngu) {
+      return { eligible: false, reason: 'Chưa cập nhật ngày nhập ngũ' };
+    }
+
+    // Tính số năm phục vụ
+    const result = calculateTotalMonths(record.ngay_nhap_ngu, record.ngay_xuat_ngu);
+    if (!result || result.years === 0) {
+      return { eligible: false, reason: 'Chưa đủ thời gian phục vụ' };
+    }
+
+    // Yêu cầu: nữ >= 20 năm, nam >= 25 năm
+    const requiredYears = record.gioi_tinh === 'NU' ? 20 : 25;
+    if (result.years < requiredYears) {
+      return {
+        eligible: false,
+        reason: `Chưa đủ ${requiredYears} năm phục vụ (hiện tại: ${result.years} năm)`,
+      };
+    }
+
+    return { eligible: true };
+  };
+
   const columns: ColumnsType<Personnel> = [
     {
       title: 'STT',
@@ -204,6 +243,18 @@ export default function Step2SelectPersonnelNienHan({
       width: 160,
       align: 'center',
       render: (_, record) => record.ChucVu?.ten_chuc_vu || '-',
+    },
+    {
+      title: 'Giới tính',
+      key: 'gioi_tinh',
+      width: 120,
+      align: 'center',
+      render: (_, record) => {
+        if (!record.gioi_tinh) {
+          return <Text type="danger">Chưa cập nhật</Text>;
+        }
+        return <Text>{record.gioi_tinh === 'NAM' ? 'Nam' : 'Nữ'}</Text>;
+      },
     },
     {
       title: 'Ngày nhập ngũ',
@@ -252,6 +303,33 @@ export default function Step2SelectPersonnelNienHan({
         }
       },
     },
+    {
+      title: 'Đủ điều kiện',
+      key: 'du_dieu_kien',
+      width: 180,
+      align: 'center',
+      render: (_, record) => {
+        const eligibility = checkEligibleForKNCVSNXD(record);
+        if (eligibility.eligible) {
+          return (
+            <Text type="success" strong>
+              ✓ Đủ điều kiện
+            </Text>
+          );
+        } else {
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+              <Text type="danger" strong>
+                ✗ Không đủ
+              </Text>
+              <Text type="secondary" style={{ fontSize: '11px', textAlign: 'center' }}>
+                {eligibility.reason}
+              </Text>
+            </div>
+          );
+        }
+      },
+    },
   ];
 
   const rowSelection = {
@@ -260,21 +338,25 @@ export default function Step2SelectPersonnelNienHan({
       onPersonnelChange(selectedRowKeys as string[]);
     },
     getCheckboxProps: (record: Personnel) => {
-      const missingNgayNhapNgu = !record.ngay_nhap_ngu;
+      const eligibility = checkEligibleForKNCVSNXD(record);
+      const isDisabled = !eligibility.eligible;
 
       return {
-        disabled: missingNgayNhapNgu,
-        title: missingNgayNhapNgu
-          ? 'Quân nhân này chưa cập nhật ngày nhập ngũ. Vui lòng cập nhật trước khi đề xuất.'
-          : '',
+        disabled: isDisabled,
+        title: isDisabled ? eligibility.reason || 'Không đủ điều kiện đề xuất' : '',
       };
     },
     onSelect: (record: Personnel, selected: boolean) => {
-      if (selected && !record.ngay_nhap_ngu) {
-        message.warning(
-          `Quân nhân ${record.ho_ten} chưa cập nhật ngày nhập ngũ. Vui lòng cập nhật trước khi đề xuất.`
-        );
-        return false;
+      if (selected) {
+        const eligibility = checkEligibleForKNCVSNXD(record);
+        if (!eligibility.eligible) {
+          message.warning(
+            `Quân nhân ${record.ho_ten} không đủ điều kiện: ${
+              eligibility.reason || 'Không đủ điều kiện đề xuất'
+            }.`
+          );
+          return false;
+        }
       }
     },
   };
@@ -282,11 +364,11 @@ export default function Step2SelectPersonnelNienHan({
   return (
     <div>
       <Alert
-        message="Bước 2: Chọn quân nhân - Niên hạn"
+        message="Bước 2: Chọn quân nhân - Kỷ niệm chương VSNXD QĐNDVN"
         description={
           <div>
             <p>1. Nhập năm đề xuất khen thưởng</p>
-            <p>2. Chọn các quân nhân cần đề xuất khen thưởng niên hạn từ danh sách dưới đây</p>
+            <p>2. Chọn các quân nhân cần đề xuất khen thưởng từ danh sách dưới đây</p>
             <p>
               3. Bảng hiển thị thông tin ngày nhập ngũ, xuất ngũ và tổng tháng để hỗ trợ lựa chọn
             </p>
@@ -295,7 +377,7 @@ export default function Step2SelectPersonnelNienHan({
         }
         type="info"
         showIcon
-        icon={<TeamOutlined />}
+        icon={<TrophyOutlined />}
         style={{ marginBottom: 24 }}
       />
 
@@ -385,17 +467,18 @@ export default function Step2SelectPersonnelNienHan({
         </Text>
       </div>
 
-      {/* Cảnh báo về quân nhân chưa có ngày nhập ngũ */}
+      {/* Cảnh báo về quân nhân không đủ điều kiện */}
       {(() => {
-        const missingNgayNhapNguCount = filteredPersonnel.filter(
-          p => !p.ngay_nhap_ngu
-        ).length;
+        const ineligiblePersonnel = filteredPersonnel.filter(
+          p => !checkEligibleForKNCVSNXD(p).eligible
+        );
+        const ineligibleCount = ineligiblePersonnel.length;
 
-        if (missingNgayNhapNguCount > 0) {
+        if (ineligibleCount > 0) {
           return (
             <Alert
               message="Cảnh báo"
-              description={`Có ${missingNgayNhapNguCount} quân nhân chưa cập nhật ngày nhập ngũ. Vui lòng cập nhật trước khi đề xuất.`}
+              description={`Có ${ineligibleCount} quân nhân không đủ điều kiện đề xuất (yêu cầu: Nữ >= 20 năm, Nam >= 25 năm phục vụ). Vui lòng kiểm tra và cập nhật thông tin trước khi đề xuất.`}
               type="warning"
               showIcon
               style={{ marginBottom: 16 }}
@@ -411,9 +494,10 @@ export default function Step2SelectPersonnelNienHan({
         rowKey="id"
         rowSelection={rowSelection}
         loading={loading}
-        rowClassName={(record) => {
-          // Tô màu dòng quân nhân chưa có ngày nhập ngũ
-          if (!record.ngay_nhap_ngu) {
+        rowClassName={record => {
+          // Tô màu dòng quân nhân không đủ điều kiện
+          const eligibility = checkEligibleForKNCVSNXD(record);
+          if (!eligibility.eligible) {
             return 'row-missing-gender';
           }
           return '';

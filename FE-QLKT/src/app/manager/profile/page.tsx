@@ -147,7 +147,7 @@ export default function UserProfilePage() {
       ),
     },
     {
-      title: 'Số QĐ CSTĐTQ',
+      title: 'Số QĐ CSTDTQ',
       dataIndex: 'so_quyet_dinh_cstdtq',
       key: 'so_quyet_dinh_cstdtq',
       render: (text: string) => text || '-',
@@ -423,8 +423,7 @@ export default function UserProfilePage() {
                         </Tag>
                         {serviceProfile.hccsvv_hang_ba_ngay && (
                           <div className="text-xs text-gray-500 dark:text-gray-400">
-                            Ngày:{' '}
-                            {formatDate(serviceProfile.hccsvv_hang_ba_ngay)}
+                            Ngày: {formatDate(serviceProfile.hccsvv_hang_ba_ngay)}
                           </div>
                         )}
                       </div>
@@ -462,8 +461,7 @@ export default function UserProfilePage() {
                         </Tag>
                         {serviceProfile.hccsvv_hang_nhi_ngay && (
                           <div className="text-xs text-gray-500 dark:text-gray-400">
-                            Ngày:{' '}
-                            {formatDate(serviceProfile.hccsvv_hang_nhi_ngay)}
+                            Ngày: {formatDate(serviceProfile.hccsvv_hang_nhi_ngay)}
                           </div>
                         )}
                       </div>
@@ -501,8 +499,7 @@ export default function UserProfilePage() {
                         </Tag>
                         {serviceProfile.hccsvv_hang_nhat_ngay && (
                           <div className="text-xs text-gray-500 dark:text-gray-400">
-                            Ngày:{' '}
-                            {formatDate(serviceProfile.hccsvv_hang_nhat_ngay)}
+                            Ngày: {formatDate(serviceProfile.hccsvv_hang_nhat_ngay)}
                           </div>
                         )}
                       </div>

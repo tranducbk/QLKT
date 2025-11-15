@@ -100,14 +100,14 @@ export default function DecisionModal({
 
   // Autocomplete search
   const handleSearch = async (value: string) => {
-    if (!value || value.length < 2) {
+    if (!value || value.trim().length === 0) {
       setAutocompleteOptions([]);
       return;
     }
 
     try {
       setSearching(true);
-      const response = await apiClient.autocompleteDecisions(value, 10);
+      const response = await apiClient.autocompleteDecisions(value.trim(), 10);
       if (response.success && response.data) {
         setAutocompleteOptions(
           response.data.map((item: any) => ({
@@ -115,9 +115,12 @@ export default function DecisionModal({
             label: `${item.so_quyet_dinh} - ${item.nguoi_ky} (${dayjs(item.ngay_ky).format('DD/MM/YYYY')})`,
           }))
         );
+      } else {
+        setAutocompleteOptions([]);
       }
     } catch (error) {
       console.error('Autocomplete error:', error);
+      setAutocompleteOptions([]);
     } finally {
       setSearching(false);
     }
@@ -302,7 +305,11 @@ export default function DecisionModal({
           name="so_quyet_dinh"
           label="Số quyết định"
           rules={[{ required: true, message: 'Vui lòng nhập số quyết định' }]}
-          extra="Nhập để tìm kiếm quyết định đã có hoặc tạo mới"
+          extra={
+            <div style={{ marginTop: '8px', fontSize: '12px', color: '#8c8c8c' }}>
+              Nhập để tìm kiếm quyết định đã có hoặc tạo mới
+            </div>
+          }
         >
           <AutoComplete
             options={autocompleteOptions}

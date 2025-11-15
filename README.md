@@ -121,7 +121,7 @@ QLKT/
 
 6. **LichSuChucVu** - Lịch sử chức vụ (tính cống hiến)
 7. **ThanhTichKhoaHoc** - Thành tích ĐTKH/SKKH
-8. **DanhHieuHangNam** - Danh hiệu hằng năm (CSTDCS/CSTT)
+8. **DanhHieuHangNam** - Danh hiệu hằng năm (CSTĐCS/CSTT)
 
 ### Bảng Dữ liệu Đầu ra (OUTPUT)
 
@@ -139,7 +139,7 @@ QLKT/
 
 ### 2. Quản lý Khen thưởng
 
-- **Danh hiệu hằng năm**: CSTDCS, CSTT
+- **Danh hiệu hằng năm**: CSTĐCS, CSTT
 - **Thành tích khoa học**: NCKH, SKKH
 - **Lịch sử chức vụ**: Theo dõi cống hiến
 
@@ -149,8 +149,8 @@ QLKT/
   - Huân chương Chiến sỹ Vẻ vang (10/15/20 năm)
   - Huân chương Bảo vệ Tổ quốc (dựa trên cống hiến)
 - **Khen thưởng Hằng năm**:
-  - Bằng khen BQP (5 năm CSTDCS liên tục)
-  - CSTD Toàn quân (10 năm CSTDCS + ĐTKH/SKKH)
+  - Bằng khen BQP (5 năm CSTĐCS liên tục)
+  - CSTD Toàn quân (10 năm CSTĐCS + ĐTKH/SKKH)
 
 ### 4. Hồ sơ Gợi ý
 

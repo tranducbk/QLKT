@@ -67,6 +67,18 @@ router.post(
 );
 
 /**
+ * @route   GET /api/proposals/check-duplicate
+ * @desc    Kiểm tra xem quân nhân đã có đề xuất cùng năm và cùng danh hiệu chưa
+ * @access  MANAGER, ADMIN
+ */
+router.get(
+  '/check-duplicate',
+  verifyToken,
+  checkRole(['MANAGER', 'ADMIN']),
+  proposalController.checkDuplicateAward
+);
+
+/**
  * @route   GET /api/proposals
  * @desc    Lấy danh sách đề xuất
  * @access  MANAGER, ADMIN

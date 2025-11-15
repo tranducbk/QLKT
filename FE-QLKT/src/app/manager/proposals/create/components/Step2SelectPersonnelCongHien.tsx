@@ -56,6 +56,7 @@ export default function Step2SelectPersonnelCongHien({
   const [searchText, setSearchText] = useState('');
   const [unitFilter, setUnitFilter] = useState<string>('ALL');
   const [positionHistoriesMap, setPositionHistoriesMap] = useState<Record<string, any[]>>({});
+  const [localNam, setLocalNam] = useState<number | null>(nam);
 
   useEffect(() => {
     fetchPersonnel();
@@ -67,6 +68,11 @@ export default function Step2SelectPersonnelCongHien({
       fetchPositionHistories(personnel);
     }
   }, [personnel.length]);
+
+  // Đồng bộ localNam với nam từ props
+  useEffect(() => {
+    setLocalNam(nam);
+  }, [nam]);
 
   const fetchPersonnel = async () => {
     try {
@@ -270,13 +276,48 @@ export default function Step2SelectPersonnelCongHien({
         <div>
           <Text strong>Năm đề xuất: </Text>
           <InputNumber
-            value={nam}
-            onChange={value => onNamChange(value || new Date().getFullYear())}
+            value={localNam}
+            onChange={value => {
+              // Cho phép null/undefined để người dùng có thể xóa và nhập lại
+              if (value === null || value === undefined) {
+                setLocalNam(null);
+                return;
+              }
+
+              const intValue = Math.floor(Number(value));
+
+              // Nếu giá trị hợp lệ, cập nhật local state
+              if (!isNaN(intValue)) {
+                // Cho phép nhập bất kỳ số nào trong quá trình nhập (kể cả < 1900)
+                // Chỉ giới hạn khi blur
+                setLocalNam(intValue);
+              }
+            }}
+            onBlur={e => {
+              // Khi blur, đảm bảo giá trị trong khoảng hợp lệ và cập nhật lên parent
+              const currentValue = localNam;
+              if (currentValue === null || currentValue === undefined || currentValue < 1900) {
+                const finalValue = 1900;
+                setLocalNam(finalValue);
+                onNamChange(finalValue);
+              } else if (currentValue > 2999) {
+                const finalValue = 2999;
+                setLocalNam(finalValue);
+                onNamChange(finalValue);
+              } else {
+                // Giá trị hợp lệ, cập nhật lên parent
+                onNamChange(currentValue);
+              }
+            }}
             style={{ width: 150 }}
             size="large"
             min={1900}
-            max={2100}
+            max={2999}
             placeholder="Nhập năm"
+            controls={true}
+            step={1}
+            precision={0}
+            keyboard={true}
           />
         </div>
 

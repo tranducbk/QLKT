@@ -113,7 +113,7 @@ export default function ManagerDashboard() {
       link: '/manager/personnel',
     },
     {
-      title: 'Tổng CSTĐCS',
+      title: 'Tổng CSTDCS',
       value: stats.totalCSTDCS,
       icon: FileTextOutlined,
       iconColor: 'text-green-600 dark:text-green-400',

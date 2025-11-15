@@ -4,10 +4,18 @@ class ProfileController {
   /**
    * GET /api/profiles/annual/:personnel_id
    * Lấy hồ sơ gợi ý hằng năm
+   * Query params: ?year=2025 (optional, nếu có sẽ tính toán lại với năm đó)
    */
   async getAnnualProfile(req, res) {
     try {
       const { personnel_id } = req.params;
+      const { year } = req.query; // Lấy năm từ query params
+      const yearNumber = year ? parseInt(year, 10) : null;
+
+      // Nếu có năm, tính toán lại hồ sơ với năm đó trước khi lấy
+      if (yearNumber) {
+        await profileService.recalculateAnnualProfile(personnel_id, yearNumber);
+      }
 
       const result = await profileService.getAnnualProfile(personnel_id);
 
@@ -52,12 +60,15 @@ class ProfileController {
   /**
    * POST /api/profiles/recalculate/:personnel_id
    * Tính toán lại hồ sơ cho 1 quân nhân
+   * Query params: ?year=2025 (optional, mặc định là năm hiện tại)
    */
   async recalculateProfile(req, res) {
     try {
       const { personnel_id } = req.params;
+      const { year } = req.query; // Lấy năm từ query params
+      const yearNumber = year ? parseInt(year, 10) : null;
 
-      const result = await profileService.recalculateProfile(personnel_id);
+      const result = await profileService.recalculateProfile(personnel_id, yearNumber);
 
       return res.status(200).json({
         success: true,

@@ -3,6 +3,23 @@
 @tailwind utilities;
 @import 'tw-animate-css';
 
+/* Tô màu dòng quân nhân chưa có giới tính */
+.ant-table-tbody > tr.row-missing-gender > td {
+  background-color: #fff7e6 !important;
+}
+
+.dark .ant-table-tbody > tr.row-missing-gender > td {
+  background-color: #3d2f1f !important;
+}
+
+.ant-table-tbody > tr.row-missing-gender:hover > td {
+  background-color: #ffe7ba !important;
+}
+
+.dark .ant-table-tbody > tr.row-missing-gender:hover > td {
+  background-color: #4a3a2a !important;
+}
+
 :root {
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);

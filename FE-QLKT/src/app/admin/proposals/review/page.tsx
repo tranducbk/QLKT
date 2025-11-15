@@ -28,6 +28,7 @@ interface Proposal {
   ngay_duyet: string | null;
   ghi_chu: string | null;
   createdAt: string;
+  loai_de_xuat?: string;
 }
 
 export default function ProposalReviewPage() {
@@ -67,12 +68,26 @@ export default function ProposalReviewPage() {
 
   const getStatusBadge = (status: string) => {
     if (status === 'PENDING') {
-      return <Badge color="gold" text="Đang chờ" />;
+      return <Badge color="gold" text="Chờ duyệt" />;
     }
     if (status === 'APPROVED') {
       return <Badge color="green" text="Đã duyệt" />;
     }
     return <Badge color="red" text="Từ chối" />;
+  };
+
+  const getProposalTypeName = (loaiDeXuat?: string) => {
+    const typeMap: Record<string, string> = {
+      CA_NHAN_HANG_NAM: 'Cá nhân hằng năm',
+      DON_VI_HANG_NAM: 'Đơn vị hằng năm',
+      NIEN_HAN: 'Niên hạn',
+      HC_QKQT: 'Huân chương Quân kỳ quyết thắng',
+      KNC_VSNXD_QDNDVN: 'Kỷ niệm chương VSNXD QĐNDVN',
+      CONG_HIEN: 'Cống hiến',
+      NCKH: 'Nghiên cứu khoa học',
+      DOT_XUAT: 'Đột xuất',
+    };
+    return loaiDeXuat ? (typeMap[loaiDeXuat] || loaiDeXuat) : '-';
   };
 
   const columns = [
@@ -92,6 +107,12 @@ export default function ProposalReviewPage() {
       title: 'Người đề xuất',
       dataIndex: 'nguoi_de_xuat',
       key: 'nguoi_de_xuat',
+    },
+    {
+      title: 'Loại đề xuất',
+      dataIndex: 'loai_de_xuat',
+      key: 'loai_de_xuat',
+      render: (loaiDeXuat: string) => getProposalTypeName(loaiDeXuat),
     },
     {
       title: 'Ngày gửi',
@@ -145,7 +166,7 @@ export default function ProposalReviewPage() {
       label: (
         <span>
           <ClockCircleOutlined style={{ marginRight: 8 }} />
-          Đang chờ ({proposals.filter(p => p.status === 'PENDING').length})
+          Chờ duyệt ({proposals.filter(p => p.status === 'PENDING').length})
         </span>
       ),
     },

@@ -117,7 +117,11 @@ export default function UserDashboard() {
         }}
       >
         <div
-          className={`flex items-center justify-center min-h-screen ${theme === 'dark' ? 'bg-gradient-to-br from-gray-900 to-gray-800' : 'bg-gradient-to-br from-blue-50 to-indigo-50'}`}
+          className={`flex items-center justify-center min-h-screen ${
+            theme === 'dark'
+              ? 'bg-gradient-to-br from-gray-900 to-gray-800'
+              : 'bg-gradient-to-br from-blue-50 to-indigo-50'
+          }`}
         >
           <Space direction="vertical" align="center" size="large">
             <Spin size="large" />
@@ -135,7 +139,11 @@ export default function UserDashboard() {
       }}
     >
       <div
-        className={`min-h-screen ${theme === 'dark' ? 'bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900' : 'bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50'}`}
+        className={`min-h-screen ${
+          theme === 'dark'
+            ? 'bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900'
+            : 'bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50'
+        }`}
       >
         <div className="max-w-7xl mx-auto p-6 space-y-6">
           {/* Hero Header with Avatar */}
@@ -180,12 +188,16 @@ export default function UserDashboard() {
           <Row gutter={[16, 16]}>
             <Col xs={24} sm={12} lg={6}>
               <Card
-                className={`shadow-sm hover:shadow-md transition-shadow border-0 ${theme === 'dark' ? 'bg-gradient-to-br from-blue-900/40 to-blue-800/40' : 'bg-gradient-to-br from-blue-50 to-blue-100'}`}
+                className={`shadow-sm hover:shadow-md transition-shadow border-0 ${
+                  theme === 'dark'
+                    ? 'bg-gradient-to-br from-blue-900/40 to-blue-800/40'
+                    : 'bg-gradient-to-br from-blue-50 to-blue-100'
+                }`}
               >
                 <Statistic
                   title={
                     <span className={theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}>
-                      Tổng CSTĐCS
+                      Tổng CSTDCS
                     </span>
                   }
                   value={annualProfile?.tong_cstdcs || 0}
@@ -196,7 +208,11 @@ export default function UserDashboard() {
             </Col>
             <Col xs={24} sm={12} lg={6}>
               <Card
-                className={`shadow-sm hover:shadow-md transition-shadow border-0 ${theme === 'dark' ? 'bg-gradient-to-br from-green-900/40 to-green-800/40' : 'bg-gradient-to-br from-green-50 to-green-100'}`}
+                className={`shadow-sm hover:shadow-md transition-shadow border-0 ${
+                  theme === 'dark'
+                    ? 'bg-gradient-to-br from-green-900/40 to-green-800/40'
+                    : 'bg-gradient-to-br from-green-50 to-green-100'
+                }`}
               >
                 <Statistic
                   title={
@@ -204,7 +220,11 @@ export default function UserDashboard() {
                       Tổng NCKH
                     </span>
                   }
-                  value={annualProfile?.tong_nckh || 0}
+                  value={
+                    Array.isArray(annualProfile?.tong_nckh)
+                      ? annualProfile.tong_nckh.length
+                      : annualProfile?.tong_nckh || 0
+                  }
                   prefix={<RocketOutlined className="text-green-600" />}
                   valueStyle={{ color: '#52c41a', fontWeight: 'bold' }}
                 />
@@ -212,12 +232,16 @@ export default function UserDashboard() {
             </Col>
             <Col xs={24} sm={12} lg={6}>
               <Card
-                className={`shadow-sm hover:shadow-md transition-shadow border-0 ${theme === 'dark' ? 'bg-gradient-to-br from-orange-900/40 to-orange-800/40' : 'bg-gradient-to-br from-orange-50 to-orange-100'}`}
+                className={`shadow-sm hover:shadow-md transition-shadow border-0 ${
+                  theme === 'dark'
+                    ? 'bg-gradient-to-br from-orange-900/40 to-orange-800/40'
+                    : 'bg-gradient-to-br from-orange-50 to-orange-100'
+                }`}
               >
                 <Statistic
                   title={
                     <span className={theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}>
-                      CSTĐCS liên tục
+                      CSTDCS liên tục
                     </span>
                   }
                   value={annualProfile?.cstdcs_lien_tuc || 0}
@@ -229,7 +253,11 @@ export default function UserDashboard() {
             </Col>
             <Col xs={24} sm={12} lg={6}>
               <Card
-                className={`shadow-sm hover:shadow-md transition-shadow border-0 ${theme === 'dark' ? 'bg-gradient-to-br from-purple-900/40 to-purple-800/40' : 'bg-gradient-to-br from-purple-50 to-purple-100'}`}
+                className={`shadow-sm hover:shadow-md transition-shadow border-0 ${
+                  theme === 'dark'
+                    ? 'bg-gradient-to-br from-purple-900/40 to-purple-800/40'
+                    : 'bg-gradient-to-br from-purple-50 to-purple-100'
+                }`}
               >
                 <Statistic
                   title={
@@ -265,9 +293,7 @@ export default function UserDashboard() {
                   {personnelInfo.cccd}
                 </Descriptions.Item>
                 <Descriptions.Item label="Ngày sinh" labelStyle={{ fontWeight: 500 }}>
-                  {personnelInfo.ngay_sinh
-                    ? formatDate(personnelInfo.ngay_sinh)
-                    : 'N/A'}
+                  {personnelInfo.ngay_sinh ? formatDate(personnelInfo.ngay_sinh) : 'N/A'}
                 </Descriptions.Item>
                 <Descriptions.Item label="Đơn vị" labelStyle={{ fontWeight: 500 }}>
                   <Badge
@@ -283,9 +309,7 @@ export default function UserDashboard() {
                   <Badge color="green" text={personnelInfo.ChucVu?.ten_chuc_vu || 'N/A'} />
                 </Descriptions.Item>
                 <Descriptions.Item label="Ngày nhập ngũ" labelStyle={{ fontWeight: 500 }}>
-                  {personnelInfo.ngay_nhap_ngu
-                    ? formatDate(personnelInfo.ngay_nhap_ngu)
-                    : 'N/A'}
+                  {personnelInfo.ngay_nhap_ngu ? formatDate(personnelInfo.ngay_nhap_ngu) : 'N/A'}
                 </Descriptions.Item>
               </Descriptions>
             </Card>
@@ -347,7 +371,7 @@ export default function UserDashboard() {
                         format={percent => `${annualProfile.cstdcs_lien_tuc || 0}/2 năm`}
                       />
                       <Text type="secondary" className="text-xs">
-                        Yêu cầu: 2 năm CSTĐCS liên tục + 1 NCKH trong 2 năm đó (NCKH hiện có:{' '}
+                        Yêu cầu: 2 năm CSTDCS liên tục + 1 NCKH trong 2 năm đó (NCKH hiện có:{' '}
                         {annualProfile.tong_nckh || 0})
                       </Text>
                     </div>
@@ -372,7 +396,7 @@ export default function UserDashboard() {
                         format={percent => `${annualProfile.cstdcs_lien_tuc || 0}/3 năm`}
                       />
                       <Text type="secondary" className="text-xs">
-                        Yêu cầu: 3 năm CSTĐCS liên tục + 1 NCKH năm thứ 3 + 1 NCKH năm 1 hoặc 2
+                        Yêu cầu: 3 năm CSTDCS liên tục + 1 NCKH năm thứ 3 + 1 NCKH năm 1 hoặc 2
                         (NCKH hiện có: {annualProfile.tong_nckh || 0})
                       </Text>
                     </div>
@@ -426,15 +450,15 @@ export default function UserDashboard() {
                             serviceProfile.hccsvv_hang_ba_status === 'DA_NHAN'
                               ? 'success'
                               : serviceProfile.hccsvv_hang_ba_status === 'DU_DIEU_KIEN'
-                                ? 'processing'
-                                : 'default'
+                              ? 'processing'
+                              : 'default'
                           }
                           text={
                             serviceProfile.hccsvv_hang_ba_status === 'DA_NHAN'
                               ? 'Đã nhận'
                               : serviceProfile.hccsvv_hang_ba_status === 'DU_DIEU_KIEN'
-                                ? 'Đủ điều kiện'
-                                : 'Chưa đủ'
+                              ? 'Đủ điều kiện'
+                              : 'Chưa đủ'
                           }
                         />
                       </div>
@@ -453,15 +477,15 @@ export default function UserDashboard() {
                             serviceProfile.hccsvv_hang_nhi_status === 'DA_NHAN'
                               ? 'success'
                               : serviceProfile.hccsvv_hang_nhi_status === 'DU_DIEU_KIEN'
-                                ? 'processing'
-                                : 'default'
+                              ? 'processing'
+                              : 'default'
                           }
                           text={
                             serviceProfile.hccsvv_hang_nhi_status === 'DA_NHAN'
                               ? 'Đã nhận'
                               : serviceProfile.hccsvv_hang_nhi_status === 'DU_DIEU_KIEN'
-                                ? 'Đủ điều kiện'
-                                : 'Chưa đủ'
+                              ? 'Đủ điều kiện'
+                              : 'Chưa đủ'
                           }
                         />
                       </div>
@@ -484,15 +508,15 @@ export default function UserDashboard() {
                             serviceProfile.hccsvv_hang_nhat_status === 'DA_NHAN'
                               ? 'success'
                               : serviceProfile.hccsvv_hang_nhat_status === 'DU_DIEU_KIEN'
-                                ? 'processing'
-                                : 'default'
+                              ? 'processing'
+                              : 'default'
                           }
                           text={
                             serviceProfile.hccsvv_hang_nhat_status === 'DA_NHAN'
                               ? 'Đã nhận'
                               : serviceProfile.hccsvv_hang_nhat_status === 'DU_DIEU_KIEN'
-                                ? 'Đủ điều kiện'
-                                : 'Chưa đủ'
+                              ? 'Đủ điều kiện'
+                              : 'Chưa đủ'
                           }
                         />
                       </div>
@@ -521,15 +545,15 @@ export default function UserDashboard() {
                             serviceProfile.hcbvtq_hang_ba_status === 'DA_NHAN'
                               ? 'success'
                               : serviceProfile.hcbvtq_hang_ba_status === 'DU_DIEU_KIEN'
-                                ? 'processing'
-                                : 'default'
+                              ? 'processing'
+                              : 'default'
                           }
                           text={
                             serviceProfile.hcbvtq_hang_ba_status === 'DA_NHAN'
                               ? 'Đã nhận'
                               : serviceProfile.hcbvtq_hang_ba_status === 'DU_DIEU_KIEN'
-                                ? 'Đủ điều kiện'
-                                : 'Chưa đủ'
+                              ? 'Đủ điều kiện'
+                              : 'Chưa đủ'
                           }
                         />
                       </div>
@@ -552,15 +576,15 @@ export default function UserDashboard() {
                             serviceProfile.hcbvtq_hang_nhi_status === 'DA_NHAN'
                               ? 'success'
                               : serviceProfile.hcbvtq_hang_nhi_status === 'DU_DIEU_KIEN'
-                                ? 'processing'
-                                : 'default'
+                              ? 'processing'
+                              : 'default'
                           }
                           text={
                             serviceProfile.hcbvtq_hang_nhi_status === 'DA_NHAN'
                               ? 'Đã nhận'
                               : serviceProfile.hcbvtq_hang_nhi_status === 'DU_DIEU_KIEN'
-                                ? 'Đủ điều kiện'
-                                : 'Chưa đủ'
+                              ? 'Đủ điều kiện'
+                              : 'Chưa đủ'
                           }
                         />
                       </div>
@@ -583,15 +607,15 @@ export default function UserDashboard() {
                             serviceProfile.hcbvtq_hang_nhat_status === 'DA_NHAN'
                               ? 'success'
                               : serviceProfile.hcbvtq_hang_nhat_status === 'DU_DIEU_KIEN'
-                                ? 'processing'
-                                : 'default'
+                              ? 'processing'
+                              : 'default'
                           }
                           text={
                             serviceProfile.hcbvtq_hang_nhat_status === 'DA_NHAN'
                               ? 'Đã nhận'
                               : serviceProfile.hcbvtq_hang_nhat_status === 'DU_DIEU_KIEN'
-                                ? 'Đủ điều kiện'
-                                : 'Chưa đủ'
+                              ? 'Đủ điều kiện'
+                              : 'Chưa đủ'
                           }
                         />
                       </div>
@@ -627,7 +651,11 @@ export default function UserDashboard() {
                 <Link href="/user/profile" className="block">
                   <Card
                     hoverable
-                    className={`text-center h-full ${theme === 'dark' ? 'bg-gradient-to-br from-blue-900/40 to-blue-800/40 border-blue-700' : 'bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200'}`}
+                    className={`text-center h-full ${
+                      theme === 'dark'
+                        ? 'bg-gradient-to-br from-blue-900/40 to-blue-800/40 border-blue-700'
+                        : 'bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200'
+                    }`}
                   >
                     <FileTextOutlined className="text-4xl text-blue-600 mb-3" />
                     <Title level={5} className="!mb-1">
@@ -643,7 +671,11 @@ export default function UserDashboard() {
                 <Link href="/user/settings" className="block">
                   <Card
                     hoverable
-                    className={`text-center h-full ${theme === 'dark' ? 'bg-gradient-to-br from-purple-900/40 to-purple-800/40 border-purple-700' : 'bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200'}`}
+                    className={`text-center h-full ${
+                      theme === 'dark'
+                        ? 'bg-gradient-to-br from-purple-900/40 to-purple-800/40 border-purple-700'
+                        : 'bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200'
+                    }`}
                   >
                     <LockOutlined className="text-4xl text-purple-600 mb-3" />
                     <Title level={5} className="!mb-1">
@@ -658,7 +690,11 @@ export default function UserDashboard() {
               <Col xs={24} sm={12} md={8}>
                 <Card
                   hoverable
-                  className={`text-center h-full cursor-pointer ${theme === 'dark' ? 'bg-gradient-to-br from-green-900/40 to-green-800/40 border-green-700' : 'bg-gradient-to-br from-green-50 to-green-100 border-green-200'}`}
+                  className={`text-center h-full cursor-pointer ${
+                    theme === 'dark'
+                      ? 'bg-gradient-to-br from-green-900/40 to-green-800/40 border-green-700'
+                      : 'bg-gradient-to-br from-green-50 to-green-100 border-green-200'
+                  }`}
                   onClick={() => window.location.reload()}
                 >
                   <CheckCircleOutlined className="text-4xl text-green-600 mb-3" />

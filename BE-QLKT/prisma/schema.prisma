@@ -24,6 +24,7 @@ model CoQuanDonVi {
   BangDeXuat             BangDeXuat[]
   TheoDoiKhenThuongDonVi TheoDoiKhenThuongDonVi[]
   TheoDoiKhenThuongDonViCha TheoDoiKhenThuongDonVi[] @relation("CoQuanDonViCha")
+  KhenThuongDotXuat       KhenThuongDotXuat[]
 
   @@map("co_quan_don_vi")
 }
@@ -44,6 +45,7 @@ model DonViTrucThuoc {
   QuanNhan                 QuanNhan[]
   BangDeXuat               BangDeXuat[]
   TheoDoiKhenThuongDonVi   TheoDoiKhenThuongDonVi[]
+  KhenThuongDotXuat         KhenThuongDotXuat[]
 
   @@map("don_vi_truc_thuoc")
 }
@@ -75,6 +77,7 @@ model QuanNhan {
   id                       String    @id @default(cuid()) @db.VarChar(30)
   cccd                     String?   @unique @db.VarChar(20)
   ho_ten                   String    @db.VarChar(255)
+  gioi_tinh                String?   @db.VarChar(10) // NAM hoặc NU
   ngay_sinh                DateTime? @db.Date
   que_quan_2_cap           String?   @db.VarChar(255) // Quê quán 2 cấp: Xã Hoà An, tỉnh Ninh Bình
   que_quan_3_cap           String?   @db.VarChar(255) // Quê quán 3 cấp: Xã An Hoà, huyện Yên Bình, tỉnh Nam Định
@@ -101,6 +104,11 @@ model QuanNhan {
   LichSuChucVu      LichSuChucVu[]
   ThanhTichKhoaHoc  ThanhTichKhoaHoc[]
   DanhHieuHangNam   DanhHieuHangNam[]
+  KhenThuongCongHien KhenThuongCongHien?
+  KhenThuongHCCSVV   KhenThuongHCCSVV[]
+  KhenThuongDotXuat  KhenThuongDotXuat[]
+  HuanChuongQuanKyQuyetThang HuanChuongQuanKyQuyetThang?
+  KyNiemChuongVSNXDQDNDVN KyNiemChuongVSNXDQDNDVN?
   HoSoNienHan       HoSoNienHan?
   HoSoHangNam       HoSoHangNam?
 
@@ -192,7 +200,110 @@ model DanhHieuHangNam {
   @@map("danh_hieu_hang_nam")
 }
 
-// 9. Bảng Hồ sơ Niên hạn (OUTPUT)
+// 9. Bảng Khen thưởng Cống hiến (OUTPUT)
+model KhenThuongCongHien {
+  id                     String   @id @default(cuid()) @db.VarChar(30)
+  quan_nhan_id           String   @unique @db.VarChar(30) // Mỗi quân nhân chỉ có 1 danh hiệu cống hiến
+  danh_hieu              String   @db.VarChar(20) // HCBVTQ_HANG_BA, HCBVTQ_HANG_NHI, HCBVTQ_HANG_NHAT
+  nam                    Int // Năm được trao
+  so_quyet_dinh          String?  @db.VarChar(100) // Số quyết định
+  file_quyet_dinh        String?  @db.VarChar(500) // Path to PDF file
+  // Thời gian đảm nhiệm chức vụ theo 3 nhóm hệ số
+  thoi_gian_nhom_0_7     Json? // { total_months, years, months, display }
+  thoi_gian_nhom_0_8     Json? // { total_months, years, months, display }
+  thoi_gian_nhom_0_9_1_0 Json? // { total_months, years, months, display }
+  createdAt              DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt              DateTime @updatedAt @db.Timestamptz(6)
+
+  // Relations
+  QuanNhan QuanNhan @relation(fields: [quan_nhan_id], references: [id], onDelete: Cascade)
+
+  @@map("khen_thuong_cong_hien")
+}
+
+// 10. Bảng Khen thưởng Huy chương Quân kỳ quyết thắng (OUTPUT)
+model HuanChuongQuanKyQuyetThang {
+  id                     String   @id @default(cuid()) @db.VarChar(30)
+  quan_nhan_id           String   @unique @db.VarChar(30) // Mỗi quân nhân chỉ có 1 huân chương
+  nam                    Int // Năm được trao
+  so_quyet_dinh          String?  @db.VarChar(100) // Số quyết định
+  file_quyet_dinh        String?  @db.VarChar(500) // Path to PDF file
+  // Thời gian tính từ ngày nhập ngũ
+  thoi_gian              Json? // { total_months, years, months, display }
+  createdAt              DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt              DateTime @updatedAt @db.Timestamptz(6)
+
+  // Relations
+  QuanNhan QuanNhan @relation(fields: [quan_nhan_id], references: [id], onDelete: Cascade)
+
+  @@map("huan_chuong_quan_ky_quyet_thang")
+}
+
+// 11. Bảng Kỷ niệm chương Vì sự nghiệp xây dựng QĐNDVN (OUTPUT)
+model KyNiemChuongVSNXDQDNDVN {
+  id                     String   @id @default(cuid()) @db.VarChar(30)
+  quan_nhan_id           String   @unique @db.VarChar(30) // Mỗi quân nhân chỉ có 1 kỷ niệm chương
+  nam                    Int // Năm được trao
+  so_quyet_dinh          String?  @db.VarChar(100) // Số quyết định
+  file_quyet_dinh        String?  @db.VarChar(500) // Path to PDF file
+  // Thời gian tính từ ngày nhập ngũ
+  thoi_gian              Json? // { total_months, years, months, display }
+  createdAt              DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt              DateTime @updatedAt @db.Timestamptz(6)
+
+  // Relations
+  QuanNhan QuanNhan @relation(fields: [quan_nhan_id], references: [id], onDelete: Cascade)
+
+  @@map("ky_niem_chuong_vsnxd_qdndvn")
+}
+
+// 12. Bảng Khen thưởng Huân chương Chiến sĩ Vẻ vang (OUTPUT)
+model KhenThuongHCCSVV {
+  id                     String   @id @default(cuid()) @db.VarChar(30)
+  quan_nhan_id           String   @db.VarChar(30)
+  danh_hieu              String   @db.VarChar(20) // HCCSVV_HANG_BA, HCCSVV_HANG_NHI, HCCSVV_HANG_NHAT
+  nam                    Int // Năm được trao
+  so_quyet_dinh          String?  @db.VarChar(100) // Số quyết định
+  file_quyet_dinh        String?  @db.VarChar(500) // Path to PDF file
+  // Thời gian tính từ ngày nhập ngũ
+  thoi_gian              Json? // { total_months, years, months, display }
+  createdAt              DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt              DateTime @updatedAt @db.Timestamptz(6)
+
+  // Relations
+  QuanNhan QuanNhan @relation(fields: [quan_nhan_id], references: [id], onDelete: Cascade)
+
+  // Mỗi người chỉ có tối đa 1 bản ghi cho mỗi hạng
+  @@unique([quan_nhan_id, danh_hieu])
+  @@map("khen_thuong_hccsvv")
+}
+
+// 13. Bảng Khen thưởng Đột xuất (OUTPUT)
+model KhenThuongDotXuat {
+  id                     String   @id @default(cuid()) @db.VarChar(30)
+  loai                   String   @db.VarChar(20) // CA_NHAN, TAP_THE
+  quan_nhan_id           String?  @db.VarChar(30) // ID quân nhân (khi loai = CA_NHAN)
+  co_quan_don_vi_id      String?  @db.VarChar(30) // ID cơ quan đơn vị (khi loai = TAP_THE và don_vi_type = CO_QUAN_DON_VI)
+  don_vi_truc_thuoc_id   String?  @db.VarChar(30) // ID đơn vị trực thuộc (khi loai = TAP_THE và don_vi_type = DON_VI_TRUC_THUOC)
+  hinh_thuc_khen_thuong  String   @db.VarChar(255) // Ví dụ: "Giấy khen của abc", "Bằng khen của def"
+  nam                    Int // Năm nhận khen thưởng
+  so_quyet_dinh          String?  @db.VarChar(100) // Số quyết định
+  file_quyet_dinh        String?  @db.VarChar(500) // Path to PDF file
+  createdAt              DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt              DateTime @updatedAt @db.Timestamptz(6)
+
+  // Relations
+  QuanNhan      QuanNhan?      @relation(fields: [quan_nhan_id], references: [id], onDelete: Cascade)
+  CoQuanDonVi   CoQuanDonVi?   @relation(fields: [co_quan_don_vi_id], references: [id], onDelete: Cascade)
+  DonViTrucThuoc DonViTrucThuoc? @relation(fields: [don_vi_truc_thuoc_id], references: [id], onDelete: Cascade)
+
+  @@index([quan_nhan_id, nam])
+  @@index([co_quan_don_vi_id, nam])
+  @@index([don_vi_truc_thuoc_id, nam])
+  @@map("khen_thuong_dot_xuat")
+}
+
+// 14. Bảng Hồ sơ Niên hạn (OUTPUT)
 model HoSoNienHan {
   id           String @id @default(cuid()) @db.VarChar(30)
   quan_nhan_id String @unique @db.VarChar(30)
@@ -205,7 +316,7 @@ model HoSoNienHan {
   hccsvv_hang_nhat_status String    @default("CHUA_DU") @db.VarChar(20)
   hccsvv_hang_nhat_ngay   DateTime? @db.Date
 
-  // Huân chương Bảo vệ Tổ quốc (HCBVTQ - Cống hiến)
+  // Huân chương Bảo vệ Tổ quốc (HCBVTQ - Cống hiến) - DEPRECATED: Dùng bảng KhenThuongCongHien
   hcbvtq_total_months     Int    @default(0)
   hcbvtq_hang_ba_status   String @default("CHUA_DU") @db.VarChar(20)
   hcbvtq_hang_nhi_status  String @default("CHUA_DU") @db.VarChar(20)
@@ -264,7 +375,7 @@ model SystemLog {
   @@map("system_logs")
 }
 
-// 12. Bảng Thông báo (Notifications)
+// 13. Bảng Thông báo (Notifications)
 model ThongBao {
   id                 Int       @id @default(autoincrement()) @db.Integer
   nguoi_nhan_id      String?   @db.VarChar(30) // ID người nhận thông báo
@@ -290,13 +401,13 @@ model ThongBao {
   @@map("notifications")
 }
 
-// 12. Bảng Đề xuất Khen thưởng (Proposals)
+// 14. Bảng Đề xuất Khen thưởng (Proposals)
 model BangDeXuat {
   id                   String    @id @default(cuid()) @db.VarChar(30)
   co_quan_don_vi_id    String?   @db.VarChar(30) // ID cơ quan đơn vị của Manager nộp đề xuất (nullable)
   don_vi_truc_thuoc_id String?   @db.VarChar(30) // ID đơn vị trực thuộc của Manager nộp đề xuất (nullable)
   nguoi_de_xuat_id     String    @db.VarChar(30) // ID tài khoản người đề xuất
-  loai_de_xuat         String    @default("HANG_NAM") @db.VarChar(20) // HANG_NAM, NIEN_HAN
+  loai_de_xuat         String    @db.VarChar(20) // CA_NHAN_HANG_NAM, DON_VI_HANG_NAM, NIEN_HAN, CONG_HIEN, DOT_XUAT, NCKH
   nam                  Int       @default(2025) // Năm đề xuất
   status               String    @default("PENDING") @db.VarChar(20) // PENDING, APPROVED, REJECTED
   data_danh_hieu       Json? // Dữ liệu danh hiệu (JSON array) - cho HANG_NAM
@@ -321,7 +432,7 @@ model BangDeXuat {
   @@map("bang_de_xuat")
 }
 
-// 13. Bảng Theo dõi Khen thưởng Đơn vị
+// 15. Bảng Theo dõi Khen thưởng Đơn vị
 model TheoDoiKhenThuongDonVi {
   id                        String    @id @default(cuid()) @db.VarChar(30)
   co_quan_don_vi_id         String?   @db.VarChar(30) // ID cơ quan đơn vị được khen thưởng (nullable)
@@ -361,7 +472,7 @@ model TheoDoiKhenThuongDonVi {
   @@map("theo_doi_khen_thuong_don_vi")
 }
 
-// 14. Bảng File Quyết định
+// 16. Bảng File Quyết định
 model FileQuyetDinh {
   id               String   @id @default(uuid()) @db.Uuid
   so_quyet_dinh    String   @unique @db.VarChar(100) // Số quyết định (unique)

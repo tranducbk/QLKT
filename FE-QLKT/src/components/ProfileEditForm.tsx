@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Card, Form, Input, DatePicker, Button, Spin, Alert, message, Divider } from 'antd';
+import { Card, Form, Input, DatePicker, Button, Spin, Alert, message, Divider, Select } from 'antd';
 import {
   UserOutlined,
   IdcardOutlined,
@@ -239,6 +239,7 @@ export default function ProfileEditForm({
         form.setFieldsValue({
           ho_ten: response.data.ho_ten,
           cccd: response.data.cccd,
+          gioi_tinh: response.data.gioi_tinh || undefined,
           ngay_sinh: response.data.ngay_sinh ? dayjs(response.data.ngay_sinh) : null,
           ngay_nhap_ngu: response.data.ngay_nhap_ngu ? dayjs(response.data.ngay_nhap_ngu) : null,
           ngay_xuat_ngu: response.data.ngay_xuat_ngu ? dayjs(response.data.ngay_xuat_ngu) : null,
@@ -283,6 +284,7 @@ export default function ProfileEditForm({
       // Chuẩn bị dữ liệu
       const payload = {
         ho_ten: values.ho_ten,
+        gioi_tinh: values.gioi_tinh,
         cccd: values.cccd,
         ngay_sinh: values.ngay_sinh ? dayjs(values.ngay_sinh).format('YYYY-MM-DD') : null,
         ngay_nhap_ngu: values.ngay_nhap_ngu
@@ -426,6 +428,17 @@ export default function ProfileEditForm({
                 size="large"
                 className="rounded-lg"
               />
+            </Form.Item>
+
+            <Form.Item
+              label="Giới tính"
+              name="gioi_tinh"
+              rules={[{ required: true, message: 'Vui lòng chọn giới tính' }]}
+            >
+              <Select placeholder="Chọn giới tính" size="large" className="rounded-lg">
+                <Select.Option value="NAM">Nam</Select.Option>
+                <Select.Option value="NU">Nữ</Select.Option>
+              </Select>
             </Form.Item>
 
             <Form.Item label="Ngày sinh" name="ngay_sinh">

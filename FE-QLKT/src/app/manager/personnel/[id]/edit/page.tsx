@@ -105,6 +105,7 @@ export default function ManagerPersonnelEditPage() {
           form.setFieldsValue({
             ho_ten: personnel.ho_ten,
             cccd: personnel.cccd,
+            gioi_tinh: personnel.gioi_tinh || undefined,
             ngay_sinh: personnel.ngay_sinh ? dayjs(personnel.ngay_sinh) : undefined,
             ngay_nhap_ngu: personnel.ngay_nhap_ngu ? dayjs(personnel.ngay_nhap_ngu) : undefined,
             ngay_xuat_ngu: personnel.ngay_xuat_ngu ? dayjs(personnel.ngay_xuat_ngu) : undefined,
@@ -183,8 +184,16 @@ export default function ManagerPersonnelEditPage() {
     try {
       setLoading(true);
 
+      // Validate giới tính trước khi submit
+      if (!values.gioi_tinh || (values.gioi_tinh !== 'NAM' && values.gioi_tinh !== 'NU')) {
+        message.error('Vui lòng chọn giới tính');
+        setLoading(false);
+        return;
+      }
+
       const formattedValues: any = {
         ho_ten: values.ho_ten,
+        gioi_tinh: values.gioi_tinh, // Luôn gửi giá trị này lên backend
         cccd: values.cccd && values.cccd.trim() ? values.cccd.trim() : null,
         ngay_sinh: values.ngay_sinh ? values.ngay_sinh.format('YYYY-MM-DD') : null,
         ngay_nhap_ngu: values.ngay_nhap_ngu ? values.ngay_nhap_ngu.format('YYYY-MM-DD') : null,
@@ -257,6 +266,10 @@ export default function ManagerPersonnelEditPage() {
                 form={form}
                 layout="vertical"
                 onFinish={onFinish}
+                onFinishFailed={(errorInfo) => {
+                  console.log('Form validation failed:', errorInfo);
+                  message.error('Vui lòng kiểm tra lại các trường bắt buộc');
+                }}
                 autoComplete="off"
                 requiredMark="optional"
               >
@@ -284,6 +297,30 @@ export default function ManagerPersonnelEditPage() {
                       disabled={loading}
                       maxLength={12}
                     />
+                  </Form.Item>
+
+                  <Form.Item
+                    name="gioi_tinh"
+                    label="Giới tính"
+                    rules={[
+                      { required: true, message: 'Vui lòng chọn giới tính' },
+                      {
+                        validator: (_, value) => {
+                          if (!value) {
+                            return Promise.reject(new Error('Vui lòng chọn giới tính'));
+                          }
+                          if (value !== 'NAM' && value !== 'NU') {
+                            return Promise.reject(new Error('Giới tính phải là Nam hoặc Nữ'));
+                          }
+                          return Promise.resolve();
+                        },
+                      },
+                    ]}
+                  >
+                    <Select placeholder="Chọn giới tính" disabled={loading} size="large" allowClear={false}>
+                      <Select.Option value="NAM">Nam</Select.Option>
+                      <Select.Option value="NU">Nữ</Select.Option>
+                    </Select>
                   </Form.Item>
 
                   <Form.Item name="ngay_sinh" label="Ngày sinh">

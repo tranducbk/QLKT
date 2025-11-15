@@ -209,7 +209,7 @@ export default function ManagerAwardsPage() {
         const unitInfo = [];
         if (record.don_vi_truc_thuoc) unitInfo.push(record.don_vi_truc_thuoc);
         if (record.co_quan_don_vi) unitInfo.push(record.co_quan_don_vi);
-        const unitInfoText = unitInfo.length > 0 ? unitInfo.join(', ') : (record.don_vi || '');
+        const unitInfoText = unitInfo.length > 0 ? unitInfo.join(', ') : record.don_vi || '';
 
         return (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
@@ -244,9 +244,7 @@ export default function ManagerAwardsPage() {
       key: 'loai_khen_thuong',
       width: 140,
       align: 'center',
-      render: (_: any, record: Award) => (
-        <Text>{getLoaiKhenThuong(record.danh_hieu)}</Text>
-      ),
+      render: (_: any, record: Award) => <Text>{getLoaiKhenThuong(record.danh_hieu)}</Text>,
     },
     {
       title: 'Danh hiệu',
@@ -257,10 +255,13 @@ export default function ManagerAwardsPage() {
       render: (text: string | null, record: Award) => {
         if (!text) return <Text type="secondary">-</Text>;
         const fullName = danhHieuMap[text] || text;
-        const soQuyetDinh = record.so_quyet_dinh || record.so_quyet_dinh_bkbqp || record.so_quyet_dinh_cstdtq;
+        const soQuyetDinh =
+          record.so_quyet_dinh || record.so_quyet_dinh_bkbqp || record.so_quyet_dinh_cstdtq;
 
         return (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+          <div
+            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}
+          >
             <Text>{fullName}</Text>
             {soQuyetDinh && (
               <Text type="secondary" style={{ fontSize: '12px' }}>

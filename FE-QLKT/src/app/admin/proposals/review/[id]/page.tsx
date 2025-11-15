@@ -177,7 +177,18 @@ export default function ProposalDetailPage() {
       const res = await apiClient.getProposalById(String(id));
 
       if (res.success && res.data) {
-        setProposal(res.data);
+        // Parse files_attached nếu cần
+        const filesAttached = res.data.files_attached;
+        const parsedFilesAttached = Array.isArray(filesAttached)
+          ? filesAttached
+          : filesAttached && typeof filesAttached === 'string'
+          ? JSON.parse(filesAttached)
+          : [];
+
+        setProposal({
+          ...res.data,
+          files_attached: parsedFilesAttached,
+        });
         const danhHieuData = res.data.data_danh_hieu;
         const thanhTichData = res.data.data_thanh_tich;
 
@@ -347,7 +358,7 @@ export default function ProposalDetailPage() {
         } else {
           // Với đề xuất cá nhân, kiểm tra so_quyet_dinh (bắt buộc)
           if (!item.so_quyet_dinh || item.so_quyet_dinh.trim() === '') {
-            missingDecisions.push(`Cán bộ ${index + 1}: ${item.ho_ten || 'N/A'}`);
+            missingDecisions.push(`quân nhân ${index + 1}: ${item.ho_ten || 'N/A'}`);
           }
         }
       });
@@ -477,7 +488,6 @@ export default function ProposalDetailPage() {
             soQuyetDinh.toLowerCase().includes('bằng khen');
           const isCSTDTQ =
             loaiKhenThuong.includes('CSTDTQ') ||
-            loaiKhenThuong.includes('CSTĐTQ') ||
             soQuyetDinh.toLowerCase().includes('cstdtq') ||
             soQuyetDinh.toLowerCase().includes('chiến sĩ thi đua toàn quân');
 
@@ -519,7 +529,7 @@ export default function ProposalDetailPage() {
       setSelectedRowKeys([]);
       message.success(
         `Đã áp dụng số quyết định cho ${count} ${
-          proposal.loai_de_xuat === 'DON_VI_HANG_NAM' ? 'đơn vị' : 'cán bộ'
+          proposal.loai_de_xuat === 'DON_VI_HANG_NAM' ? 'đơn vị' : 'quân nhân'
         }`
       );
     } else {
@@ -1082,7 +1092,7 @@ export default function ProposalDetailPage() {
 
       {messageAlert && (
         <Alert
-          message={messageAlert.text}
+          message={<div style={{ whiteSpace: 'pre-line' }}>{messageAlert.text}</div>}
           type={messageAlert.type}
           showIcon
           closable
@@ -1203,7 +1213,12 @@ export default function ProposalDetailPage() {
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <FileTextOutlined style={{ color: '#1890ff', fontSize: '16px' }} />
-                    <Text style={{ fontSize: '14px' }}>{file.originalName || file.filename}</Text>
+                    <Text style={{ fontSize: '14px' }}>
+                      {file.originalName ||
+                        file.originalname ||
+                        file.filename ||
+                        'Không có tên file'}
+                    </Text>
                     {file.size && (
                       <Text type="secondary" style={{ fontSize: '12px' }}>
                         ({(file.size / 1024).toFixed(2)} KB)
@@ -1227,7 +1242,8 @@ export default function ProposalDetailPage() {
                         const url = window.URL.createObjectURL(blob);
                         const link = document.createElement('a');
                         link.href = url;
-                        link.download = file.originalName || filename;
+                        link.download =
+                          file.originalName || file.originalname || file.filename || 'download';
                         document.body.appendChild(link);
                         link.click();
                         document.body.removeChild(link);

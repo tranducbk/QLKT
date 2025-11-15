@@ -650,9 +650,12 @@ export const apiClient = {
   },
 
   // Profiles
-  async getAnnualProfile(personnelId: string): Promise<ApiResponse> {
+  async getAnnualProfile(personnelId: string, year?: number): Promise<ApiResponse> {
     try {
-      const res = await axiosInstance.get(`/api/profiles/annual/${personnelId}`);
+      const url = year
+        ? `/api/profiles/annual/${personnelId}?year=${year}`
+        : `/api/profiles/annual/${personnelId}`;
+      const res = await axiosInstance.get(url);
       return { success: true, data: res.data?.data || res.data };
     } catch (e: any) {
       return { success: false, message: e?.response?.data?.message || e.message };
@@ -668,9 +671,12 @@ export const apiClient = {
     }
   },
 
-  async recalculateProfile(personnelId: string): Promise<ApiResponse> {
+  async recalculateProfile(personnelId: string, year?: number): Promise<ApiResponse> {
     try {
-      const res = await axiosInstance.post(`/api/profiles/recalculate/${personnelId}`);
+      const url = year
+        ? `/api/profiles/recalculate/${personnelId}?year=${year}`
+        : `/api/profiles/recalculate/${personnelId}`;
+      const res = await axiosInstance.post(url);
       return { success: true, data: res.data?.data || res.data, message: res.data?.message };
     } catch (e: any) {
       return { success: false, message: e?.response?.data?.message || e.message };
@@ -715,10 +721,10 @@ export const apiClient = {
     try {
       const res = await axiosInstance.get('/api/decisions', { params });
       // Backend trả về: { success: true, data: [...], pagination: {...} }
-      return { 
-        success: true, 
+      return {
+        success: true,
         data: res.data?.data || res.data,
-        pagination: res.data?.pagination 
+        pagination: res.data?.pagination
       };
     } catch (e: any) {
       return { success: false, message: e?.response?.data?.message || e.message };

@@ -92,6 +92,18 @@ class AnnualRewardService {
         },
       });
 
+      // Tự động cập nhật lại hồ sơ hằng năm
+      try {
+        const profileService = require('./profile.service');
+        await profileService.recalculateAnnualProfile(personnel_id);
+      } catch (recalcError) {
+        console.error(
+          `⚠️ Failed to auto-recalculate annual profile for personnel ${personnel_id}:`,
+          recalcError.message
+        );
+        // Không throw error, chỉ log để không ảnh hưởng đến việc tạo danh hiệu
+      }
+
       return newReward;
     } catch (error) {
       throw error;
@@ -142,6 +154,18 @@ class AnnualRewardService {
         },
       });
 
+      // Tự động cập nhật lại hồ sơ hằng năm
+      try {
+        const profileService = require('./profile.service');
+        await profileService.recalculateAnnualProfile(reward.quan_nhan_id);
+      } catch (recalcError) {
+        console.error(
+          `⚠️ Failed to auto-recalculate annual profile for personnel ${reward.quan_nhan_id}:`,
+          recalcError.message
+        );
+        // Không throw error, chỉ log để không ảnh hưởng đến việc cập nhật danh hiệu
+      }
+
       return updatedReward;
     } catch (error) {
       throw error;
@@ -162,10 +186,24 @@ class AnnualRewardService {
         throw new Error('Bản ghi danh hiệu không tồn tại');
       }
 
+      const personnelId = reward.quan_nhan_id;
+
       // Xóa
       await prisma.danhHieuHangNam.delete({
         where: { id },
       });
+
+      // Tự động cập nhật lại hồ sơ hằng năm
+      try {
+        const profileService = require('./profile.service');
+        await profileService.recalculateAnnualProfile(personnelId);
+      } catch (recalcError) {
+        console.error(
+          `⚠️ Failed to auto-recalculate annual profile for personnel ${personnelId}:`,
+          recalcError.message
+        );
+        // Không throw error, chỉ log để không ảnh hưởng đến việc xóa danh hiệu
+      }
 
       return { message: 'Xóa bản ghi danh hiệu thành công' };
     } catch (error) {
@@ -277,6 +315,18 @@ class AnnualRewardService {
           });
           updated.push(existing.id);
         }
+
+        // Tự động cập nhật lại hồ sơ hằng năm cho quân nhân này
+        try {
+          const profileService = require('./profile.service');
+          await profileService.recalculateAnnualProfile(personnel.id);
+        } catch (recalcError) {
+          console.error(
+            `⚠️ Failed to auto-recalculate annual profile for personnel ${personnel.id}:`,
+            recalcError.message
+          );
+          // Không throw error, chỉ log
+        }
       }
 
       return {
@@ -357,12 +407,12 @@ class AnnualRewardService {
 
           created.push(newReward);
 
-          // Tự động cập nhật lại hồ sơ
+          // Tự động cập nhật lại hồ sơ hằng năm
           try {
-            await profileService.recalculateProfile(personnelId);
+            await profileService.recalculateAnnualProfile(personnelId);
           } catch (recalcError) {
             console.error(
-              `⚠️ Failed to auto-recalculate profile for personnel ${personnelId}:`,
+              `⚠️ Failed to auto-recalculate annual profile for personnel ${personnelId}:`,
               recalcError.message
             );
           }

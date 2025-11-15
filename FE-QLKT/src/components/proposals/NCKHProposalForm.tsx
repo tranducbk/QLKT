@@ -200,7 +200,7 @@ export default function NCKHProposalForm({
     <div>
       <Alert
         message="Hướng dẫn"
-        description="Nhập danh sách cán bộ có thành tích ĐTKH/SKKH trong năm. Mỗi dòng là một thành tích cần đề xuất khen thưởng."
+        description="Nhập danh sách quân nhân có thành tích ĐTKH/SKKH trong năm. Mỗi dòng là một thành tích cần đề xuất khen thưởng."
         type="info"
         showIcon
         icon={<ExperimentOutlined />}
@@ -249,7 +249,7 @@ export default function NCKHProposalForm({
       >
         <Form form={form} layout="vertical" style={{ marginTop: 20 }}>
           <Form.Item
-            label="Họ và tên cán bộ"
+            label="Họ và tên quân nhân"
             name="personnel_name"
             rules={[{ required: true, message: 'Vui lòng nhập họ tên!' }]}
           >

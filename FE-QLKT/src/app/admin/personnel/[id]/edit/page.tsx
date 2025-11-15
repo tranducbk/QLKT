@@ -105,6 +105,7 @@ export default function PersonnelEditPage() {
           form.setFieldsValue({
             ho_ten: personnel.ho_ten,
             cccd: personnel.cccd,
+            gioi_tinh: personnel.gioi_tinh || undefined,
             ngay_sinh: personnel.ngay_sinh ? dayjs(personnel.ngay_sinh) : undefined,
             ngay_nhap_ngu: personnel.ngay_nhap_ngu ? dayjs(personnel.ngay_nhap_ngu) : undefined,
             ngay_xuat_ngu: personnel.ngay_xuat_ngu ? dayjs(personnel.ngay_xuat_ngu) : undefined,
@@ -190,6 +191,7 @@ export default function PersonnelEditPage() {
 
       const formattedValues: any = {
         ho_ten: values.ho_ten,
+        gioi_tinh: values.gioi_tinh,
         cccd: values.cccd && values.cccd.trim() ? values.cccd.trim() : null,
         ngay_sinh: values.ngay_sinh ? values.ngay_sinh.format('YYYY-MM-DD') : null,
         ngay_nhap_ngu: values.ngay_nhap_ngu ? values.ngay_nhap_ngu.format('YYYY-MM-DD') : null,
@@ -302,6 +304,17 @@ export default function PersonnelEditPage() {
                       disabled={loading}
                       maxLength={12}
                     />
+                  </Form.Item>
+
+                  <Form.Item
+                    name="gioi_tinh"
+                    label="Giới tính"
+                    rules={[{ required: true, message: 'Vui lòng chọn giới tính' }]}
+                  >
+                    <Select placeholder="Chọn giới tính" disabled={loading} size="large">
+                      <Select.Option value="NAM">Nam</Select.Option>
+                      <Select.Option value="NU">Nữ</Select.Option>
+                    </Select>
                   </Form.Item>
 
                   <Form.Item name="ngay_sinh" label="Ngày sinh">

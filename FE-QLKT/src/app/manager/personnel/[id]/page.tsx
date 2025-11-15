@@ -190,6 +190,15 @@ export default function ManagerPersonnelDetailPage() {
               items={[
                 { label: 'ID', value: personnel.id },
                 { label: 'Họ và tên', value: personnel.ho_ten || '-' },
+                {
+                  label: 'Giới tính',
+                  value:
+                    personnel.gioi_tinh === 'NAM'
+                      ? 'Nam'
+                      : personnel.gioi_tinh === 'NU'
+                      ? 'Nữ'
+                      : '-',
+                },
                 { label: 'CCCD', value: personnel.cccd || '-' },
                 { label: 'Số điện thoại', value: personnel.so_dien_thoai || '-' },
                 { label: 'Ngày sinh', value: formatDate(personnel.ngay_sinh) },
@@ -421,7 +430,11 @@ export default function ManagerPersonnelDetailPage() {
                     <Card size="small">
                       <Statistic
                         title="Tổng CSTDCS"
-                        value={annualProfile.tong_cstdcs || 0}
+                        value={
+                          Array.isArray(annualProfile.tong_cstdcs)
+                            ? annualProfile.tong_cstdcs.length
+                            : annualProfile.tong_cstdcs || 0
+                        }
                         suffix="năm"
                         valueStyle={{ color: '#1890ff' }}
                       />
@@ -441,7 +454,11 @@ export default function ManagerPersonnelDetailPage() {
                     <Card size="small">
                       <Statistic
                         title="Tổng ĐTKH/SKKH"
-                        value={annualProfile.tong_nckh || 0}
+                        value={
+                          Array.isArray(annualProfile.tong_nckh)
+                            ? annualProfile.tong_nckh.length
+                            : annualProfile.tong_nckh || 0
+                        }
                         suffix="công trình"
                         valueStyle={{ color: '#722ed1' }}
                       />
@@ -493,7 +510,7 @@ export default function ManagerPersonnelDetailPage() {
                   <Divider className="my-4" />
                   <Card size="small" className="bg-blue-50 dark:bg-gray-800">
                     <Text strong>💡 Gợi ý: </Text>
-                    <Text>{annualProfile.goi_y}</Text>
+                    <Text style={{ whiteSpace: 'pre-wrap' }}>{annualProfile.goi_y}</Text>
                   </Card>
                 </>
               )}

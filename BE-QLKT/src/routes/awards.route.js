@@ -63,4 +63,16 @@ router.get(
   proposalController.exportAllAwardsExcel
 );
 
+/**
+ * @route   GET /api/awards/statistics
+ * @desc    Thống kê khen thưởng theo loại
+ * @access  ADMIN, MANAGER
+ */
+router.get(
+  '/statistics',
+  verifyToken,
+  checkRole(['ADMIN', 'MANAGER']),
+  proposalController.getAwardsStatistics
+);
+
 module.exports = router;

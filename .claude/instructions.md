@@ -2,7 +2,10 @@
 
 ## Project Overview
 
-This is a QLKT (Quản Lý Kho Thuốc) project - a pharmacy/medicine inventory management system.
+This is **QLKT** (Quản lý Khen thưởng) - Awards Management System for Vietnam Military Science Academy
+- **Frontend**: Next.js 14 + React 18 + TypeScript + TailwindCSS + shadcn/ui
+- **Backend**: Node.js + Express + PostgreSQL + Prisma
+- **Auth**: JWT (Access Token + Refresh Token)
 
 ## Code Style & Formatting
 

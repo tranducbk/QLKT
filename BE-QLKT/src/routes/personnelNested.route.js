@@ -3,6 +3,7 @@ const router = express.Router({ mergeParams: true });
 const annualRewardController = require('../controllers/annualReward.controller');
 const positionHistoryController = require('../controllers/positionHistory.controller');
 const scientificAchievementController = require('../controllers/scientificAchievement.controller');
+const profileController = require('../controllers/profile.controller');
 const { verifyToken, requireManager, requireAuth } = require('../middlewares/auth');
 const { auditLog } = require('../middlewares/auditLog');
 const { getLogDescription, getResourceId } = require('../helpers/auditLogHelper');
@@ -42,7 +43,7 @@ router.post(
   (req, res, next) => {
     // Add personnel_id from URL params to body (CUID string, không phải number)
     req.body.personnel_id = req.params.personnelId;
-  annualRewardController.createAnnualReward(req, res);
+    annualRewardController.createAnnualReward(req, res);
   }
 );
 
@@ -76,7 +77,7 @@ router.post(
   (req, res, next) => {
     // Add personnel_id from URL params to body (CUID string, không phải number)
     req.body.personnel_id = req.params.personnelId;
-  positionHistoryController.createPositionHistory(req, res);
+    positionHistoryController.createPositionHistory(req, res);
   }
 );
 
@@ -101,6 +102,18 @@ router.post('/scientific-achievements', verifyToken, requireManager, (req, res, 
   // Add personnel_id from URL params to body (CUID string, không phải number)
   req.body.personnel_id = req.params.personnelId;
   scientificAchievementController.createAchievement(req, res);
+});
+
+// ===== PROFILE =====
+/**
+ * @route   GET /api/personnel/:personnelId/profile
+ * @desc    Lấy hồ sơ hằng năm (alias)
+ * @access  Private - ADMIN, MANAGER, USER
+ */
+router.get('/profile', verifyToken, requireAuth, (req, res, next) => {
+  // Convert nested route param to match profile controller expectation
+  req.params.personnel_id = req.params.personnelId;
+  profileController.getAnnualProfile(req, res);
 });
 
 module.exports = router;

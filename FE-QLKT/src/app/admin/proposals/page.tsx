@@ -198,7 +198,7 @@ export default function AdminProposalsPage() {
       align: 'center',
     },
     {
-      title: 'Số cán bộ',
+      title: 'Số quân nhân',
       key: 'so_can_bo',
       width: 100,
       align: 'center',
@@ -253,11 +253,7 @@ export default function AdminProposalsPage() {
           soQuyetDinh = record.data_thanh_tich[0]?.so_quyet_dinh || null;
         }
 
-        return soQuyetDinh ? (
-          <Text code>{soQuyetDinh}</Text>
-        ) : (
-          <Text type="secondary">-</Text>
-        );
+        return soQuyetDinh ? <Text code>{soQuyetDinh}</Text> : <Text type="secondary">-</Text>;
       },
     },
     {
@@ -410,15 +406,10 @@ export default function AdminProposalsPage() {
         {selectedRowKeys.length > 0 && (
           <div style={{ marginBottom: 16 }}>
             <Space>
-              <Button
-                type="primary"
-                onClick={() => setDecisionModalVisible(true)}
-              >
+              <Button type="primary" onClick={() => setDecisionModalVisible(true)}>
                 Thêm quyết định ({selectedRowKeys.length} đề xuất)
               </Button>
-              <Button onClick={() => setSelectedRowKeys([])}>
-                Bỏ chọn
-              </Button>
+              <Button onClick={() => setSelectedRowKeys([])}>Bỏ chọn</Button>
             </Space>
           </div>
         )}
@@ -432,7 +423,7 @@ export default function AdminProposalsPage() {
           rowSelection={{
             selectedRowKeys,
             onChange: setSelectedRowKeys,
-            getCheckboxProps: (record) => ({
+            getCheckboxProps: record => ({
               disabled: record.status !== 'APPROVED', // Chỉ cho phép chọn đề xuất đã được phê duyệt
             }),
           }}
@@ -494,7 +485,7 @@ export default function AdminProposalsPage() {
           const selectedProposals = filteredProposals.filter(p => selectedRowKeys.includes(p.id));
 
           try {
-            const uploadPromises = selectedProposals.map(async (proposal) => {
+            const uploadPromises = selectedProposals.map(async proposal => {
               const formData = new FormData();
 
               // Thêm số quyết định
@@ -515,7 +506,9 @@ export default function AdminProposalsPage() {
             });
 
             await Promise.all(uploadPromises);
-            message.success(`Đã thêm quyết định cho ${selectedProposals.length} đề xuất thành công`);
+            message.success(
+              `Đã thêm quyết định cho ${selectedProposals.length} đề xuất thành công`
+            );
             setDecisionModalVisible(false);
             setSelectedRowKeys([]);
             setSelectedDecision(null);
@@ -523,9 +516,13 @@ export default function AdminProposalsPage() {
           } catch (error: any) {
             console.error('Upload decision error:', error);
             if (error.response?.status === 404) {
-              message.warning('API endpoint chưa được tạo. Quyết định đã được lưu nhưng chưa gắn vào đề xuất.');
+              message.warning(
+                'API endpoint chưa được tạo. Quyết định đã được lưu nhưng chưa gắn vào đề xuất.'
+              );
             } else {
-              message.error(error.response?.data?.message || 'Lỗi khi upload quyết định cho đề xuất');
+              message.error(
+                error.response?.data?.message || 'Lỗi khi upload quyết định cho đề xuất'
+              );
             }
           }
         }}

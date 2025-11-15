@@ -211,7 +211,7 @@ export default function ProposalDetailModal({
           <Descriptions.Item label="Năm đề xuất">
             <Text strong>{proposal.nam}</Text>
           </Descriptions.Item>
-          <Descriptions.Item label="Số cán bộ">
+          <Descriptions.Item label="Số quân nhân">
             <Tag color="cyan">{personnelCount}</Tag>
           </Descriptions.Item>
           <Descriptions.Item label="Ngày tạo">
@@ -274,7 +274,7 @@ export default function ProposalDetailModal({
 
         {/* Title data table */}
         <div style={{ marginTop: 16 }}>
-          <Title level={5}>Danh sách cán bộ và danh hiệu</Title>
+          <Title level={5}>Danh sách quân nhân và danh hiệu</Title>
           <Table
             columns={columns}
             dataSource={titleData}

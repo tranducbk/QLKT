@@ -528,7 +528,7 @@ export default function ManagerProposalDetailPage() {
               {proposal.loai_de_xuat === 'NCKH' ? (
                 <Tag color="magenta">{proposal.data_thanh_tich?.length || 0} đề tài/sáng kiến</Tag>
               ) : (
-                <Tag color="blue">{proposal.data_danh_hieu?.length || 0} cán bộ</Tag>
+                <Tag color="blue">{proposal.data_danh_hieu?.length || 0} quân nhân</Tag>
               )}
             </Descriptions.Item>
             {proposal.nguoi_duyet && (

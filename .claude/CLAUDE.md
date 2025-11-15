@@ -272,3 +272,72 @@ export default function ComponentName() {
 ### Review Step (Step 5)
 - Hiển thị "Tổng tháng" trong bảng review cho NIEN_HAN
 - Validation: Không cho phép submit nếu thiếu số quyết định
+
+## Annual Profile Calculation (HoSoHangNam)
+
+### Logic Overview
+- **BKBQP**: Cần 2 năm CSTDCS liên tục + mỗi năm đều có NCKH → đề xuất BKBQP vào năm thứ 3
+- **CSTDTQ**: Cần 3 năm CSTDCS liên tục + mỗi năm đều có NCKH + có BKBQP → đề xuất CSTDTQ vào năm thứ 4
+- **Independent Clusters**: Mỗi cụm 2 năm (BKBQP) hoặc 3 năm (CSTDTQ) là độc lập, không nối với nhau
+- **Processing Order**: Kiểm tra BKBQP trước, sau đó mới kiểm tra CSTDTQ (vì BKBQP là điều kiện của CSTDTQ)
+- **Year Parameter**: API `recalculateProfile` và `getAnnualProfile` nhận tham số `year` để tính toán gợi ý cho năm cụ thể
+
+### Key Functions
+- `recalculateAnnualProfile(personnelId, year)` - Tính toán lại hồ sơ hằng năm với năm cụ thể
+- `recalculateProfile(personnelId, year)` - Tính toán lại cả niên hạn và hằng năm
+
+### Suggestion Logic
+- Gợi ý có line breaks (`\n`) để dễ đọc (hiển thị với `whiteSpace: 'pre-wrap'`)
+- Kiểm tra năm đã qua: Nếu năm thứ 3 < năm hiện tại và chưa đủ điều kiện → báo "đã qua đợt đề xuất"
+- Chỉ đề xuất CSTDTQ khi năm thứ 3 đã có đủ điều kiện (CSTDCS + NCKH + BKBQP)
+- Gợi ý luôn có mục tiêu rõ ràng: "để xét CSTDTQ vào năm X"
+- Không đề xuất CSTDTQ nếu năm thứ 3 chưa đủ điều kiện
+
+### Example Suggestion Messages
+```
+Đã đủ điều kiện BKBQP (CSTDCS vào năm 2022, 2023 và mỗi năm đều có NCKH).
+Cần:
+BKBQP vào năm 2024
+CSTDCS vào năm 2024
+NCKH vào năm 2024
+để xét CSTDTQ vào năm 2025.
+```
+
+## Proposal Year Input
+
+### Step2 Components
+Tất cả các Step2 components cho phép nhập/nhập lại năm:
+- `Step2SelectPersonnelCaNhanHangNam`
+- `Step2SelectUnits`
+- `Step2SelectPersonnelNienHan`
+- `Step2SelectPersonnelHCQKQT`
+- `Step2SelectPersonnelKNCVSNXD`
+- `Step2SelectPersonnelCongHien`
+- `Step2SelectPersonnelNCKH`
+
+### InputNumber Configuration
+- Range: 1900-2999
+- Type: Integer only (precision={0})
+- Controls: Enable increment/decrement buttons
+- Validation: Clamp to 1900-2999 on blur
+- Allow deletion: User can clear and re-enter year
+
+### Year Flow
+- Năm mặc định: Năm hiện tại (chỉ set lần đầu khi mount)
+- User có thể thay đổi năm tự do (1900-2999)
+- Khi chuyển từ Step 2 → Step 3: Gọi `recalculateProfile(personnelId, nam)` để tính toán gợi ý cho năm đã chọn
+- API endpoints:
+  - `POST /api/profiles/recalculate/:personnel_id?year=2025`
+  - `GET /api/profiles/annual/:personnel_id?year=2025`
+
+## API Client Methods
+
+### Frontend API Client (`FE-QLKT/src/lib/api-client.ts`)
+```typescript
+async recalculateProfile(personnelId: string, year?: number): Promise<ApiResponse>
+async getAnnualProfile(personnelId: string, year?: number): Promise<ApiResponse>
+```
+
+### Backend Controllers (`BE-QLKT/src/controllers/profile.controller.js`)
+- `recalculateProfile`: Extract `year` from `req.query` and pass to service
+- `getAnnualProfile`: Extract `year` from `req.query`, call `recalculateAnnualProfile` if year provided

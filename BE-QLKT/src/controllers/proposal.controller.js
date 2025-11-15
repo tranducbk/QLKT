@@ -3,7 +3,7 @@ const notificationHelper = require('../helpers/notificationHelper');
 
 class ProposalController {
   /**
-   * GET /api/proposals/template?type=CA_NHAN_HANG_NAM|DON_VI_HANG_NAM|NIEN_HAN|CONG_HIEN|DOT_XUAT|NCKH
+   * GET /api/proposals/template?type=CA_NHAN_HANG_NAM|DON_VI_HANG_NAM|NIEN_HAN|HC_QKQT|KNC_VSNXD_QDNDVN|CONG_HIEN|DOT_XUAT|NCKH
    * Xuất file mẫu Excel để Manager điền đề xuất
    */
   async exportTemplate(req, res) {
@@ -16,6 +16,8 @@ class ProposalController {
         'CA_NHAN_HANG_NAM',
         'DON_VI_HANG_NAM',
         'NIEN_HAN',
+        'HC_QKQT',
+        'KNC_VSNXD_QDNDVN',
         'CONG_HIEN',
         'DOT_XUAT',
         'NCKH',
@@ -33,6 +35,8 @@ class ProposalController {
         CA_NHAN_HANG_NAM: 'ca_nhan_hang_nam',
         DON_VI_HANG_NAM: 'don_vi_hang_nam',
         NIEN_HAN: 'nien_han',
+        HC_QKQT: 'hc_qkqt',
+        KNC_VSNXD_QDNDVN: 'knc_vsnxd_qdndvn',
         CONG_HIEN: 'cong_hien',
         DOT_XUAT: 'dot_xuat',
         NCKH: 'nckh',
@@ -58,7 +62,7 @@ class ProposalController {
   /**
    * POST /api/proposals
    * Nộp file đề xuất khen thưởng (Excel + nhiều file đính kèm không giới hạn)
-   * Body: type=CA_NHAN_HANG_NAM|DON_VI_HANG_NAM|NIEN_HAN|CONG_HIEN|DOT_XUAT|NCKH, so_quyet_dinh (optional)
+   * Body: type=CA_NHAN_HANG_NAM|DON_VI_HANG_NAM|NIEN_HAN|HC_QKQT|KNC_VSNXD_QDNDVN|CONG_HIEN|DOT_XUAT|NCKH, so_quyet_dinh (optional)
    * Files: file_excel (required), attached_files[] (optional - không giới hạn số lượng)
    */
   async submitProposal(req, res) {
@@ -72,6 +76,8 @@ class ProposalController {
         'CA_NHAN_HANG_NAM',
         'DON_VI_HANG_NAM',
         'NIEN_HAN',
+        'HC_QKQT',
+        'KNC_VSNXD_QDNDVN',
         'CONG_HIEN',
         'DOT_XUAT',
         'NCKH',
@@ -219,6 +225,7 @@ class ProposalController {
       const editedData = {
         data_danh_hieu: JSON.parse(req.body.data_danh_hieu || '[]'),
         data_thanh_tich: JSON.parse(req.body.data_thanh_tich || '[]'),
+        data_nien_han: JSON.parse(req.body.data_nien_han || '[]'),
       };
 
       // Lấy số quyết định cho từng loại đề xuất
@@ -612,6 +619,63 @@ class ProposalController {
       return res.status(400).json({
         success: false,
         message: error.message || 'Xóa đề xuất thất bại',
+      });
+    }
+  }
+
+  /**
+   * GET /api/awards/statistics
+   * Thống kê khen thưởng theo loại
+   */
+  async getAwardsStatistics(req, res) {
+    try {
+      const statistics = await proposalService.getAwardsStatistics();
+
+      return res.status(200).json({
+        success: true,
+        message: 'Lấy thống kê khen thưởng thành công',
+        data: statistics,
+      });
+    } catch (error) {
+      console.error('Get awards statistics error:', error);
+      return res.status(500).json({
+        success: false,
+        message: error.message || 'Lấy thống kê khen thưởng thất bại',
+      });
+    }
+  }
+
+  /**
+   * GET /api/proposals/check-duplicate
+   * Kiểm tra xem quân nhân đã có đề xuất cùng năm và cùng danh hiệu chưa
+   */
+  async checkDuplicateAward(req, res) {
+    try {
+      const { personnel_id, nam, danh_hieu, proposal_type } = req.query;
+
+      if (!personnel_id || !nam || !danh_hieu || !proposal_type) {
+        return res.status(400).json({
+          success: false,
+          message: 'Thiếu thông tin: personnel_id, nam, danh_hieu, proposal_type',
+        });
+      }
+
+      const result = await proposalService.checkDuplicateAward(
+        personnel_id,
+        parseInt(nam),
+        danh_hieu,
+        proposal_type
+      );
+
+      return res.status(200).json({
+        success: true,
+        data: result,
+      });
+    } catch (error) {
+      console.error('Check duplicate award error:', error);
+      return res.status(500).json({
+        success: false,
+        message: error.message || 'Lỗi khi kiểm tra đề xuất trùng',
       });
     }
   }

@@ -82,8 +82,8 @@ Hệ thống sử dụng cơ chế JWT (JSON Web Token) với Access Token (th�
 | Method   | Endpoint                   | Chức năng chi tiết                                                  | Request Body / Params                                           | Vai trò              |
 | :------- | :------------------------- | :------------------------------------------------------------------ | :-------------------------------------------------------------- | :------------------- |
 | `GET`    | `/api/annual-rewards`      | Lấy nhật ký Danh hiệu (CSTĐCS...) của 1 quân nhân.                  | `?personnel_id={id}` (Bắt buộc)                                 | ADMIN, MANAGER, USER |
-| `POST`   | `/api/annual-rewards`      | Thêm 1 Danh hiệu (CSTĐCS...) cho quân nhân.                         | `{ "personnel_id": "...", "nam": 2024, "danh_hieu": "CSTDCS" }` | ADMIN, MANAGER       |
-| `PUT`    | `/api/annual-rewards/{id}` | Sửa một bản ghi Danh hiệu (ví dụ: nhập nhầm 'CSTT' thành 'CSTDCS'). | `{ "nam": 2024, "danh_hieu": "CSTDCS" }`                        | ADMIN, MANAGER       |
+| `POST`   | `/api/annual-rewards`      | Thêm 1 Danh hiệu (CSTĐCS...) cho quân nhân.                         | `{ "personnel_id": "...", "nam": 2024, "danh_hieu": "CSTĐCS" }` | ADMIN, MANAGER       |
+| `PUT`    | `/api/annual-rewards/{id}` | Sửa một bản ghi Danh hiệu (ví dụ: nhập nhầm 'CSTT' thành 'CSTĐCS'). | `{ "nam": 2024, "danh_hieu": "CSTĐCS" }`                        | ADMIN, MANAGER       |
 | `DELETE` | `/api/annual-rewards/{id}` | Xóa 1 bản ghi Danh hiệu.                                            | `Params: {id}`                                                  | ADMIN, MANAGER       |
 
 ### 5.2. Thành tích khoa học (Scientific Achievements)
@@ -235,7 +235,7 @@ Hệ thống sử dụng cơ chế JWT (JSON Web Token) với Access Token (th�
 | `id`                   | Serial       | PK                   | Mã tự động tăng.                                     |
 | `quan_nhan_id`         | Integer      | FK (tới QuanNhan.id) | Quân nhân.                                           |
 | `nam`                  | Integer      |                      | Năm xét danh hiệu.                                   |
-| `danh_hieu`            | ENUM         |                      | ('CSTDCS', 'CSTT', 'KHONG_DAT').                     |
+| `danh_hieu`            | ENUM         |                      | ('CSTĐCS', 'CSTT', 'KHONG_DAT').                     |
 | `nhan_bkbqp`           | Boolean      |                      | **(OUTPUT)** Ghi nhận có đạt BKBQP năm nay.          |
 | `so_quyet_dinh_bkbqp`  | Varchar      |                      | (Tương ứng với BKBQP)                                |
 | `nhan_cstdtq`          | Boolean      |                      | **(OUTPUT)** Ghi nhận có đạt CSTD Toàn quân năm nay. |
@@ -273,9 +273,9 @@ Hệ thống sử dụng cơ chế JWT (JSON Web Token) với Access Token (th�
 | :-------------------- | :----------- | :--------------------------- | :------------------------------------------------------------ |
 | `id`                  | Serial       | PK                           | Mã tự động tăng.                                              |
 | `quan_nhan_id`        | Integer      | FK (tới QuanNhan.id), Unique | Liên kết 1-1 với Quân nhân.                                   |
-| `tong_cstdcs`         | Integer      |                              | Tổng số CSTDCS đã đạt.                                        |
+| `tong_CSTĐCS`         | Integer      |                              | Tổng số CSTĐCS đã đạt.                                        |
 | `tong_nckh`           | Integer      |                              | Tổng số ĐTKH/SKKH đã APPROVED.                                |
-| `cstdcs_lien_tuc`     | Integer      |                              | Số năm CSTDCS _liên tục_ hiện tại.                            |
+| `CSTĐCS_lien_tuc`     | Integer      |                              | Số năm CSTĐCS _liên tục_ hiện tại.                            |
 | `du_dieu_kien_bkbqp`  | Boolean      |                              | true nếu đủ điều kiện Bằng khen BQP.                          |
 | `du_dieu_kien_cstdtq` | Boolean      |                              | true nếu đủ điều kiện CSTD Toàn quân.                         |
 | `goi_y`               | Varchar      |                              | **LƯU GỢI Ý** (VD: "Cần thêm NCKH để đạt CSTD Toàn quân..."). |

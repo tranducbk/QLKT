@@ -39,6 +39,8 @@ interface Proposal {
     | 'CA_NHAN_HANG_NAM'
     | 'DON_VI_HANG_NAM'
     | 'NIEN_HAN'
+    | 'HC_QKQT'
+    | 'KNC_VSNXD_QDNDVN'
     | 'CONG_HIEN'
     | 'DOT_XUAT'
     | 'NCKH';
@@ -144,6 +146,8 @@ export default function ManagerProposalsPage() {
       CA_NHAN_HANG_NAM: { color: 'blue', text: 'Cá nhân hằng năm' },
       DON_VI_HANG_NAM: { color: 'purple', text: 'Đơn vị hằng năm' },
       NIEN_HAN: { color: 'cyan', text: 'Niên hạn' },
+      HC_QKQT: { color: 'gold', text: 'HC Quân kỳ quyết thắng' },
+      KNC_VSNXD_QDNDVN: { color: 'lime', text: 'KNC VSNXD QĐNDVN' },
       CONG_HIEN: { color: 'geekblue', text: 'Cống hiến' },
       DOT_XUAT: { color: 'orange', text: 'Đột xuất' },
       NCKH: { color: 'magenta', text: 'ĐTKH/SKKH' },
@@ -210,18 +214,14 @@ export default function ManagerProposalsPage() {
           // NCKH: hiển thị số thành tích khoa học
           return (
             <Tooltip title="Số đề tài/sáng kiến khoa học">
-              <span style={{ fontSize: '14px', fontWeight: 500 }}>
-                {record.so_thanh_tich ?? 0}
-              </span>
+              <span style={{ fontSize: '14px', fontWeight: 500 }}>{record.so_thanh_tich ?? 0}</span>
             </Tooltip>
           );
         } else {
-          // Các loại khác: hiển thị số cán bộ (danh hiệu)
+          // Các loại khác: hiển thị số quân nhân (danh hiệu)
           return (
-            <Tooltip title="Số cán bộ">
-              <span style={{ fontSize: '14px', fontWeight: 500 }}>
-                {record.so_danh_hieu ?? 0}
-              </span>
+            <Tooltip title="Số quân nhân">
+              <span style={{ fontSize: '14px', fontWeight: 500 }}>{record.so_danh_hieu ?? 0}</span>
             </Tooltip>
           );
         }

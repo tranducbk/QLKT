@@ -1,11 +1,24 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Table, Select, Input, Alert, Typography, Space, Tag, message } from 'antd';
-import { EditOutlined } from '@ant-design/icons';
+import {
+  Table,
+  Select,
+  Input,
+  Alert,
+  Typography,
+  Space,
+  Tag,
+  message,
+  Modal,
+  Button,
+  Tabs,
+} from 'antd';
+import { EditOutlined, HistoryOutlined, EyeOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import axiosInstance from '@/utils/axiosInstance';
 import { apiClient } from '@/lib/api-client';
+import PersonnelRewardHistoryModal from './PersonnelRewardHistoryModal';
 
 const { Text } = Typography;
 const { TextArea } = Input;
@@ -14,6 +27,7 @@ interface Personnel {
   id: string;
   ho_ten: string;
   cccd: string;
+  gioi_tinh?: string | null;
   ngay_nhap_ngu?: string | Date | null;
   ngay_xuat_ngu?: string | Date | null;
   ChucVu?: {
@@ -52,12 +66,32 @@ interface TitleData {
   mo_ta?: string;
 }
 
+interface CSTDCSItem {
+  nam: number;
+  danh_hieu: string;
+  nhan_bkbqp?: boolean;
+  nhan_cstdtq?: boolean;
+  so_quyet_dinh_bkbqp?: string | null;
+  so_quyet_dinh_cstdtq?: string | null;
+  [key: string]: any;
+}
+
+interface NCKHItem {
+  nam: number;
+  loai: string;
+  mo_ta: string;
+  status?: string;
+  so_quyet_dinh?: string | null;
+  [key: string]: any;
+}
+
 interface Step3SetTitlesProps {
   selectedPersonnelIds: string[];
   selectedUnitIds?: string[];
   proposalType: string;
   titleData: TitleData[];
   onTitleDataChange: (data: TitleData[]) => void;
+  nam: number;
 }
 
 export default function Step3SetTitles({
@@ -66,11 +100,19 @@ export default function Step3SetTitles({
   proposalType,
   titleData,
   onTitleDataChange,
+  nam,
 }: Step3SetTitlesProps) {
   const [loading, setLoading] = useState(false);
   const [personnel, setPersonnel] = useState<Personnel[]>([]);
   const [units, setUnits] = useState<Unit[]>([]);
   const [positionHistoriesMap, setPositionHistoriesMap] = useState<Record<string, any[]>>({});
+
+  // Modal states
+  const [modalVisible, setModalVisible] = useState(false);
+  const [historyModalVisible, setHistoryModalVisible] = useState(false);
+  const [selectedPersonnel, setSelectedPersonnel] = useState<Personnel | null>(null);
+  const [annualProfile, setAnnualProfile] = useState<any>(null);
+  const [loadingModal, setLoadingModal] = useState(false);
 
   // Fetch personnel/unit details
   useEffect(() => {
@@ -108,10 +150,35 @@ export default function Step3SetTitles({
 
       // Initialize title data if empty
       if (titleData.length === 0) {
-        const initialData = personnelData.map((p: Personnel) => ({
-          personnel_id: p.id,
-        }));
+        const initialData = personnelData.map((p: Personnel) => {
+          const data: TitleData = {
+            personnel_id: p.id,
+          };
+
+          // Tự động set danh hiệu cho các loại đề xuất chỉ có 1 lựa chọn
+          if (proposalType === 'KNC_VSNXD_QDNDVN') {
+            data.danh_hieu = 'KNC_VSNXD_QDNDVN';
+          } else if (proposalType === 'HC_QKQT') {
+            data.danh_hieu = 'HC_QKQT';
+          }
+
+          return data;
+        });
         onTitleDataChange(initialData);
+      } else {
+        // Nếu đã có titleData nhưng chưa có danh_hieu cho KNC_VSNXD_QDNDVN hoặc HC_QKQT, tự động set
+        if (proposalType === 'KNC_VSNXD_QDNDVN' || proposalType === 'HC_QKQT') {
+          const updatedData = titleData.map(item => {
+            if (!item.danh_hieu) {
+              return {
+                ...item,
+                danh_hieu: proposalType === 'KNC_VSNXD_QDNDVN' ? 'KNC_VSNXD_QDNDVN' : 'HC_QKQT',
+              };
+            }
+            return item;
+          });
+          onTitleDataChange(updatedData);
+        }
       }
     } catch (error) {
       console.error('Error fetching personnel details:', error);
@@ -386,6 +453,12 @@ export default function Step3SetTitles({
         }
 
         return nienHanAllOptions;
+      case 'HC_QKQT':
+        return [{ label: 'Huy chương Quân kỳ quyết thắng', value: 'HC_QKQT' }];
+      case 'KNC_VSNXD_QDNDVN':
+        return [
+          { label: 'Kỷ niệm chương Vì sự nghiệp xây dựng QĐNDVN', value: 'KNC_VSNXD_QDNDVN' },
+        ];
       case 'CONG_HIEN':
         return [
           { label: 'Huân chương Bảo vệ Tổ quốc Hạng Ba', value: 'HCBVTQ_HANG_BA' },
@@ -398,7 +471,7 @@ export default function Step3SetTitles({
   };
 
   // Update title for a personnel/unit
-  const updateTitle = (id: string, field: string, value: any) => {
+  const updateTitle = async (id: string, field: string, value: any) => {
     // Validation cho CONG_HIEN: Kiểm tra điều kiện thời gian khi chọn danh hiệu
     if (field === 'danh_hieu' && proposalType === 'CONG_HIEN' && value) {
       const personnelRecord = personnel.find(p => p.id === id);
@@ -518,6 +591,149 @@ export default function Step3SetTitles({
               'Vui lòng tạo đề xuất riêng cho loại danh hiệu này.'
           );
           return;
+        }
+      }
+    }
+
+    // Validation cho HC_QKQT và KNC_VSNXD_QDNDVN: Chỉ cho phép 1 danh hiệu tương ứng
+    if (field === 'danh_hieu' && proposalType === 'HC_QKQT' && value !== 'HC_QKQT') {
+      message.warning(
+        'Loại đề xuất "Huy chương Quân kỳ quyết thắng" chỉ cho phép danh hiệu HC_QKQT.'
+      );
+      return;
+    }
+    if (
+      field === 'danh_hieu' &&
+      proposalType === 'KNC_VSNXD_QDNDVN' &&
+      value !== 'KNC_VSNXD_QDNDVN'
+    ) {
+      message.warning(
+        'Loại đề xuất "Kỷ niệm chương VSNXD QĐNDVN" chỉ cho phép danh hiệu KNC_VSNXD_QDNDVN.'
+      );
+      return;
+    }
+
+    // Validation cho HC_QKQT: Kiểm tra điều kiện thời gian >= 25 năm (không phân biệt nam nữ)
+    if (field === 'danh_hieu' && proposalType === 'HC_QKQT' && value === 'HC_QKQT') {
+      const personnelDetail = personnel.find(p => p.id === id);
+      if (personnelDetail) {
+        // Kiểm tra ngày nhập ngũ
+        if (!personnelDetail.ngay_nhap_ngu) {
+          message.error(
+            `Quân nhân ${personnelDetail.ho_ten} chưa có thông tin ngày nhập ngũ. Vui lòng cập nhật thông tin ngày nhập ngũ trước khi đề xuất.`
+          );
+          return;
+        }
+
+        // Tính số năm từ ngày nhập ngũ
+        const ngayNhapNgu = new Date(personnelDetail.ngay_nhap_ngu);
+        const ngayKetThuc = personnelDetail.ngay_xuat_ngu
+          ? new Date(personnelDetail.ngay_xuat_ngu)
+          : new Date();
+
+        let months = (ngayKetThuc.getFullYear() - ngayNhapNgu.getFullYear()) * 12;
+        months += ngayKetThuc.getMonth() - ngayNhapNgu.getMonth();
+        if (ngayKetThuc.getDate() < ngayNhapNgu.getDate()) {
+          months--;
+        }
+        months = Math.max(0, months);
+
+        const years = Math.floor(months / 12);
+
+        // Yêu cầu: >= 25 năm (không phân biệt nam nữ)
+        const requiredYears = 25;
+
+        if (years < requiredYears) {
+          message.error(
+            `Quân nhân ${personnelDetail.ho_ten} chưa đủ điều kiện đề xuất Huy chương Quân kỳ quyết thắng. ` +
+              `Yêu cầu: >= ${requiredYears} năm phục vụ. Hiện tại: ${years} năm. ` +
+              `Vui lòng kiểm tra lại thông tin ngày nhập ngũ của quân nhân này.`
+          );
+          return;
+        }
+      }
+    }
+
+    // Validation cho KNC_VSNXD_QDNDVN: Kiểm tra điều kiện thời gian theo giới tính
+    if (
+      field === 'danh_hieu' &&
+      proposalType === 'KNC_VSNXD_QDNDVN' &&
+      value === 'KNC_VSNXD_QDNDVN'
+    ) {
+      const personnelDetail = personnel.find(p => p.id === id);
+      if (personnelDetail) {
+        // Kiểm tra giới tính
+        if (
+          !personnelDetail.gioi_tinh ||
+          (personnelDetail.gioi_tinh !== 'NAM' && personnelDetail.gioi_tinh !== 'NU')
+        ) {
+          message.error(
+            `Quân nhân ${personnelDetail.ho_ten} chưa cập nhật thông tin giới tính. Vui lòng cập nhật thông tin giới tính trước khi đề xuất.`
+          );
+          return;
+        }
+
+        // Kiểm tra ngày nhập ngũ
+        if (!personnelDetail.ngay_nhap_ngu) {
+          message.error(
+            `Quân nhân ${personnelDetail.ho_ten} chưa có thông tin ngày nhập ngũ. Vui lòng cập nhật thông tin ngày nhập ngũ trước khi đề xuất.`
+          );
+          return;
+        }
+
+        // Tính số năm từ ngày nhập ngũ
+        const ngayNhapNgu = new Date(personnelDetail.ngay_nhap_ngu);
+        const ngayKetThuc = personnelDetail.ngay_xuat_ngu
+          ? new Date(personnelDetail.ngay_xuat_ngu)
+          : new Date();
+
+        let months = (ngayKetThuc.getFullYear() - ngayNhapNgu.getFullYear()) * 12;
+        months += ngayKetThuc.getMonth() - ngayNhapNgu.getMonth();
+        if (ngayKetThuc.getDate() < ngayNhapNgu.getDate()) {
+          months--;
+        }
+        months = Math.max(0, months);
+
+        const years = Math.floor(months / 12);
+
+        // Yêu cầu: nữ >=20 năm, nam >=25 năm
+        const requiredYears = personnelDetail.gioi_tinh === 'NU' ? 20 : 25;
+
+        if (years < requiredYears) {
+          message.error(
+            `Quân nhân ${personnelDetail.ho_ten} chưa đủ điều kiện để đề xuất Kỷ niệm chương Vì sự nghiệp xây dựng QĐNDVN. ` +
+              `Yêu cầu: ${
+                personnelDetail.gioi_tinh === 'NU' ? 'Nữ' : 'Nam'
+              } >= ${requiredYears} năm phục vụ (hiện tại: ${years} năm).`
+          );
+          return;
+        }
+      }
+    }
+
+    // Kiểm tra đề xuất trùng: cùng năm và cùng danh hiệu
+    if (field === 'danh_hieu' && value) {
+      const personnelDetail = personnel.find(p => p.id === id);
+      if (personnelDetail) {
+        try {
+          const response = await axiosInstance.get('/api/proposals/check-duplicate', {
+            params: {
+              personnel_id: id,
+              nam: nam,
+              danh_hieu: value,
+              proposal_type: proposalType,
+            },
+          });
+
+          if (response.data.success && response.data.data.exists) {
+            message.warning(
+              `${personnelDetail.ho_ten}: ${response.data.data.message}. Vui lòng kiểm tra lại.`
+            );
+            // Vẫn cho phép chọn nhưng cảnh báo
+          }
+        } catch (error: any) {
+          console.error('Error checking duplicate award:', error);
+          // Không block nếu lỗi API, chỉ log
         }
       }
     }
@@ -714,6 +930,54 @@ export default function Step3SetTitles({
     }
   };
 
+  // Hàm mở modal xem danh hiệu và NCKH
+  const handleViewDetails = async (record: Personnel) => {
+    setSelectedPersonnel(record);
+    setLoadingModal(true);
+    setModalVisible(true);
+
+    try {
+      // Lấy hồ sơ hằng năm (đã có tong_cstdcs và tong_nckh dạng JSON)
+      // Truyền năm lên để tính toán lại gợi ý với năm được chọn
+      const profileRes = await apiClient.getAnnualProfile(record.id, nam);
+      if (profileRes.success && profileRes.data) {
+        setAnnualProfile(profileRes.data);
+      } else {
+        setAnnualProfile(null);
+      }
+    } catch (error: any) {
+      console.error('Error fetching profile:', error);
+      message.error('Không thể tải thông tin chi tiết');
+      setAnnualProfile(null);
+    } finally {
+      setLoadingModal(false);
+    }
+  };
+
+  // Hàm mở modal xem lịch sử khen thưởng
+  const handleViewHistory = async (record: Personnel) => {
+    setSelectedPersonnel(record);
+    setLoadingModal(true);
+    setHistoryModalVisible(true);
+
+    try {
+      // Lấy hồ sơ hằng năm (đã có tong_cstdcs và tong_nckh dạng JSON)
+      // Truyền năm lên để tính toán lại gợi ý với năm được chọn
+      const profileRes = await apiClient.getAnnualProfile(record.id, nam);
+      if (profileRes.success && profileRes.data) {
+        setAnnualProfile(profileRes.data);
+      } else {
+        setAnnualProfile(null);
+      }
+    } catch (error: any) {
+      console.error('Error fetching profile:', error);
+      message.error('Không thể tải lịch sử khen thưởng');
+      setAnnualProfile(null);
+    } finally {
+      setLoadingModal(false);
+    }
+  };
+
   // Columns for CA_NHAN_HANG_NAM, NIEN_HAN, CONG_HIEN
   const standardColumns: ColumnsType<Personnel> = [
     {
@@ -721,7 +985,20 @@ export default function Step3SetTitles({
       key: 'index',
       width: 50,
       align: 'center',
-      render: (_, __, index) => index + 1,
+      render: (_, record, index) => (
+        <span
+          style={{ cursor: 'pointer', color: '#1890ff' }}
+          onClick={() => handleViewDetails(record)}
+          onMouseEnter={e => {
+            e.currentTarget.style.textDecoration = 'underline';
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.textDecoration = 'none';
+          }}
+        >
+          {index + 1}
+        </span>
+      ),
     },
     {
       title: 'Họ và tên',
@@ -760,8 +1037,27 @@ export default function Step3SetTitles({
         return <Text>{chucVu || '-'}</Text>;
       },
     },
-    // Thêm cột Tổng tháng cho đề xuất Niên hạn
-    ...(proposalType === 'NIEN_HAN'
+    // Thêm cột Giới tính cho đề xuất KNC_VSNXD_QDNDVN
+    ...(proposalType === 'KNC_VSNXD_QDNDVN'
+      ? [
+          {
+            title: 'Giới tính',
+            key: 'gioi_tinh',
+            width: 120,
+            align: 'center' as const,
+            render: (_: any, record: Personnel) => {
+              if (!record.gioi_tinh) {
+                return <Text type="danger">Chưa cập nhật</Text>;
+              }
+              return <Text>{record.gioi_tinh === 'NAM' ? 'Nam' : 'Nữ'}</Text>;
+            },
+          },
+        ]
+      : []),
+    // Thêm cột Tổng tháng cho đề xuất Niên hạn, HC_QKQT, KNC_VSNXD_QDNDVN
+    ...(proposalType === 'NIEN_HAN' ||
+    proposalType === 'HC_QKQT' ||
+    proposalType === 'KNC_VSNXD_QDNDVN'
       ? [
           {
             title: 'Tổng tháng',
@@ -805,6 +1101,17 @@ export default function Step3SetTitles({
       render: (_, record) => {
         const data = getTitleData(record.id);
 
+        // Đối với KNC_VSNXD_QDNDVN và HC_QKQT, chỉ có 1 lựa chọn nên hiển thị dạng text
+        if (proposalType === 'KNC_VSNXD_QDNDVN' || proposalType === 'HC_QKQT') {
+          const danhHieuMap: Record<string, string> = {
+            KNC_VSNXD_QDNDVN: 'Kỷ niệm chương Vì sự nghiệp xây dựng QĐNDVN',
+            HC_QKQT: 'Huân chương Quân kỳ quyết thắng',
+          };
+          const danhHieuValue =
+            proposalType === 'KNC_VSNXD_QDNDVN' ? 'KNC_VSNXD_QDNDVN' : 'HC_QKQT';
+          return <Text>{danhHieuMap[danhHieuValue]}</Text>;
+        }
+
         // Lọc danh hiệu dựa trên điều kiện thời gian cho CONG_HIEN
         let availableOptions = getDanhHieuOptions();
         if (proposalType === 'CONG_HIEN') {
@@ -835,6 +1142,22 @@ export default function Step3SetTitles({
           />
         );
       },
+    },
+    {
+      title: 'Xem lịch sử khen thưởng',
+      key: 'history',
+      width: 180,
+      align: 'center',
+      render: (_, record) => (
+        <Button
+          type="link"
+          icon={<HistoryOutlined />}
+          onClick={() => handleViewHistory(record)}
+          size="small"
+        >
+          Xem lịch sử
+        </Button>
+      ),
     },
     ...(proposalType === 'CONG_HIEN'
       ? [
@@ -870,7 +1193,20 @@ export default function Step3SetTitles({
       key: 'index',
       width: 50,
       align: 'center',
-      render: (_, __, index) => index + 1,
+      render: (_, record, index) => (
+        <span
+          style={{ cursor: 'pointer', color: '#1890ff' }}
+          onClick={() => handleViewDetails(record)}
+          onMouseEnter={e => {
+            e.currentTarget.style.textDecoration = 'underline';
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.textDecoration = 'none';
+          }}
+        >
+          {index + 1}
+        </span>
+      ),
     },
     {
       title: 'Họ và tên',
@@ -1046,6 +1382,206 @@ export default function Step3SetTitles({
           }}
         />
       )}
+
+      {/* Modal xem danh hiệu và NCKH */}
+      <Modal
+        title={
+          <span>
+            <EyeOutlined /> Thông tin danh hiệu và NCKH - {selectedPersonnel?.ho_ten}
+          </span>
+        }
+        open={modalVisible}
+        onCancel={() => {
+          setModalVisible(false);
+          setSelectedPersonnel(null);
+          setAnnualProfile(null);
+        }}
+        footer={[
+          <Button
+            key="close"
+            onClick={() => {
+              setModalVisible(false);
+              setSelectedPersonnel(null);
+              setAnnualProfile(null);
+            }}
+          >
+            Đóng
+          </Button>,
+        ]}
+        width={800}
+        loading={loadingModal}
+      >
+        {annualProfile && (
+          <Tabs
+            items={[
+              {
+                key: 'CSTDCS',
+                label: `Danh hiệu CSTDCS (${
+                  Array.isArray(annualProfile.tong_cstdcs) ? annualProfile.tong_cstdcs.length : 0
+                })`,
+                children: (
+                  <div>
+                    {Array.isArray(annualProfile.tong_cstdcs) &&
+                    annualProfile.tong_cstdcs.length > 0 ? (
+                      <Table<CSTDCSItem>
+                        dataSource={annualProfile.tong_cstdcs}
+                        rowKey={(record, index) => `${record.nam}-${index}`}
+                        pagination={false}
+                        size="small"
+                        columns={[
+                          {
+                            title: 'Năm',
+                            dataIndex: 'nam',
+                            key: 'nam',
+                            width: 100,
+                            align: 'center',
+                          },
+                          {
+                            title: 'Danh hiệu',
+                            dataIndex: 'danh_hieu',
+                            key: 'danh_hieu',
+                            width: 150,
+                            align: 'center',
+                            render: text => {
+                              const map: Record<string, string> = {
+                                CSTDCS: 'Chiến sĩ thi đua cơ sở',
+                                CSTT: 'Chiến sĩ thi đua',
+                              };
+                              return map[text] || text;
+                            },
+                          },
+                          {
+                            title: 'Nhận BKBQP',
+                            dataIndex: 'nhan_bkbqp',
+                            key: 'nhan_bkbqp',
+                            width: 120,
+                            align: 'center',
+                            render: value =>
+                              value ? <Tag color="green">Có</Tag> : <Tag>Không</Tag>,
+                          },
+                          {
+                            title: 'Nhận CSTDTQ',
+                            dataIndex: 'nhan_cstdtq',
+                            key: 'nhan_cstdtq',
+                            width: 120,
+                            align: 'center',
+                            render: value =>
+                              value ? <Tag color="green">Có</Tag> : <Tag>Không</Tag>,
+                          },
+                          {
+                            title: 'Số QĐ BKBQP',
+                            dataIndex: 'so_quyet_dinh_bkbqp',
+                            key: 'so_quyet_dinh_bkbqp',
+                            width: 150,
+                            align: 'center',
+                            render: text => text || '-',
+                          },
+                          {
+                            title: 'Số QĐ CSTDTQ',
+                            dataIndex: 'so_quyet_dinh_cstdtq',
+                            key: 'so_quyet_dinh_cstdtq',
+                            width: 150,
+                            align: 'center',
+                            render: text => text || '-',
+                          },
+                        ]}
+                      />
+                    ) : (
+                      <Text type="secondary">Chưa có danh hiệu CSTDCS</Text>
+                    )}
+                  </div>
+                ),
+              },
+              {
+                key: 'nckh',
+                label: `NCKH/SKKH (${
+                  Array.isArray(annualProfile.tong_nckh) ? annualProfile.tong_nckh.length : 0
+                })`,
+                children: (
+                  <div>
+                    {Array.isArray(annualProfile.tong_nckh) &&
+                    annualProfile.tong_nckh.length > 0 ? (
+                      <Table<NCKHItem>
+                        dataSource={annualProfile.tong_nckh}
+                        rowKey={(record, index) => `${record.nam}-${index}`}
+                        pagination={false}
+                        size="small"
+                        columns={[
+                          {
+                            title: 'Năm',
+                            dataIndex: 'nam',
+                            key: 'nam',
+                            width: 100,
+                            align: 'center',
+                          },
+                          {
+                            title: 'Loại',
+                            dataIndex: 'loai',
+                            key: 'loai',
+                            width: 150,
+                            align: 'center',
+                            render: text => {
+                              const map: Record<string, string> = {
+                                NCKH: 'Đề tài khoa học',
+                                SKKH: 'Sáng kiến khoa học',
+                              };
+                              return map[text] || text;
+                            },
+                          },
+                          {
+                            title: 'Mô tả',
+                            dataIndex: 'mo_ta',
+                            key: 'mo_ta',
+                            align: 'left',
+                          },
+                          {
+                            title: 'Trạng thái',
+                            dataIndex: 'status',
+                            key: 'status',
+                            width: 120,
+                            align: 'center',
+                            render: status => {
+                              const color = status === 'APPROVED' ? 'green' : 'orange';
+                              const text = status === 'APPROVED' ? 'Đã duyệt' : 'Chờ duyệt';
+                              return <Tag color={color}>{text}</Tag>;
+                            },
+                          },
+                          {
+                            title: 'Số QĐ',
+                            dataIndex: 'so_quyet_dinh',
+                            key: 'so_quyet_dinh',
+                            width: 150,
+                            align: 'center',
+                            render: text => text || '-',
+                          },
+                        ]}
+                      />
+                    ) : (
+                      <Text type="secondary">Chưa có thành tích NCKH/SKKH</Text>
+                    )}
+                  </div>
+                ),
+              },
+            ]}
+          />
+        )}
+        {!annualProfile && !loadingModal && (
+          <Text type="secondary">Không có dữ liệu hồ sơ hằng năm</Text>
+        )}
+      </Modal>
+
+      {/* Modal xem lịch sử khen thưởng */}
+      <PersonnelRewardHistoryModal
+        visible={historyModalVisible}
+        personnel={selectedPersonnel}
+        annualProfile={annualProfile}
+        loading={loadingModal}
+        onClose={() => {
+          setHistoryModalVisible(false);
+          setSelectedPersonnel(null);
+          setAnnualProfile(null);
+        }}
+      />
     </div>
   );
 }

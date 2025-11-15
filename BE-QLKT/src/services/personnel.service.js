@@ -299,6 +299,7 @@ class PersonnelService {
         co_quan_don_vi_id,
         don_vi_truc_thuoc_id,
         ho_ten,
+        gioi_tinh,
         ngay_sinh,
         cccd,
         ngay_nhap_ngu,
@@ -429,9 +430,20 @@ class PersonnelService {
         }
       }
 
+      // Validate giới tính: bắt buộc khi cập nhật
+      if (gioi_tinh !== undefined) {
+        if (!gioi_tinh || (gioi_tinh !== 'NAM' && gioi_tinh !== 'NU')) {
+          throw new Error('Giới tính là bắt buộc và phải là NAM hoặc NU');
+        }
+      } else if (!personnel.gioi_tinh) {
+        // Nếu chưa có giới tính và không được cung cấp trong lần cập nhật này
+        throw new Error('Giới tính là bắt buộc. Vui lòng cập nhật thông tin giới tính.');
+      }
+
       // Chuẩn bị data update
       const updateData = {
         ho_ten: ho_ten !== undefined ? ho_ten : personnel.ho_ten,
+        gioi_tinh: gioi_tinh !== undefined ? gioi_tinh : personnel.gioi_tinh,
         ngay_sinh:
           ngay_sinh !== undefined ? (ngay_sinh ? new Date(ngay_sinh) : null) : personnel.ngay_sinh,
         cccd: cccd !== undefined ? cccd : personnel.cccd,

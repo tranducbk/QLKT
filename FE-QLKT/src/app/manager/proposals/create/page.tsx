@@ -36,6 +36,8 @@ import { apiClient } from '@/lib/api-client';
 import axiosInstance from '@/utils/axiosInstance';
 import Step2SelectPersonnelCaNhanHangNam from './components/Step2SelectPersonnelCaNhanHangNam';
 import Step2SelectPersonnelNienHan from './components/Step2SelectPersonnelNienHan';
+import Step2SelectPersonnelHCQKQT from './components/Step2SelectPersonnelHCQKQT';
+import Step2SelectPersonnelKNCVSNXD from './components/Step2SelectPersonnelKNCVSNXD';
 import Step2SelectPersonnelCongHien from './components/Step2SelectPersonnelCongHien';
 import Step2SelectPersonnelNCKH from './components/Step2SelectPersonnelNCKH';
 import Step2SelectUnits from './components/Step2SelectUnits';
@@ -43,7 +45,14 @@ import Step3SetTitles from './components/Step3SetTitles';
 
 const { Title, Paragraph, Text } = Typography;
 
-type ProposalType = 'CA_NHAN_HANG_NAM' | 'DON_VI_HANG_NAM' | 'NIEN_HAN' | 'CONG_HIEN' | 'NCKH';
+type ProposalType =
+  | 'CA_NHAN_HANG_NAM'
+  | 'DON_VI_HANG_NAM'
+  | 'NIEN_HAN'
+  | 'HC_QKQT'
+  | 'KNC_VSNXD_QDNDVN'
+  | 'CONG_HIEN'
+  | 'NCKH';
 
 interface Personnel {
   id: string;
@@ -104,7 +113,17 @@ export default function CreateProposalPage() {
     NIEN_HAN: {
       icon: <ClockCircleOutlined />,
       label: 'Niên hạn',
-      description: 'HCCSVV các hạng, HC Quân kỳ, Kỷ niệm chương',
+      description: 'HCCSVV các hạng',
+    },
+    HC_QKQT: {
+      icon: <TrophyOutlined />,
+      label: 'Huy chương Quân kỳ quyết thắng',
+      description: 'HC Quân kỳ quyết thắng',
+    },
+    KNC_VSNXD_QDNDVN: {
+      icon: <TrophyOutlined />,
+      label: 'Kỷ niệm chương VSNXD QĐNDVN',
+      description: 'Kỷ niệm chương Vì sự nghiệp xây dựng QĐNDVN',
     },
     CONG_HIEN: {
       icon: <HeartOutlined />,
@@ -131,10 +150,12 @@ export default function CreateProposalPage() {
   };
   const steps = getSteps();
 
-  // Đảm bảo năm luôn là năm hiện tại khi component mount
+  // Chỉ set năm hiện tại lần đầu khi component mount (nếu chưa có giá trị)
   useEffect(() => {
-    const currentYear = new Date().getFullYear();
-    setNam(currentYear);
+    if (!nam) {
+      const currentYear = new Date().getFullYear();
+      setNam(currentYear);
+    }
   }, []);
 
   // Fetch personnel/unit details when reaching Step 5 (Review)
@@ -213,7 +234,169 @@ export default function CreateProposalPage() {
   };
 
   // Handle next step
-  const handleNext = () => {
+  const handleNext = async () => {
+    // Validation đặc biệt cho KNC_VSNXD_QDNDVN: Kiểm tra giới tính và ngày nhập ngũ khi chuyển từ Step 2 sang Step 3
+    if (
+      currentStep === 1 &&
+      proposalType === 'KNC_VSNXD_QDNDVN' &&
+      selectedPersonnelIds.length > 0
+    ) {
+      try {
+        const promises = selectedPersonnelIds.map(id => axiosInstance.get(`/api/personnel/${id}`));
+        const responses = await Promise.all(promises);
+        const personnelData = responses.filter(r => r.data.success).map(r => r.data.data);
+
+        const missingGender = personnelData.filter(
+          p => !p.gioi_tinh || (p.gioi_tinh !== 'NAM' && p.gioi_tinh !== 'NU')
+        );
+        const missingNgayNhapNgu = personnelData.filter(p => !p.ngay_nhap_ngu);
+
+        if (missingGender.length > 0 || missingNgayNhapNgu.length > 0) {
+          const errors = [];
+          if (missingGender.length > 0) {
+            const names = missingGender.map(p => p.ho_ten).join(', ');
+            errors.push(`chưa cập nhật giới tính: ${names}`);
+          }
+          if (missingNgayNhapNgu.length > 0) {
+            const names = missingNgayNhapNgu.map(p => p.ho_ten).join(', ');
+            errors.push(`chưa cập nhật ngày nhập ngũ: ${names}`);
+          }
+          antMessage.error(
+            `Một số quân nhân ${errors.join(' và ')}. Vui lòng cập nhật trước khi tiếp tục.`
+          );
+          return;
+        }
+      } catch (error: any) {
+        console.error('Error validating gender:', error);
+        antMessage.error('Lỗi khi kiểm tra thông tin quân nhân');
+        return;
+      }
+    }
+
+    // Validation cho NIEN_HAN: Kiểm tra ngày nhập ngũ khi chuyển từ Step 2 sang Step 3
+    if (currentStep === 1 && proposalType === 'NIEN_HAN' && selectedPersonnelIds.length > 0) {
+      try {
+        const promises = selectedPersonnelIds.map(id => axiosInstance.get(`/api/personnel/${id}`));
+        const responses = await Promise.all(promises);
+        const personnelData = responses.filter(r => r.data.success).map(r => r.data.data);
+
+        const missingNgayNhapNgu = personnelData.filter(p => !p.ngay_nhap_ngu);
+
+        if (missingNgayNhapNgu.length > 0) {
+          const names = missingNgayNhapNgu.map(p => p.ho_ten).join(', ');
+          antMessage.error(
+            `Một số quân nhân chưa cập nhật ngày nhập ngũ: ${names}. Vui lòng cập nhật trước khi tiếp tục.`
+          );
+          return;
+        }
+      } catch (error: any) {
+        console.error('Error validating ngay_nhap_ngu:', error);
+        antMessage.error('Lỗi khi kiểm tra thông tin quân nhân');
+        return;
+      }
+    }
+
+    // Validation cho HC_QKQT: Kiểm tra >= 25 năm phục vụ khi chuyển từ Step 2 sang Step 3
+    if (currentStep === 1 && proposalType === 'HC_QKQT' && selectedPersonnelIds.length > 0) {
+      try {
+        const promises = selectedPersonnelIds.map(id => axiosInstance.get(`/api/personnel/${id}`));
+        const responses = await Promise.all(promises);
+        const personnelData = responses.filter(r => r.data.success).map(r => r.data.data);
+
+        const ineligiblePersonnel: Array<{ ho_ten: string; reason: string }> = [];
+
+        for (const p of personnelData) {
+          if (!p.ngay_nhap_ngu) {
+            ineligiblePersonnel.push({
+              ho_ten: p.ho_ten,
+              reason: 'Chưa cập nhật ngày nhập ngũ',
+            });
+            continue;
+          }
+
+          // Tính số năm phục vụ
+          const ngayNhapNgu = new Date(p.ngay_nhap_ngu);
+          const ngayKetThuc = p.ngay_xuat_ngu ? new Date(p.ngay_xuat_ngu) : new Date();
+
+          let months = (ngayKetThuc.getFullYear() - ngayNhapNgu.getFullYear()) * 12;
+          months += ngayKetThuc.getMonth() - ngayNhapNgu.getMonth();
+          if (ngayKetThuc.getDate() < ngayNhapNgu.getDate()) {
+            months--;
+          }
+          months = Math.max(0, months);
+
+          const years = Math.floor(months / 12);
+
+          // Yêu cầu: >= 25 năm (không phân biệt nam nữ)
+          if (years < 25) {
+            ineligiblePersonnel.push({
+              ho_ten: p.ho_ten,
+              reason: `Chưa đủ 25 năm phục vụ (hiện tại: ${years} năm)`,
+            });
+          }
+        }
+
+        if (ineligiblePersonnel.length > 0) {
+          const names = ineligiblePersonnel.map(p => `${p.ho_ten} (${p.reason})`).join(', ');
+          antMessage.error(
+            `Một số quân nhân chưa đủ điều kiện đề xuất Huy chương Quân kỳ quyết thắng (yêu cầu >= 25 năm): ${names}. Vui lòng cập nhật trước khi tiếp tục.`
+          );
+          return;
+        }
+      } catch (error: any) {
+        console.error('Error validating HC_QKQT:', error);
+        antMessage.error('Lỗi khi kiểm tra thông tin quân nhân');
+        return;
+      }
+    }
+
+    // Gọi API recalculate khi chuyển từ bước 2 sang bước 3 cho đề xuất CA_NHAN_HANG_NAM
+    if (
+      currentStep === 1 &&
+      proposalType === 'CA_NHAN_HANG_NAM' &&
+      selectedPersonnelIds.length > 0 &&
+      canProceedToNextStep()
+    ) {
+      try {
+        setLoading(true);
+        antMessage.loading('Đang tính toán gợi ý...', 0);
+
+        // Gọi API recalculate cho từng quân nhân đã chọn, truyền năm được chọn
+        const recalculatePromises = selectedPersonnelIds.map(personnelId =>
+          apiClient.recalculateProfile(personnelId, nam)
+        );
+
+        const results = await Promise.all(recalculatePromises);
+        const failed = results.filter(r => !r.success);
+
+        antMessage.destroy();
+
+        if (failed.length > 0) {
+          console.warn('Một số quân nhân không thể tính toán gợi ý:', failed);
+          antMessage.warning(
+            `Đã tính toán gợi ý cho ${results.length - failed.length}/${results.length} quân nhân. Một số quân nhân có thể chưa có đủ dữ liệu.`
+          );
+        } else {
+          antMessage.success(`Đã tính toán gợi ý cho ${results.length} quân nhân`);
+        }
+
+        // Sau khi tính toán xong, mới chuyển sang bước 3
+        setCurrentStep(currentStep + 1);
+        return; // Return để không chạy logic chuyển step ở dưới
+      } catch (error: any) {
+        console.error('Error recalculating profiles:', error);
+        antMessage.destroy();
+        antMessage.error('Lỗi khi tính toán gợi ý. Vui lòng thử lại.');
+        // Nếu lỗi, vẫn cho phép chuyển step nhưng có cảnh báo
+        if (canProceedToNextStep()) {
+          setCurrentStep(currentStep + 1);
+        }
+        return;
+      } finally {
+        setLoading(false);
+      }
+    }
+
     if (canProceedToNextStep()) {
       setCurrentStep(currentStep + 1);
     } else {
@@ -244,6 +427,129 @@ export default function CreateProposalPage() {
   const handleSubmit = async () => {
     try {
       setLoading(true);
+
+      // Validation cho KNC_VSNXD_QDNDVN: Kiểm tra giới tính và ngày nhập ngũ
+      if (proposalType === 'KNC_VSNXD_QDNDVN' && selectedPersonnelIds.length > 0) {
+        try {
+          const promises = selectedPersonnelIds.map(id =>
+            axiosInstance.get(`/api/personnel/${id}`)
+          );
+          const responses = await Promise.all(promises);
+          const personnelData = responses.filter(r => r.data.success).map(r => r.data.data);
+
+          const missingGender = personnelData.filter(
+            p => !p.gioi_tinh || (p.gioi_tinh !== 'NAM' && p.gioi_tinh !== 'NU')
+          );
+          const missingNgayNhapNgu = personnelData.filter(p => !p.ngay_nhap_ngu);
+
+          if (missingGender.length > 0 || missingNgayNhapNgu.length > 0) {
+            const errors = [];
+            if (missingGender.length > 0) {
+              const names = missingGender.map(p => p.ho_ten).join(', ');
+              errors.push(`chưa cập nhật giới tính: ${names}`);
+            }
+            if (missingNgayNhapNgu.length > 0) {
+              const names = missingNgayNhapNgu.map(p => p.ho_ten).join(', ');
+              errors.push(`chưa cập nhật ngày nhập ngũ: ${names}`);
+            }
+            antMessage.error(
+              `Một số quân nhân ${errors.join(' và ')}. Vui lòng cập nhật trước khi đề xuất.`
+            );
+            setLoading(false);
+            return;
+          }
+        } catch (error: any) {
+          console.error('Error validating gender:', error);
+          antMessage.error('Lỗi khi kiểm tra thông tin quân nhân');
+          setLoading(false);
+          return;
+        }
+      }
+
+      // Validation cho NIEN_HAN: Kiểm tra ngày nhập ngũ
+      if (proposalType === 'NIEN_HAN' && selectedPersonnelIds.length > 0) {
+        try {
+          const promises = selectedPersonnelIds.map(id =>
+            axiosInstance.get(`/api/personnel/${id}`)
+          );
+          const responses = await Promise.all(promises);
+          const personnelData = responses.filter(r => r.data.success).map(r => r.data.data);
+
+          const missingNgayNhapNgu = personnelData.filter(p => !p.ngay_nhap_ngu);
+
+          if (missingNgayNhapNgu.length > 0) {
+            const names = missingNgayNhapNgu.map(p => p.ho_ten).join(', ');
+            antMessage.error(
+              `Một số quân nhân chưa cập nhật ngày nhập ngũ: ${names}. Vui lòng cập nhật trước khi đề xuất.`
+            );
+            setLoading(false);
+            return;
+          }
+        } catch (error: any) {
+          console.error('Error validating ngay_nhap_ngu:', error);
+          antMessage.error('Lỗi khi kiểm tra thông tin quân nhân');
+          setLoading(false);
+          return;
+        }
+      }
+
+      // Validation cho HC_QKQT: Kiểm tra >= 25 năm phục vụ
+      if (proposalType === 'HC_QKQT' && selectedPersonnelIds.length > 0) {
+        try {
+          const promises = selectedPersonnelIds.map(id =>
+            axiosInstance.get(`/api/personnel/${id}`)
+          );
+          const responses = await Promise.all(promises);
+          const personnelData = responses.filter(r => r.data.success).map(r => r.data.data);
+
+          const ineligiblePersonnel: Array<{ ho_ten: string; reason: string }> = [];
+
+          for (const p of personnelData) {
+            if (!p.ngay_nhap_ngu) {
+              ineligiblePersonnel.push({
+                ho_ten: p.ho_ten,
+                reason: 'Chưa cập nhật ngày nhập ngũ',
+              });
+              continue;
+            }
+
+            // Tính số năm phục vụ
+            const ngayNhapNgu = new Date(p.ngay_nhap_ngu);
+            const ngayKetThuc = p.ngay_xuat_ngu ? new Date(p.ngay_xuat_ngu) : new Date();
+
+            let months = (ngayKetThuc.getFullYear() - ngayNhapNgu.getFullYear()) * 12;
+            months += ngayKetThuc.getMonth() - ngayNhapNgu.getMonth();
+            if (ngayKetThuc.getDate() < ngayNhapNgu.getDate()) {
+              months--;
+            }
+            months = Math.max(0, months);
+
+            const years = Math.floor(months / 12);
+
+            // Yêu cầu: >= 25 năm (không phân biệt nam nữ)
+            if (years < 25) {
+              ineligiblePersonnel.push({
+                ho_ten: p.ho_ten,
+                reason: `Chưa đủ 25 năm phục vụ (hiện tại: ${years} năm)`,
+              });
+            }
+          }
+
+          if (ineligiblePersonnel.length > 0) {
+            const names = ineligiblePersonnel.map(p => `${p.ho_ten} (${p.reason})`).join(', ');
+            antMessage.error(
+              `Một số quân nhân chưa đủ điều kiện đề xuất Huy chương Quân kỳ quyết thắng (yêu cầu >= 25 năm): ${names}. Vui lòng cập nhật trước khi đề xuất.`
+            );
+            setLoading(false);
+            return;
+          }
+        } catch (error: any) {
+          console.error('Error validating HC_QKQT:', error);
+          antMessage.error('Lỗi khi kiểm tra thông tin quân nhân');
+          setLoading(false);
+          return;
+        }
+      }
 
       // Tạo FormData
       const formData = new FormData();
@@ -285,6 +591,11 @@ export default function CreateProposalPage() {
       setAttachedFiles([]);
       setPersonnelDetails([]);
       setUnitDetails([]);
+
+      // Chuyển về trang danh sách đề xuất sau 1 giây
+      setTimeout(() => {
+        router.push('/manager/proposals');
+      }, 1000);
     } catch (error: any) {
       antMessage.error(error.message || 'Lỗi khi gửi đề xuất');
     } finally {
@@ -377,6 +688,24 @@ export default function CreateProposalPage() {
                 onNamChange={setNam}
               />
             );
+          case 'HC_QKQT':
+            return (
+              <Step2SelectPersonnelHCQKQT
+                selectedPersonnelIds={selectedPersonnelIds}
+                onPersonnelChange={setSelectedPersonnelIds}
+                nam={nam}
+                onNamChange={setNam}
+              />
+            );
+          case 'KNC_VSNXD_QDNDVN':
+            return (
+              <Step2SelectPersonnelKNCVSNXD
+                selectedPersonnelIds={selectedPersonnelIds}
+                onPersonnelChange={setSelectedPersonnelIds}
+                nam={nam}
+                onNamChange={setNam}
+              />
+            );
           case 'CONG_HIEN':
             return (
               <Step2SelectPersonnelCongHien
@@ -407,6 +736,7 @@ export default function CreateProposalPage() {
             proposalType={proposalType}
             titleData={titleData}
             onTitleDataChange={setTitleData}
+            nam={nam}
           />
         );
 
@@ -567,7 +897,11 @@ export default function CreateProposalPage() {
           );
 
           // Thêm cột Tổng tháng cho đề xuất Niên hạn
-          if (proposalType === 'NIEN_HAN') {
+          if (
+            proposalType === 'NIEN_HAN' ||
+            proposalType === 'HC_QKQT' ||
+            proposalType === 'KNC_VSNXD_QDNDVN'
+          ) {
             // Hàm tính tổng số tháng
             const calculateTotalMonths = (
               ngayNhapNgu: string | Date | null | undefined,
@@ -699,6 +1033,10 @@ export default function CreateProposalPage() {
                 HCCSVV_HANG_BA: 'Huân chương Chiến sỹ Vẻ vang Hạng Ba',
                 HCCSVV_HANG_NHI: 'Huân chương Chiến sỹ Vẻ vang Hạng Nhì',
                 HCCSVV_HANG_NHAT: 'Huân chương Chiến sỹ Vẻ vang Hạng Nhất',
+                // HC_QKQT
+                HC_QKQT: 'Huy chương Quân kỳ quyết thắng',
+                // KNC_VSNXD_QDNDVN
+                KNC_VSNXD_QDNDVN: 'Kỷ niệm chương Vì sự nghiệp xây dựng QĐNDVN',
                 // Cống hiến
                 HCBVTQ_HANG_BA: 'Huân chương Bảo vệ Tổ quốc Hạng Ba',
                 HCBVTQ_HANG_NHI: 'Huân chương Bảo vệ Tổ quốc Hạng Nhì',
@@ -754,7 +1092,7 @@ export default function CreateProposalPage() {
               title={
                 proposalType === 'DON_VI_HANG_NAM'
                   ? 'Danh sách đơn vị và danh hiệu'
-                  : 'Danh sách cán bộ và danh hiệu'
+                  : 'Danh sách quân nhân và danh hiệu'
               }
             >
               <Table
@@ -765,7 +1103,14 @@ export default function CreateProposalPage() {
                 size="small"
                 bordered
                 scroll={{
-                  x: proposalType === 'NCKH' ? 1100 : proposalType === 'NIEN_HAN' ? 1150 : 1000,
+                  x:
+                    proposalType === 'NCKH'
+                      ? 1100
+                      : proposalType === 'NIEN_HAN' ||
+                        proposalType === 'HC_QKQT' ||
+                        proposalType === 'KNC_VSNXD_QDNDVN'
+                      ? 1150
+                      : 1000,
                 }}
                 locale={{
                   emptyText: 'Không có dữ liệu',
@@ -804,10 +1149,18 @@ export default function CreateProposalPage() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 8 }}>
           <Button
             icon={<ArrowLeftOutlined />}
-            onClick={() => router.push('/manager/proposals')}
+            onClick={() => {
+              if (currentStep === 0) {
+                // Nếu đang ở bước chọn loại đề xuất, quay về trang danh sách
+                router.push('/manager/proposals');
+              } else {
+                // Nếu đang ở bước khác, quay lại bước chọn loại đề xuất
+                setCurrentStep(0);
+              }
+            }}
             style={{ marginBottom: 0 }}
           >
-            Quay lại danh sách
+            {currentStep === 0 ? 'Quay lại danh sách' : 'Quay lại chọn loại đề xuất'}
           </Button>
         </div>
         <Title level={2} style={{ marginBottom: 8 }}>
