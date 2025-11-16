@@ -77,6 +77,16 @@ Hệ thống sử dụng cơ chế JWT (JSON Web Token) với Access Token (th�
 
 ## 🏆 5. Quản lý Khen thưởng (Input - Nghiệp vụ chính)
 
+> **📚 Tài liệu Chi tiết**: Xem thêm các file trong thư mục `Document/` để biết chi tiết về từng loại khen thưởng:
+> - [Cá nhân Hằng năm](./Document/01-CA-NHAN-HANG-NAM.md)
+> - [Đơn vị Hằng năm](./Document/02-DON-VI-HANG-NAM.md)
+> - [Niên hạn](./Document/03-NIEN-HAN.md)
+> - [Cống hiến](./Document/04-CONG-HIEN.md)
+> - [Huân chương Quân kỳ Quyết thắng](./Document/05-HC-QKQT.md)
+> - [Kỷ niệm chương VSNXD QĐNDVN](./Document/06-KNC-VSNXD-QDNDVN.md)
+> - [Đột xuất](./Document/07-DOT-XUAT.md)
+> - [Thành tích Khoa học](./Document/08-THANH-TICH-KHOA-HOC.md)
+
 ### 5.1. Danh hiệu hằng năm (Annual Rewards)
 
 | Method   | Endpoint                   | Chức năng chi tiết                                                  | Request Body / Params                                           | Vai trò              |

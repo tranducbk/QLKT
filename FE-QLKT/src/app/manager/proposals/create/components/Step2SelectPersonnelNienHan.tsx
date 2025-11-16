@@ -14,6 +14,8 @@ interface Personnel {
   id: string;
   ho_ten: string;
   cccd: string;
+  cap_bac?: string;
+  gioi_tinh?: string | null;
   co_quan_don_vi_id: string;
   don_vi_truc_thuoc_id: string;
   chuc_vu_id: string;
@@ -245,6 +247,11 @@ export default function Step2SelectPersonnelNienHan({
 
   // Kiểm tra quân nhân có thể đề xuất hạng tiếp theo không
   const canProposeNextRank = (record: Personnel) => {
+    // Kiểm tra giới tính
+    if (!record.gioi_tinh || (record.gioi_tinh !== 'NAM' && record.gioi_tinh !== 'NU')) {
+      return false;
+    }
+
     if (!record.ngay_nhap_ngu) return false;
 
     const eligibility = checkHCCSVVEligibility(record);
@@ -329,6 +336,18 @@ export default function Step2SelectPersonnelNienHan({
             </Text>
           </div>
         );
+      },
+    },
+    {
+      title: 'Giới tính',
+      key: 'gioi_tinh',
+      width: 120,
+      align: 'center',
+      render: (_, record) => {
+        if (!record.gioi_tinh) {
+          return <Text type="danger">Chưa cập nhật</Text>;
+        }
+        return <Text>{record.gioi_tinh === 'NAM' ? 'Nam' : 'Nữ'}</Text>;
       },
     },
     {
@@ -498,11 +517,15 @@ export default function Step2SelectPersonnelNienHan({
       onPersonnelChange(selectedRowKeys as string[]);
     },
     getCheckboxProps: (record: Personnel) => {
+      const missingGender =
+        !record.gioi_tinh || (record.gioi_tinh !== 'NAM' && record.gioi_tinh !== 'NU');
       const missingNgayNhapNgu = !record.ngay_nhap_ngu;
       const canPropose = canProposeNextRank(record);
 
       let title = '';
-      if (missingNgayNhapNgu) {
+      if (missingGender) {
+        title = 'Quân nhân này chưa cập nhật giới tính. Vui lòng cập nhật trước khi đề xuất.';
+      } else if (missingNgayNhapNgu) {
         title = 'Quân nhân này chưa cập nhật ngày nhập ngũ. Vui lòng cập nhật trước khi đề xuất.';
       } else if (!canPropose) {
         const eligibility = checkHCCSVVEligibility(record);
@@ -523,17 +546,25 @@ export default function Step2SelectPersonnelNienHan({
       }
 
       return {
-        disabled: missingNgayNhapNgu || !canPropose,
+        disabled: missingGender || missingNgayNhapNgu || !canPropose,
         title,
       };
     },
     onSelect: (record: Personnel, selected: boolean) => {
       if (selected) {
+        const missingGender =
+          !record.gioi_tinh || (record.gioi_tinh !== 'NAM' && record.gioi_tinh !== 'NU');
+        if (missingGender) {
+          message.warning(
+            `Quân nhân ${record.ho_ten} chưa cập nhật giới tính. Vui lòng cập nhật trước khi đề xuất.`
+          );
+          return false;
+        }
         if (!record.ngay_nhap_ngu) {
-        message.warning(
-          `Quân nhân ${record.ho_ten} chưa cập nhật ngày nhập ngũ. Vui lòng cập nhật trước khi đề xuất.`
-        );
-        return false;
+          message.warning(
+            `Quân nhân ${record.ho_ten} chưa cập nhật ngày nhập ngũ. Vui lòng cập nhật trước khi đề xuất.`
+          );
+          return false;
         }
         if (!canProposeNextRank(record)) {
           const eligibility = checkHCCSVVEligibility(record);
@@ -669,15 +700,26 @@ export default function Step2SelectPersonnelNienHan({
         </Text>
       </div>
 
-      {/* Cảnh báo về quân nhân chưa có ngày nhập ngũ */}
+      {/* Cảnh báo về quân nhân chưa có giới tính hoặc ngày nhập ngũ */}
       {(() => {
+        const missingGenderCount = filteredPersonnel.filter(
+          p => !p.gioi_tinh || (p.gioi_tinh !== 'NAM' && p.gioi_tinh !== 'NU')
+        ).length;
         const missingNgayNhapNguCount = filteredPersonnel.filter(p => !p.ngay_nhap_ngu).length;
 
-        if (missingNgayNhapNguCount > 0) {
+        if (missingGenderCount > 0 || missingNgayNhapNguCount > 0) {
+          const messages = [];
+          if (missingGenderCount > 0) {
+            messages.push(`${missingGenderCount} quân nhân chưa cập nhật giới tính`);
+          }
+          if (missingNgayNhapNguCount > 0) {
+            messages.push(`${missingNgayNhapNguCount} quân nhân chưa cập nhật ngày nhập ngũ`);
+          }
+
           return (
             <Alert
               message="Cảnh báo"
-              description={`Có ${missingNgayNhapNguCount} quân nhân chưa cập nhật ngày nhập ngũ. Vui lòng cập nhật trước khi đề xuất.`}
+              description={`Có ${messages.join(', ')}. Vui lòng cập nhật trước khi đề xuất.`}
               type="warning"
               showIcon
               style={{ marginBottom: 16 }}
@@ -694,6 +736,13 @@ export default function Step2SelectPersonnelNienHan({
         rowSelection={rowSelection}
         loading={loading}
         rowClassName={record => {
+          // Tô màu dòng quân nhân chưa có giới tính
+          const missingGender =
+            !record.gioi_tinh || (record.gioi_tinh !== 'NAM' && record.gioi_tinh !== 'NU');
+          if (missingGender) {
+            return 'row-missing-gender';
+          }
+
           // Tô màu dòng quân nhân chưa có ngày nhập ngũ
           if (!record.ngay_nhap_ngu) {
             return 'row-missing-ngay-nhap-ngu';
@@ -710,7 +759,7 @@ export default function Step2SelectPersonnelNienHan({
             // Nếu chưa nhận Hạng Ba và chưa đủ 10 năm
             if (!hasHangBa && eligibility && !eligibility.hangBa.eligible) {
               return 'row-not-eligible-hccsvv';
-          }
+            }
             // Nếu đã nhận Hạng Ba nhưng chưa nhận Hạng Nhì và chưa đủ 15 năm
             if (hasHangBa && !hasHangNhi && eligibility && !eligibility.hangNhi.eligible) {
               return 'row-partial-eligible-hccsvv';

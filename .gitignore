@@ -75,10 +75,11 @@ BE-QLKT/src/generated/
 BE-QLKT/uploads/
 BE-QLKT/temp/
 
-# Documentation (ignore all .md files except README.md and QLKT.md)
+# Documentation (ignore all .md files except README.md, QLKT.md, and Document/)
 *.md
 !README.md
 !QLKT.md
+!Document/**/*.md
 
 # Other files
 DOCS_TREE.txt

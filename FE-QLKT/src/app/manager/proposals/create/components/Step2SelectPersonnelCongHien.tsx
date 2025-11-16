@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Table, Input, Select, Space, Alert, Typography, InputNumber } from 'antd';
+import { Table, Input, Select, Space, Alert, Typography, InputNumber, message } from 'antd';
 import { SearchOutlined, TeamOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import axiosInstance from '@/utils/axiosInstance';
@@ -14,6 +14,7 @@ interface Personnel {
   id: string;
   ho_ten: string;
   cccd: string;
+  gioi_tinh?: string | null;
   co_quan_don_vi_id: string;
   don_vi_truc_thuoc_id: string;
   chuc_vu_id: string;
@@ -240,6 +241,18 @@ export default function Step2SelectPersonnelCongHien({
       },
     },
     {
+      title: 'Giới tính',
+      key: 'gioi_tinh',
+      width: 120,
+      align: 'center',
+      render: (_, record) => {
+        if (!record.gioi_tinh) {
+          return <Text type="danger">Chưa cập nhật</Text>;
+        }
+        return <Text>{record.gioi_tinh === 'NAM' ? 'Nam' : 'Nữ'}</Text>;
+      },
+    },
+    {
       title: 'Tổng thời gian (0.7)',
       key: 'total_time_0_7',
       width: 150,
@@ -266,6 +279,29 @@ export default function Step2SelectPersonnelCongHien({
     selectedRowKeys: selectedPersonnelIds,
     onChange: (selectedRowKeys: React.Key[]) => {
       onPersonnelChange(selectedRowKeys as string[]);
+    },
+    getCheckboxProps: (record: Personnel) => {
+      const missingGender =
+        !record.gioi_tinh || (record.gioi_tinh !== 'NAM' && record.gioi_tinh !== 'NU');
+
+      return {
+        disabled: missingGender,
+        title: missingGender
+          ? 'Quân nhân này chưa cập nhật giới tính. Vui lòng cập nhật trước khi đề xuất.'
+          : '',
+      };
+    },
+    onSelect: (record: Personnel, selected: boolean) => {
+      if (selected) {
+        const missingGender =
+          !record.gioi_tinh || (record.gioi_tinh !== 'NAM' && record.gioi_tinh !== 'NU');
+        if (missingGender) {
+          message.warning(
+            `Quân nhân ${record.ho_ten} chưa cập nhật giới tính. Vui lòng cập nhật trước khi đề xuất.`
+          );
+          return false;
+        }
+      }
     },
   };
 
@@ -372,12 +408,41 @@ export default function Step2SelectPersonnelCongHien({
         </Text>
       </div>
 
+      {/* Cảnh báo về quân nhân chưa có giới tính */}
+      {(() => {
+        const missingGenderCount = filteredPersonnel.filter(
+          p => !p.gioi_tinh || (p.gioi_tinh !== 'NAM' && p.gioi_tinh !== 'NU')
+        ).length;
+
+        if (missingGenderCount > 0) {
+          return (
+            <Alert
+              message="Cảnh báo"
+              description={`Có ${missingGenderCount} quân nhân chưa cập nhật giới tính. Vui lòng cập nhật trước khi đề xuất.`}
+              type="warning"
+              showIcon
+              style={{ marginBottom: 16 }}
+            />
+          );
+        }
+        return null;
+      })()}
+
       <Table
         columns={columns}
         dataSource={filteredPersonnel}
         rowKey="id"
         rowSelection={rowSelection}
         loading={loading}
+        rowClassName={record => {
+          // Tô màu dòng quân nhân chưa có giới tính
+          const missingGender =
+            !record.gioi_tinh || (record.gioi_tinh !== 'NAM' && record.gioi_tinh !== 'NU');
+          if (missingGender) {
+            return 'row-missing-gender';
+          }
+          return '';
+        }}
         pagination={{
           pageSize: 20,
           showSizeChanger: true,

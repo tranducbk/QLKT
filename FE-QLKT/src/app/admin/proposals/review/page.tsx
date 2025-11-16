@@ -81,13 +81,13 @@ export default function ProposalReviewPage() {
       CA_NHAN_HANG_NAM: 'Cá nhân hằng năm',
       DON_VI_HANG_NAM: 'Đơn vị hằng năm',
       NIEN_HAN: 'Niên hạn',
-      HC_QKQT: 'Huân chương Quân kỳ quyết thắng',
+      HC_QKQT: 'Huy chương Quân kỳ Quyết thắng',
       KNC_VSNXD_QDNDVN: 'Kỷ niệm chương VSNXD QĐNDVN',
       CONG_HIEN: 'Cống hiến',
       NCKH: 'Nghiên cứu khoa học',
       DOT_XUAT: 'Đột xuất',
     };
-    return loaiDeXuat ? (typeMap[loaiDeXuat] || loaiDeXuat) : '-';
+    return loaiDeXuat ? typeMap[loaiDeXuat] || loaiDeXuat : '-';
   };
 
   const columns = [
@@ -216,16 +216,16 @@ export default function ProposalReviewPage() {
                 activeTab === 'pending'
                   ? 'Đề xuất đang chờ phê duyệt'
                   : activeTab === 'approved'
-                    ? 'Đề xuất đã được phê duyệt'
-                    : 'Đề xuất đã bị từ chối'
+                  ? 'Đề xuất đã được phê duyệt'
+                  : 'Đề xuất đã bị từ chối'
               }
               extra={
                 <Paragraph style={{ margin: 0, color: '#666' }}>
                   {activeTab === 'pending'
                     ? "Nhấn 'Xem và Duyệt' để kiểm tra và phê duyệt đề xuất"
                     : activeTab === 'approved'
-                      ? 'Danh sách các đề xuất đã được phê duyệt và import vào hệ thống'
-                      : 'Danh sách các đề xuất đã bị từ chối'}
+                    ? 'Danh sách các đề xuất đã được phê duyệt và import vào hệ thống'
+                    : 'Danh sách các đề xuất đã bị từ chối'}
                 </Paragraph>
               }
             >
@@ -244,8 +244,8 @@ export default function ProposalReviewPage() {
                         {activeTab === 'pending'
                           ? 'Chưa có đề xuất chờ phê duyệt'
                           : activeTab === 'approved'
-                            ? 'Chưa có đề xuất nào được phê duyệt'
-                            : 'Chưa có đề xuất nào bị từ chối'}
+                          ? 'Chưa có đề xuất nào được phê duyệt'
+                          : 'Chưa có đề xuất nào bị từ chối'}
                       </div>
                     </div>
                   }

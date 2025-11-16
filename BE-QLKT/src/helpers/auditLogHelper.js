@@ -17,7 +17,7 @@ const createLogDescription = {
         CONG_HIEN: 'Cống hiến',
         DOT_XUAT: 'Đột xuất',
         NCKH: 'ĐTKH/SKKH',
-        HC_QKQT: 'Huân chương Quân kỳ Quyết thắng',
+        HC_QKQT: 'Huy chương Quân kỳ Quyết thắng',
         KNC_VSNXD_QDNDVN: 'Kỷ niệm chương Vì sự nghiệp xây dựng QĐNDVN',
       };
       const typeName = typeNames[proposalType] || proposalType;

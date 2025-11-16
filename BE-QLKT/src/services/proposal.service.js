@@ -1528,16 +1528,33 @@ class ProposalService {
       // Hạng nhất (0.9-1.0): >= 10 năm từ nhóm 0.9-1.0
       // Hạng nhì (0.8): >= 10 năm từ nhóm 0.8 + 0.9-1.0 (hạng cao cộng vào)
       // Hạng ba (0.7): >= 10 năm từ nhóm 0.7 + 0.8 + 0.9-1.0 (tất cả hạng cao cộng vào)
+      // Lưu ý: Nữ giảm 1/3 thời gian (chỉ cần 2/3), làm tròn tới tháng
       // ============================================
       if (type === 'CONG_HIEN' && dataDanhHieu && dataDanhHieu.length > 0) {
-        const requiredMonths = 10 * 12; // 10 năm = 120 tháng
+        const baseRequiredMonths = 10 * 12; // 10 năm = 120 tháng (cho nam)
+        const femaleRequiredMonths = Math.round(baseRequiredMonths * (2 / 3)); // Nữ: 80 tháng (làm tròn)
 
-        // Fetch lịch sử chức vụ cho tất cả quân nhân trong đề xuất
+        // Fetch thông tin quân nhân và lịch sử chức vụ
         const personnelIds = dataDanhHieu.map(item => item.personnel_id).filter(Boolean);
         const positionHistoriesMap = {};
+        const personnelGenderMap = {}; // Map để lưu giới tính của quân nhân
 
         for (const personnelId of personnelIds) {
           try {
+            // Fetch thông tin quân nhân để lấy giới tính
+            const quanNhan = await prisma.quanNhan.findUnique({
+              where: { id: personnelId },
+              select: {
+                id: true,
+                gioi_tinh: true,
+              },
+            });
+
+            if (quanNhan) {
+              personnelGenderMap[personnelId] = quanNhan.gioi_tinh;
+            }
+
+            // Fetch lịch sử chức vụ
             const histories = await prisma.lichSuChucVu.findMany({
               where: { quan_nhan_id: personnelId },
               select: {
@@ -1602,20 +1619,28 @@ class ProposalService {
           return totalMonths;
         };
 
+        // Hàm tính số tháng yêu cầu dựa trên giới tính
+        const getRequiredMonths = personnelId => {
+          const gioiTinh = personnelGenderMap[personnelId];
+          // Nữ giảm 1/3 thời gian (chỉ cần 2/3), làm tròn tới tháng
+          return gioiTinh === 'NU' ? femaleRequiredMonths : baseRequiredMonths;
+        };
+
         // Hàm kiểm tra đủ điều kiện cho hạng
         const checkEligibleForRank = (personnelId, rank) => {
           const months0_9_1_0 = getTotalMonthsByGroup(personnelId, '0.9-1.0');
           const months0_8 = getTotalMonthsByGroup(personnelId, '0.8');
           const months0_7 = getTotalMonthsByGroup(personnelId, '0.7');
+          const requiredMonths = getRequiredMonths(personnelId);
 
           if (rank === 'HANG_NHAT') {
-            // Hạng nhất: cần >= 10 năm từ nhóm 0.9-1.0
+            // Hạng nhất: cần >= yêu cầu từ nhóm 0.9-1.0
             return months0_9_1_0 >= requiredMonths;
           } else if (rank === 'HANG_NHI') {
-            // Hạng nhì: cần >= 10 năm từ nhóm 0.8 + 0.9-1.0 (hạng cao cộng vào)
+            // Hạng nhì: cần >= yêu cầu từ nhóm 0.8 + 0.9-1.0 (hạng cao cộng vào)
             return months0_8 + months0_9_1_0 >= requiredMonths;
           } else if (rank === 'HANG_BA') {
-            // Hạng ba: cần >= 10 năm từ nhóm 0.7 + 0.8 + 0.9-1.0 (tất cả hạng cao cộng vào)
+            // Hạng ba: cần >= yêu cầu từ nhóm 0.7 + 0.8 + 0.9-1.0 (tất cả hạng cao cộng vào)
             return months0_7 + months0_8 + months0_9_1_0 >= requiredMonths;
           }
 
@@ -1628,6 +1653,8 @@ class ProposalService {
 
           const personnel = personnelMap[item.personnel_id];
           const hoTen = personnel?.ho_ten || item.personnel_id;
+          const gioiTinh = personnelGenderMap[item.personnel_id];
+          const requiredMonths = getRequiredMonths(item.personnel_id);
 
           let eligible = false;
           let rankName = '';
@@ -1666,9 +1693,20 @@ class ProposalService {
                 ? `${totalYears} năm`
                 : `${remainingMonths} tháng`;
 
+            const requiredYears = Math.floor(requiredMonths / 12);
+            const requiredRemainingMonths = requiredMonths % 12;
+            const requiredYearsText =
+              requiredYears > 0 && requiredRemainingMonths > 0
+                ? `${requiredYears} năm ${requiredRemainingMonths} tháng`
+                : requiredYears > 0
+                ? `${requiredYears} năm`
+                : `${requiredRemainingMonths} tháng`;
+
+            const genderText = gioiTinh === 'NU' ? ' (Nữ giảm 1/3 thời gian)' : '';
+
             throw new Error(
               `Quân nhân "${hoTen}" không đủ điều kiện đề xuất Huân chương Bảo vệ Tổ quốc ${rankName}. ` +
-                `Yêu cầu: ít nhất 10 năm. Hiện tại: ${totalYearsText}. ` +
+                `Yêu cầu: ít nhất ${requiredYearsText}${genderText}. Hiện tại: ${totalYearsText}. ` +
                 `Vui lòng kiểm tra lại lịch sử chức vụ của quân nhân này.`
             );
           }
