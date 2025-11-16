@@ -3,6 +3,7 @@ const router = express.Router();
 const authController = require('../controllers/auth.controller');
 const { verifyToken } = require('../middlewares/auth');
 const { auditLog, createDescription } = require('../middlewares/auditLog');
+const { getLogDescription } = require('../helpers/auditLogHelper');
 
 /**
  * @route   POST /api/auth/login
@@ -14,7 +15,7 @@ router.post(
   auditLog({
     action: 'LOGIN',
     resource: 'auth',
-    getDescription: () => createDescription.login(),
+    getDescription: getLogDescription('auth', 'LOGIN'),
   }),
   authController.login
 );
@@ -36,7 +37,7 @@ router.post(
   auditLog({
     action: 'LOGOUT',
     resource: 'auth',
-    getDescription: () => createDescription.logout(),
+    getDescription: getLogDescription('auth', 'LOGOUT'),
   }),
   authController.logout
 );
@@ -52,7 +53,7 @@ router.post(
   auditLog({
     action: 'CHANGE_PASSWORD',
     resource: 'auth',
-    getDescription: () => 'Tự đổi mật khẩu',
+    getDescription: getLogDescription('auth', 'CHANGE_PASSWORD'),
   }),
   authController.changePassword
 );

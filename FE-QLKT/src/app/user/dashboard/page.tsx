@@ -305,6 +305,9 @@ export default function UserDashboard() {
                     }
                   />
                 </Descriptions.Item>
+                <Descriptions.Item label="Cấp bậc" labelStyle={{ fontWeight: 500 }}>
+                  <Badge color="purple" text={personnelInfo.cap_bac || 'N/A'} />
+                </Descriptions.Item>
                 <Descriptions.Item label="Chức vụ" labelStyle={{ fontWeight: 500 }}>
                   <Badge color="green" text={personnelInfo.ChucVu?.ten_chuc_vu || 'N/A'} />
                 </Descriptions.Item>

@@ -236,7 +236,15 @@ export function AccountCreateForm() {
           title: 'Thành công',
           description: 'Tạo tài khoản thành công',
         });
-        router.push('/admin/accounts');
+        // Redirect về đúng trang dựa trên role hiện tại
+        const currentRole = localStorage.getItem('role');
+        if (currentRole === 'SUPER_ADMIN') {
+          router.push('/super-admin/accounts');
+        } else if (currentRole === 'ADMIN') {
+          router.push('/admin/accounts');
+        } else {
+          router.push('/super-admin/accounts'); // Fallback
+        }
       } else {
         // Hiển thị lỗi từ backend
         console.error('Create account error:', response);

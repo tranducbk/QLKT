@@ -40,6 +40,7 @@ export function PersonnelTable({
               <TableHead className="w-[140px] text-center">Họ tên</TableHead>
               <TableHead className="w-[180px] text-center">Cơ quan đơn vị</TableHead>
               <TableHead className="w-[180px] text-center">Đơn vị trực thuộc</TableHead>
+              <TableHead className="w-[140px] text-center">Cấp bậc</TableHead>
               <TableHead className="w-[160px] text-center">Chức vụ</TableHead>
               <TableHead className="w-[150px] text-center">Hành động</TableHead>
             </TableRow>
@@ -47,7 +48,7 @@ export function PersonnelTable({
           <TableBody>
             {personnel.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-muted-foreground h-24">
+                <TableCell colSpan={7} className="text-center text-muted-foreground h-24">
                   Không có dữ liệu
                 </TableCell>
               </TableRow>
@@ -77,6 +78,9 @@ export function PersonnelTable({
                     </TableCell>
                     <TableCell className="text-center">{coQuanDonViName}</TableCell>
                     <TableCell className="text-center">{donViTrucThuocName}</TableCell>
+                    <TableCell className="text-center">
+                      {p.cap_bac || '-'}
+                    </TableCell>
                     <TableCell className="text-center">
                       {p.ChucVu?.ten_chuc_vu || p.ten_chuc_vu || '-'}
                     </TableCell>

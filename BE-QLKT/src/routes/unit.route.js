@@ -3,6 +3,7 @@ const router = express.Router();
 const unitController = require('../controllers/unit.controller');
 const { verifyToken, requireAdmin, requireManager } = require('../middlewares/auth');
 const { auditLog, createDescription, getResourceId } = require('../middlewares/auditLog');
+const { getLogDescription } = require('../helpers/auditLogHelper');
 
 /**
  * @route   GET /api/units/my-units
@@ -37,10 +38,7 @@ router.post(
   auditLog({
     action: 'CREATE',
     resource: 'units',
-    getDescription: (req, res, responseData) => {
-      const tenDonVi = req.body?.ten_don_vi || 'N/A';
-      return `Tạo mới cơ quan đơn vị/đơn vị trực thuộc: ${tenDonVi}`;
-    },
+    getDescription: getLogDescription('units', 'CREATE'),
     getResourceId: getResourceId.fromResponse('id'),
   }),
   unitController.createUnit
@@ -58,10 +56,7 @@ router.put(
   auditLog({
     action: 'UPDATE',
     resource: 'units',
-    getDescription: (req, res, responseData) => {
-      const tenDonVi = req.body?.ten_don_vi || 'N/A';
-      return `Cập nhật cơ quan đơn vị/đơn vị trực thuộc: ${tenDonVi}`;
-    },
+    getDescription: getLogDescription('units', 'UPDATE'),
     getResourceId: getResourceId.fromParams('id'),
   }),
   unitController.updateUnit
@@ -79,15 +74,7 @@ router.delete(
   auditLog({
     action: 'DELETE',
     resource: 'units',
-    getDescription: (req, res, responseData) => {
-      try {
-        const data = typeof responseData === 'string' ? JSON.parse(responseData) : responseData;
-        const tenDonVi = data?.data?.ten_don_vi || `ID ${req.params.id}`;
-        return `Xóa cơ quan đơn vị/đơn vị trực thuộc: ${tenDonVi}`;
-      } catch {
-        return `Xóa cơ quan đơn vị/đơn vị trực thuộc: ID ${req.params.id}`;
-      }
-    },
+    getDescription: getLogDescription('units', 'DELETE'),
     getResourceId: getResourceId.fromParams('id'),
   }),
   unitController.deleteUnit

@@ -27,6 +27,7 @@ import {
 import { PersonnelTable } from '@/components/personnel/personnel-table';
 import { PersonnelForm } from '@/components/personnel/personnel-form';
 import { apiClient } from '@/lib/api-client';
+import { MILITARY_RANKS } from '@/lib/constants/military-ranks';
 import Link from 'next/link';
 
 const { Title, Text } = Typography;
@@ -42,6 +43,7 @@ export default function ManagerPersonnelPage() {
   const [viewingPersonnel, setViewingPersonnel] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedPosition, setSelectedPosition] = useState('');
+  const [selectedCapBac, setSelectedCapBac] = useState('');
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 10,
@@ -160,7 +162,8 @@ export default function ManagerPersonnelPage() {
   const filteredPersonnel = personnel
     .filter(p => {
       const matchesPosition = !selectedPosition || p.chuc_vu_id === parseInt(selectedPosition);
-      return matchesPosition;
+      const matchesCapBac = !selectedCapBac || p.cap_bac === selectedCapBac;
+      return matchesPosition && matchesCapBac;
     })
     .sort((a, b) => {
       // Những người không có đơn vị trực thuộc (chỉ huy) lên đầu
@@ -310,7 +313,7 @@ export default function ManagerPersonnelPage() {
         <Card style={{ marginBottom: '24px', padding: '16px' }}>
           <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
             <Input
-              placeholder="Tìm kiếm theo tên hoặc CCCD..."
+              placeholder="Tìm kiếm theo tên..."
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
               onPressEnter={handleSearch}
@@ -318,11 +321,27 @@ export default function ManagerPersonnelPage() {
               style={{ flex: 1, minWidth: '200px' }}
             />
             <Select
+              value={selectedCapBac}
+              onChange={setSelectedCapBac}
+              size="large"
+              style={{ width: 200 }}
+              placeholder="Lọc theo Cấp bậc"
+              allowClear
+            >
+              <Option value="">Tất cả cấp bậc</Option>
+              {MILITARY_RANKS.map(rank => (
+                <Option key={rank} value={rank}>
+                  {rank}
+                </Option>
+              ))}
+            </Select>
+            <Select
               value={selectedPosition}
               onChange={setSelectedPosition}
               size="large"
               style={{ width: 256 }}
               placeholder="Lọc theo Chức vụ"
+              allowClear
             >
               <Option value="">Tất cả chức vụ ({filteredPositions.length})</Option>
               {filteredPositions.map(position => (

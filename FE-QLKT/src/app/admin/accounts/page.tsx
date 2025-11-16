@@ -139,9 +139,35 @@ export default function AdminAccountsPage() {
       render: (record: any) => record.don_vi || <span className="text-gray-400">-</span>,
     },
     {
-      title: 'Chức vụ',
-      key: 'chuc_vu',
-      render: (record: any) => record.chuc_vu || <span className="text-gray-400">-</span>,
+      title: 'Cấp bậc / Chức vụ',
+      key: 'cap_bac_chuc_vu',
+      width: 180,
+      align: 'center',
+      render: (record: any) => {
+        const capBac = record.cap_bac;
+        const chucVu = record.chuc_vu;
+        if (!capBac && !chucVu) {
+          return <span className="text-gray-400">-</span>;
+        }
+        return (
+          <div
+            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}
+          >
+            {capBac ? (
+              <span style={{ fontWeight: 600 }}>{capBac}</span>
+            ) : (
+              <span className="text-gray-400">-</span>
+            )}
+            {chucVu ? (
+              <span style={{ fontSize: '12px', color: '#8c8c8c' }}>{chucVu}</span>
+            ) : (
+              <span className="text-gray-400" style={{ fontSize: '12px' }}>
+                -
+              </span>
+            )}
+          </div>
+        );
+      },
     },
     {
       title: 'Thao tác',

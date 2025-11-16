@@ -21,6 +21,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { useTheme } from '@/components/theme-provider';
 import { apiClient } from '@/lib/api-client';
 import dayjs from 'dayjs';
+import { MILITARY_RANKS } from '@/lib/constants/military-ranks';
 
 const { Title } = Typography;
 
@@ -106,6 +107,7 @@ export default function ManagerPersonnelEditPage() {
             ho_ten: personnel.ho_ten,
             cccd: personnel.cccd,
             gioi_tinh: personnel.gioi_tinh || undefined,
+            cap_bac: personnel.cap_bac || undefined,
             ngay_sinh: personnel.ngay_sinh ? dayjs(personnel.ngay_sinh) : undefined,
             ngay_nhap_ngu: personnel.ngay_nhap_ngu ? dayjs(personnel.ngay_nhap_ngu) : undefined,
             ngay_xuat_ngu: personnel.ngay_xuat_ngu ? dayjs(personnel.ngay_xuat_ngu) : undefined,
@@ -195,6 +197,7 @@ export default function ManagerPersonnelEditPage() {
         ho_ten: values.ho_ten,
         gioi_tinh: values.gioi_tinh, // Luôn gửi giá trị này lên backend
         cccd: values.cccd && values.cccd.trim() ? values.cccd.trim() : null,
+        cap_bac: values.cap_bac || null,
         ngay_sinh: values.ngay_sinh ? values.ngay_sinh.format('YYYY-MM-DD') : null,
         ngay_nhap_ngu: values.ngay_nhap_ngu ? values.ngay_nhap_ngu.format('YYYY-MM-DD') : null,
         ngay_xuat_ngu: values.ngay_xuat_ngu ? values.ngay_xuat_ngu.format('YYYY-MM-DD') : null,
@@ -323,6 +326,16 @@ export default function ManagerPersonnelEditPage() {
                     </Select>
                   </Form.Item>
 
+                  <Form.Item name="cap_bac" label="Cấp bậc" required={false}>
+                    <Select placeholder="Chọn cấp bậc" disabled={loading} size="large" allowClear>
+                      {MILITARY_RANKS.map(rank => (
+                        <Select.Option key={rank} value={rank}>
+                          {rank}
+                        </Select.Option>
+                      ))}
+                    </Select>
+                  </Form.Item>
+
                   <Form.Item name="ngay_sinh" label="Ngày sinh">
                     <DatePicker
                       size="large"
@@ -433,6 +446,16 @@ export default function ManagerPersonnelEditPage() {
                   {/* Manager không thể thay đổi đơn vị */}
                   <Form.Item label="Đơn vị" tooltip="Chỉ Admin mới có thể thay đổi đơn vị">
                     <Input size="large" value={currentUnitName} disabled placeholder="Đơn vị" />
+                  </Form.Item>
+
+                  <Form.Item name="cap_bac" label="Cấp bậc" required={false}>
+                    <Select placeholder="Chọn cấp bậc" disabled={loading} size="large" allowClear>
+                      {MILITARY_RANKS.map(rank => (
+                        <Select.Option key={rank} value={rank}>
+                          {rank}
+                        </Select.Option>
+                      ))}
+                    </Select>
                   </Form.Item>
 
                   <Form.Item

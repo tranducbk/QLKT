@@ -30,6 +30,7 @@ import {
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { apiClient } from '@/lib/api-client';
+import { MILITARY_RANKS } from '@/lib/constants/military-ranks';
 
 const { Title, Text } = Typography;
 
@@ -46,6 +47,7 @@ export default function PersonnelPage() {
   const [selectedDonViTrucThuoc, setSelectedDonViTrucThuoc] = useState<string | 'ALL' | null>(null);
   const [selectedChucVu, setSelectedChucVu] = useState<string | 'ALL'>('ALL');
   const [chucVuSearchValue, setChucVuSearchValue] = useState<string>('');
+  const [selectedCapBac, setSelectedCapBac] = useState<string | 'ALL'>('ALL');
   const [positions, setPositions] = useState<any[]>([]);
   const [tableLoading, setTableLoading] = useState(false);
   const router = useRouter();
@@ -177,7 +179,6 @@ export default function PersonnelPage() {
     }
   }
 
-
   const filteredPersonnel = personnel
     .filter(p => {
       const matchesSearch =
@@ -211,7 +212,16 @@ export default function PersonnelPage() {
       const matchesChucVu =
         !selectedChucVu || selectedChucVu === 'ALL' || p.chuc_vu_id === selectedChucVu;
 
-      return matchesSearch && matchesCoQuanDonVi && matchesDonViTrucThuoc && matchesChucVu;
+      const matchesCapBac =
+        !selectedCapBac || selectedCapBac === 'ALL' || p.cap_bac === selectedCapBac;
+
+      return (
+        matchesSearch &&
+        matchesCoQuanDonVi &&
+        matchesDonViTrucThuoc &&
+        matchesChucVu &&
+        matchesCapBac
+      );
     })
     .sort((a, b) => {
       // Những người không có đơn vị trực thuộc (chỉ huy) lên đầu
@@ -233,41 +243,66 @@ export default function PersonnelPage() {
 
   const columns = [
     {
-      title: 'CCCD',
-      dataIndex: 'cccd',
-      key: 'cccd',
-      width: 140,
-      render: text => <Text strong>{text}</Text>,
+      title: 'STT',
+      key: 'index',
+      width: 60,
+      align: 'center',
+      render: (_: any, __: any, index: number) => index + 1,
     },
     {
       title: 'Họ tên',
       dataIndex: 'ho_ten',
       key: 'ho_ten',
-      width: 200,
+      width: 150,
+      ellipsis: true,
     },
     {
-      title: 'Đơn vị',
-      dataIndex: 'don_vi_display',
-      key: 'don_vi_display',
-      width: 300,
-      render: (text, record) => {
-        // Nếu là đơn vị trực thuộc, hiển thị với màu khác
-        const isDonViTrucThuoc = !!record.DonViTrucThuoc;
-        return <Tag color={isDonViTrucThuoc ? 'cyan' : 'blue'}>{text || '-'}</Tag>;
+      title: 'Cơ quan đơn vị',
+      key: 'co_quan_don_vi',
+      width: 180,
+      ellipsis: true,
+      render: (_: any, record: any) => {
+        const coQuanDonVi =
+          record.CoQuanDonVi?.ten_don_vi || record.DonViTrucThuoc?.CoQuanDonVi?.ten_don_vi;
+        return coQuanDonVi || '-';
+      },
+    },
+    {
+      title: 'Đơn vị trực thuộc',
+      key: 'don_vi_truc_thuoc',
+      width: 180,
+      ellipsis: true,
+      render: (_: any, record: any) => {
+        const donViTrucThuoc = record.DonViTrucThuoc?.ten_don_vi;
+        return donViTrucThuoc || '-';
+      },
+    },
+    {
+      title: 'Cấp bậc',
+      key: 'cap_bac',
+      width: 120,
+      align: 'center',
+      ellipsis: true,
+      render: (_: any, record: any) => {
+        const capBac = record.cap_bac;
+        return capBac || '-';
       },
     },
     {
       title: 'Chức vụ',
-      dataIndex: 'chuc_vu_name',
-      key: 'chuc_vu_name',
+      key: 'chuc_vu',
       width: 180,
-      render: text => <Tag color="green">{text || '-'}</Tag>,
+      ellipsis: true,
+      render: (_: any, record: any) => {
+        const chucVu = record.chuc_vu_name;
+        return chucVu || '-';
+      },
     },
     {
       title: 'Hành động',
       key: 'action',
-      width: 120,
-      fixed: 'right',
+      width: 100,
+      align: 'center',
       render: (_, record) => (
         <Button
           type="primary"
@@ -352,198 +387,237 @@ export default function PersonnelPage() {
 
         {/* Filters */}
         <Card style={{ marginBottom: 24 }}>
-          <Space direction="vertical" style={{ width: '100%' }} size="middle">
-            <Space wrap style={{ width: '100%' }} size="middle">
-              <div style={{ flex: 1, minWidth: 300 }}>
-                <Text type="secondary" style={{ marginBottom: 8, display: 'block' }}>
-                  Tìm kiếm
-                </Text>
-                <Input
-                  placeholder="Nhập tên hoặc số CCCD để tìm kiếm..."
-                  prefix={<SearchOutlined />}
-                  value={searchTerm}
-                  onChange={e => setSearchTerm(e.target.value)}
-                  size="large"
-                  allowClear
-                />
-              </div>
-              <div style={{ minWidth: 250 }}>
-                <Text type="secondary" style={{ marginBottom: 8, display: 'block' }}>
-                  Cơ quan đơn vị
-                </Text>
-                <Select
-                  value={selectedCoQuanDonVi}
-                  onChange={value => {
-                    const newValue = value || 'ALL';
-                    setSelectedCoQuanDonVi(newValue);
-                    setSelectedDonViTrucThuoc(newValue !== 'ALL' ? 'ALL' : null);
-                    setSelectedChucVu('ALL'); // Reset chức vụ
-                    setChucVuSearchValue(''); // Clear search value khi đổi cơ quan đơn vị
-                    setChucVuSearchValue(''); // Clear search value
-                  }}
-                  onClear={() => {
-                    setSelectedCoQuanDonVi('ALL');
-                    setSelectedDonViTrucThuoc(null);
-                    setSelectedChucVu('ALL'); // Reset chức vụ
-                    setChucVuSearchValue(''); // Clear search value
-                  }}
-                  style={{ width: '100%' }}
-                  size="large"
-                  showSearch
-                  placeholder="Chọn hoặc tìm kiếm cơ quan đơn vị..."
-                  optionFilterProp="label"
-                  filterOption={(input, option: any) => {
-                    const label = String(option?.label || option?.children || '');
-                    const value = String(option?.value || '');
-                    const searchText = input.toLowerCase();
-                    return (
-                      label.toLowerCase().includes(searchText) ||
-                      value.toLowerCase().includes(searchText)
-                    );
-                  }}
-                  suffixIcon={<FilterOutlined />}
-                  allowClear
-                >
-                  <Select.Option value="ALL" label="Tất cả cơ quan đơn vị">
-                    Tất cả cơ quan đơn vị ({units.coQuanDonVi.length})
-                  </Select.Option>
-                  {units.coQuanDonVi.map((coQuanDonVi: any) => {
-                    const label = coQuanDonVi.ma_don_vi
-                      ? `${coQuanDonVi.ten_don_vi} (${coQuanDonVi.ma_don_vi})`
-                      : coQuanDonVi.ten_don_vi;
-                    return (
-                      <Select.Option key={coQuanDonVi.id} value={coQuanDonVi.id} label={label}>
-                        {label}
-                      </Select.Option>
-                    );
-                  })}
-                </Select>
-              </div>
-              <div style={{ minWidth: 250 }}>
-                <Text type="secondary" style={{ marginBottom: 8, display: 'block' }}>
-                  Đơn vị trực thuộc
-                </Text>
-                <Select
-                  value={
-                    selectedCoQuanDonVi && selectedCoQuanDonVi !== 'ALL'
-                      ? selectedDonViTrucThuoc || 'ALL'
-                      : undefined
-                  }
-                  onChange={value => {
-                    setSelectedDonViTrucThuoc(value || 'ALL');
-                    setSelectedChucVu('ALL'); // Reset chức vụ
-                    setChucVuSearchValue(''); // Clear search value khi đổi đơn vị trực thuộc
-                  }}
-                  onClear={() => {
-                    setSelectedDonViTrucThuoc('ALL');
-                    setSelectedChucVu('ALL'); // Reset chức vụ
-                    setChucVuSearchValue(''); // Clear search value
-                  }}
-                  style={{ width: '100%' }}
-                  size="large"
-                  showSearch
-                  placeholder={
-                    selectedCoQuanDonVi && selectedCoQuanDonVi !== 'ALL'
-                      ? 'Chọn hoặc tìm kiếm đơn vị trực thuộc...'
-                      : 'Chọn cơ quan đơn vị trước'
-                  }
-                  optionFilterProp="label"
-                  filterOption={(input, option: any) => {
-                    const label = String(option?.label || option?.children || '');
-                    const value = String(option?.value || '');
-                    const searchText = input.toLowerCase();
-                    return (
-                      label.toLowerCase().includes(searchText) ||
-                      value.toLowerCase().includes(searchText)
-                    );
-                  }}
-                  suffixIcon={<FilterOutlined />}
-                  allowClear
-                  disabled={!selectedCoQuanDonVi || selectedCoQuanDonVi === 'ALL'}
-                >
-                  {selectedCoQuanDonVi && selectedCoQuanDonVi !== 'ALL' && (
-                    <Select.Option value="ALL" label="Tất cả đơn vị trực thuộc">
-                      Tất cả đơn vị trực thuộc ({availableDonViTrucThuoc.length})
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+              gap: '16px',
+            }}
+          >
+            <div>
+              <Text type="secondary" style={{ marginBottom: 8, display: 'block' }}>
+                Tìm kiếm
+              </Text>
+              <Input
+                placeholder="Tìm kiếm theo tên..."
+                prefix={<SearchOutlined />}
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                size="large"
+                allowClear
+              />
+            </div>
+            <div>
+              <Text type="secondary" style={{ marginBottom: 8, display: 'block' }}>
+                Cơ quan đơn vị
+              </Text>
+              <Select
+                value={selectedCoQuanDonVi}
+                onChange={value => {
+                  const newValue = value || 'ALL';
+                  setSelectedCoQuanDonVi(newValue);
+                  setSelectedDonViTrucThuoc(newValue !== 'ALL' ? 'ALL' : null);
+                  setSelectedChucVu('ALL'); // Reset chức vụ
+                  setChucVuSearchValue(''); // Clear search value khi đổi cơ quan đơn vị
+                  setChucVuSearchValue(''); // Clear search value
+                }}
+                onClear={() => {
+                  setSelectedCoQuanDonVi('ALL');
+                  setSelectedDonViTrucThuoc(null);
+                  setSelectedChucVu('ALL'); // Reset chức vụ
+                  setChucVuSearchValue(''); // Clear search value
+                }}
+                style={{ width: '100%' }}
+                size="large"
+                showSearch
+                placeholder="Chọn hoặc tìm kiếm cơ quan đơn vị..."
+                optionFilterProp="label"
+                filterOption={(input, option: any) => {
+                  const label = String(option?.label || option?.children || '');
+                  const value = String(option?.value || '');
+                  const searchText = input.toLowerCase();
+                  return (
+                    label.toLowerCase().includes(searchText) ||
+                    value.toLowerCase().includes(searchText)
+                  );
+                }}
+                suffixIcon={<FilterOutlined />}
+                allowClear
+              >
+                <Select.Option value="ALL" label="Tất cả cơ quan đơn vị">
+                  Tất cả cơ quan đơn vị ({units.coQuanDonVi.length})
+                </Select.Option>
+                {units.coQuanDonVi.map((coQuanDonVi: any) => {
+                  const label = coQuanDonVi.ma_don_vi
+                    ? `${coQuanDonVi.ten_don_vi} (${coQuanDonVi.ma_don_vi})`
+                    : coQuanDonVi.ten_don_vi;
+                  return (
+                    <Select.Option key={coQuanDonVi.id} value={coQuanDonVi.id} label={label}>
+                      {label}
                     </Select.Option>
-                  )}
-                  {availableDonViTrucThuoc.map((donVi: any) => {
-                    const label = donVi.ma_don_vi
-                      ? `${donVi.ten_don_vi} (${donVi.ma_don_vi})`
-                      : donVi.ten_don_vi;
-                    return (
-                      <Select.Option key={donVi.id} value={donVi.id} label={label}>
-                        {label}
+                  );
+                })}
+              </Select>
+            </div>
+            <div>
+              <Text type="secondary" style={{ marginBottom: 8, display: 'block' }}>
+                Đơn vị trực thuộc
+              </Text>
+              <Select
+                value={
+                  selectedCoQuanDonVi && selectedCoQuanDonVi !== 'ALL'
+                    ? selectedDonViTrucThuoc || 'ALL'
+                    : undefined
+                }
+                onChange={value => {
+                  setSelectedDonViTrucThuoc(value || 'ALL');
+                  setSelectedChucVu('ALL'); // Reset chức vụ
+                  setChucVuSearchValue(''); // Clear search value khi đổi đơn vị trực thuộc
+                }}
+                onClear={() => {
+                  setSelectedDonViTrucThuoc('ALL');
+                  setSelectedChucVu('ALL'); // Reset chức vụ
+                  setChucVuSearchValue(''); // Clear search value
+                }}
+                style={{ width: '100%' }}
+                size="large"
+                showSearch
+                placeholder={
+                  selectedCoQuanDonVi && selectedCoQuanDonVi !== 'ALL'
+                    ? 'Chọn hoặc tìm kiếm đơn vị trực thuộc...'
+                    : 'Chọn cơ quan đơn vị trước'
+                }
+                optionFilterProp="label"
+                filterOption={(input, option: any) => {
+                  const label = String(option?.label || option?.children || '');
+                  const value = String(option?.value || '');
+                  const searchText = input.toLowerCase();
+                  return (
+                    label.toLowerCase().includes(searchText) ||
+                    value.toLowerCase().includes(searchText)
+                  );
+                }}
+                suffixIcon={<FilterOutlined />}
+                allowClear
+                disabled={!selectedCoQuanDonVi || selectedCoQuanDonVi === 'ALL'}
+              >
+                {selectedCoQuanDonVi && selectedCoQuanDonVi !== 'ALL' && (
+                  <Select.Option value="ALL" label="Tất cả đơn vị trực thuộc">
+                    Tất cả đơn vị trực thuộc ({availableDonViTrucThuoc.length})
+                  </Select.Option>
+                )}
+                {availableDonViTrucThuoc.map((donVi: any) => {
+                  const label = donVi.ma_don_vi
+                    ? `${donVi.ten_don_vi} (${donVi.ma_don_vi})`
+                    : donVi.ten_don_vi;
+                  return (
+                    <Select.Option key={donVi.id} value={donVi.id} label={label}>
+                      {label}
+                    </Select.Option>
+                  );
+                })}
+              </Select>
+            </div>
+            <div>
+              <Text type="secondary" style={{ marginBottom: 8, display: 'block' }}>
+                Cấp bậc
+              </Text>
+              <Select
+                value={selectedCapBac === 'ALL' ? undefined : selectedCapBac}
+                onChange={value => {
+                  setSelectedCapBac(value || 'ALL');
+                }}
+                onClear={() => {
+                  setSelectedCapBac('ALL');
+                }}
+                style={{ width: '100%' }}
+                size="large"
+                showSearch
+                placeholder="Lọc theo Cấp bậc"
+                optionFilterProp="label"
+                filterOption={(input, option: any) => {
+                  const label = String(option?.label || option?.children || '');
+                  const searchText = input.toLowerCase();
+                  return label.toLowerCase().includes(searchText);
+                }}
+                suffixIcon={<FilterOutlined />}
+                allowClear
+              >
+                <Select.Option value="ALL" label="Tất cả cấp bậc">
+                  Tất cả cấp bậc
+                </Select.Option>
+                {MILITARY_RANKS.map(rank => (
+                  <Select.Option key={rank} value={rank} label={rank}>
+                    {rank}
+                  </Select.Option>
+                ))}
+              </Select>
+            </div>
+            <div>
+              <Text type="secondary" style={{ marginBottom: 8, display: 'block' }}>
+                Chức vụ
+              </Text>
+              <Select
+                value={selectedChucVu === 'ALL' ? undefined : selectedChucVu}
+                onChange={value => {
+                  setSelectedChucVu(value || 'ALL');
+                  setChucVuSearchValue(''); // Clear search when selecting
+                }}
+                onClear={() => {
+                  setSelectedChucVu('ALL');
+                  setChucVuSearchValue('');
+                }}
+                searchValue={chucVuSearchValue}
+                onSearch={setChucVuSearchValue}
+                style={{ width: '100%' }}
+                size="large"
+                showSearch
+                placeholder="Lọc theo Chức vụ"
+                optionFilterProp="label"
+                filterOption={(input, option: any) => {
+                  const label = String(option?.label || option?.children || '');
+                  const searchText = input.toLowerCase();
+                  return label.toLowerCase().includes(searchText);
+                }}
+                suffixIcon={<FilterOutlined />}
+                allowClear
+              >
+                {(() => {
+                  // Filter positions dựa trên frontend
+                  const filteredPositions = positions.filter(pos => {
+                    // Nếu không chọn cơ quan đơn vị, hiển thị tất cả
+                    if (!selectedCoQuanDonVi || selectedCoQuanDonVi === 'ALL') return true;
+
+                    // Nếu chọn đơn vị trực thuộc cụ thể, chỉ hiển thị chức vụ của đơn vị đó
+                    if (selectedDonViTrucThuoc && selectedDonViTrucThuoc !== 'ALL') {
+                      return pos.don_vi_truc_thuoc_id === selectedDonViTrucThuoc;
+                    }
+
+                    // Nếu chỉ chọn cơ quan đơn vị, hiển thị:
+                    // 1. Chức vụ có co_quan_don_vi_id = selectedCoQuanDonVi
+                    if (pos.co_quan_don_vi_id === selectedCoQuanDonVi) return true;
+
+                    // 2. Chức vụ của đơn vị trực thuộc thuộc cơ quan đơn vị đó
+                    const donViTrucThuocList = units.donViTrucThuocMap[selectedCoQuanDonVi] || [];
+                    return donViTrucThuocList.some(unit => unit.id === pos.don_vi_truc_thuoc_id);
+                  });
+
+                  return (
+                    <>
+                      <Select.Option value="ALL" label="Tất cả chức vụ">
+                        Tất cả chức vụ ({filteredPositions.length})
                       </Select.Option>
-                    );
-                  })}
-                </Select>
-              </div>
-              <div style={{ minWidth: 250 }}>
-                <Text type="secondary" style={{ marginBottom: 8, display: 'block' }}>
-                  Chức vụ
-                </Text>
-                <Select
-                  value={selectedChucVu === 'ALL' ? undefined : selectedChucVu}
-                  onChange={value => {
-                    setSelectedChucVu(value || 'ALL');
-                    setChucVuSearchValue(''); // Clear search when selecting
-                  }}
-                  onClear={() => {
-                    setSelectedChucVu('ALL');
-                    setChucVuSearchValue('');
-                  }}
-                  searchValue={chucVuSearchValue}
-                  onSearch={setChucVuSearchValue}
-                  style={{ width: '100%' }}
-                  size="large"
-                  showSearch
-                  placeholder="Lọc theo Chức vụ"
-                  optionFilterProp="label"
-                  filterOption={(input, option: any) => {
-                    const label = String(option?.label || option?.children || '');
-                    const searchText = input.toLowerCase();
-                    return label.toLowerCase().includes(searchText);
-                  }}
-                  suffixIcon={<FilterOutlined />}
-                  allowClear
-                >
-                  {(() => {
-                    // Filter positions dựa trên frontend
-                    const filteredPositions = positions.filter(pos => {
-                      // Nếu không chọn cơ quan đơn vị, hiển thị tất cả
-                      if (!selectedCoQuanDonVi || selectedCoQuanDonVi === 'ALL') return true;
-
-                      // Nếu chọn đơn vị trực thuộc cụ thể, chỉ hiển thị chức vụ của đơn vị đó
-                      if (selectedDonViTrucThuoc && selectedDonViTrucThuoc !== 'ALL') {
-                        return pos.don_vi_truc_thuoc_id === selectedDonViTrucThuoc;
-                      }
-
-                      // Nếu chỉ chọn cơ quan đơn vị, hiển thị:
-                      // 1. Chức vụ có co_quan_don_vi_id = selectedCoQuanDonVi
-                      if (pos.co_quan_don_vi_id === selectedCoQuanDonVi) return true;
-
-                      // 2. Chức vụ của đơn vị trực thuộc thuộc cơ quan đơn vị đó
-                      const donViTrucThuocList = units.donViTrucThuocMap[selectedCoQuanDonVi] || [];
-                      return donViTrucThuocList.some(unit => unit.id === pos.don_vi_truc_thuoc_id);
-                    });
-
-                    return (
-                      <>
-                        <Select.Option value="ALL" label="Tất cả chức vụ">
-                          Tất cả chức vụ ({filteredPositions.length})
+                      {filteredPositions.map(pos => (
+                        <Select.Option key={pos.id} value={pos.id} label={pos.ten_chuc_vu}>
+                          {pos.ten_chuc_vu}
                         </Select.Option>
-                        {filteredPositions.map(pos => (
-                          <Select.Option key={pos.id} value={pos.id} label={pos.ten_chuc_vu}>
-                            {pos.ten_chuc_vu}
-                          </Select.Option>
-                        ))}
-                      </>
-                    );
-                  })()}
-                </Select>
-              </div>
-            </Space>
-          </Space>
+                      ))}
+                    </>
+                  );
+                })()}
+              </Select>
+            </div>
+          </div>
         </Card>
 
         {/* Table */}

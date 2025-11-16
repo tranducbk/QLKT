@@ -3,6 +3,7 @@ const router = express.Router();
 const accountController = require('../controllers/account.controller');
 const { verifyToken, requireSuperAdmin, requireAdmin } = require('../middlewares/auth');
 const { auditLog, createDescription, getResourceId } = require('../middlewares/auditLog');
+const { getLogDescription } = require('../helpers/auditLogHelper');
 
 /**
  * @route   GET /api/accounts
@@ -30,10 +31,7 @@ router.post(
   auditLog({
     action: 'CREATE',
     resource: 'accounts',
-    getDescription: (req, res, responseData) => {
-      const username = req.body?.username || 'N/A';
-      return `Tạo mới tài khoản: ${username}`;
-    },
+    getDescription: getLogDescription('accounts', 'CREATE'),
     getResourceId: getResourceId.fromResponse('id'),
   }),
   accountController.createAccount
@@ -51,10 +49,7 @@ router.put(
   auditLog({
     action: 'UPDATE',
     resource: 'accounts',
-    getDescription: (req, res, responseData) => {
-      const username = req.body?.username || 'N/A';
-      return `Cập nhật tài khoản: ${username}`;
-    },
+    getDescription: getLogDescription('accounts', 'UPDATE'),
     getResourceId: getResourceId.fromParams('id'),
   }),
   accountController.updateAccount
@@ -72,7 +67,7 @@ router.post(
   auditLog({
     action: 'RESET_PASSWORD',
     resource: 'accounts',
-    getDescription: req => createDescription.resetPassword(req.body),
+    getDescription: getLogDescription('accounts', 'RESET_PASSWORD'),
     getResourceId: req => req.body.account_id || null,
   }),
   accountController.resetPassword
@@ -90,15 +85,7 @@ router.delete(
   auditLog({
     action: 'DELETE',
     resource: 'accounts',
-    getDescription: (req, res, responseData) => {
-      try {
-        const data = typeof responseData === 'string' ? JSON.parse(responseData) : responseData;
-        const username = data?.data?.username || `ID ${req.params.id}`;
-        return `Xóa tài khoản: ${username}`;
-      } catch {
-        return `Xóa tài khoản: ID ${req.params.id}`;
-      }
-    },
+    getDescription: getLogDescription('accounts', 'DELETE'),
     getResourceId: getResourceId.fromParams('id'),
   }),
   accountController.deleteAccount

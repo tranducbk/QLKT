@@ -17,6 +17,7 @@ import {
 import dayjs from 'dayjs';
 import { apiClient } from '@/lib/api-client';
 import VietnamAddressCascader from './VietnamAddressCascader';
+import { MILITARY_RANKS } from '@/lib/constants/military-ranks';
 
 // Helper function để hiển thị tên quyền
 const getRoleName = (role: string) => {
@@ -240,6 +241,7 @@ export default function ProfileEditForm({
           ho_ten: response.data.ho_ten,
           cccd: response.data.cccd,
           gioi_tinh: response.data.gioi_tinh || undefined,
+          cap_bac: response.data.cap_bac || undefined,
           ngay_sinh: response.data.ngay_sinh ? dayjs(response.data.ngay_sinh) : null,
           ngay_nhap_ngu: response.data.ngay_nhap_ngu ? dayjs(response.data.ngay_nhap_ngu) : null,
           ngay_xuat_ngu: response.data.ngay_xuat_ngu ? dayjs(response.data.ngay_xuat_ngu) : null,
@@ -286,6 +288,7 @@ export default function ProfileEditForm({
         ho_ten: values.ho_ten,
         gioi_tinh: values.gioi_tinh,
         cccd: values.cccd,
+        cap_bac: values.cap_bac || null,
         ngay_sinh: values.ngay_sinh ? dayjs(values.ngay_sinh).format('YYYY-MM-DD') : null,
         ngay_nhap_ngu: values.ngay_nhap_ngu
           ? dayjs(values.ngay_nhap_ngu).format('YYYY-MM-DD')
@@ -589,6 +592,21 @@ export default function ProfileEditForm({
               }
             >
               <Input disabled size="large" className="rounded-lg bg-gray-50" />
+            </Form.Item>
+
+            <Form.Item label="Cấp bậc" name="cap_bac" required={false}>
+              <Select
+                placeholder="Chọn cấp bậc"
+                size="large"
+                className="rounded-lg"
+                allowClear
+              >
+                {MILITARY_RANKS.map(rank => (
+                  <Select.Option key={rank} value={rank}>
+                    {rank}
+                  </Select.Option>
+                ))}
+              </Select>
             </Form.Item>
 
             <Form.Item

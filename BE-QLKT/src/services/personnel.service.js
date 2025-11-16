@@ -302,6 +302,7 @@ class PersonnelService {
         gioi_tinh,
         ngay_sinh,
         cccd,
+        cap_bac,
         ngay_nhap_ngu,
         ngay_xuat_ngu,
         que_quan_2_cap,
@@ -447,6 +448,7 @@ class PersonnelService {
         ngay_sinh:
           ngay_sinh !== undefined ? (ngay_sinh ? new Date(ngay_sinh) : null) : personnel.ngay_sinh,
         cccd: cccd !== undefined ? cccd : personnel.cccd,
+        cap_bac: cap_bac !== undefined ? cap_bac : personnel.cap_bac,
         ngay_nhap_ngu:
           ngay_nhap_ngu !== undefined
             ? ngay_nhap_ngu

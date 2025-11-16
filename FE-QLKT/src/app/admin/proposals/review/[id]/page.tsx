@@ -47,6 +47,8 @@ interface DanhHieuItem {
   ma_don_vi?: string;
   nam: number;
   danh_hieu: string | null;
+  cap_bac?: string | null;
+  chuc_vu?: string | null;
   so_quyet_dinh?: string | null;
   nhan_bkbqp?: boolean;
   so_quyet_dinh_bkbqp?: string | null;
@@ -86,6 +88,8 @@ interface ThanhTichItem {
   status: string;
   so_quyet_dinh?: string;
   file_quyet_dinh?: string | null;
+  cap_bac?: string | null;
+  chuc_vu?: string | null;
   co_quan_don_vi?: {
     id: string;
     ten_co_quan_don_vi: string;
@@ -676,6 +680,33 @@ export default function ProposalDetailPage() {
       },
     },
     {
+      title: 'Cấp bậc / Chức vụ',
+      key: 'cap_bac_chuc_vu',
+      width: 180,
+      align: 'center' as const,
+      render: (_: any, record: DanhHieuItem) => {
+        // Chỉ hiển thị nếu có dữ liệu trong dataJSON
+        const capBac = record.cap_bac;
+        const chucVu = record.chuc_vu;
+
+        // Nếu không có cả cấp bậc và chức vụ, để trống
+        if (!capBac && !chucVu) {
+          return <span>-</span>;
+        }
+
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            {capBac && <Text strong>{capBac}</Text>}
+            {chucVu && (
+              <Text type="secondary" style={{ fontSize: '12px', marginTop: capBac ? '4px' : '0' }}>
+                {chucVu}
+              </Text>
+            )}
+          </div>
+        );
+      },
+    },
+    {
       title: 'Năm',
       dataIndex: 'nam',
       key: 'nam',
@@ -958,6 +989,33 @@ export default function ProposalDetailPage() {
             {unitInfo && (
               <Text type="secondary" style={{ fontSize: '12px', marginTop: '4px' }}>
                 {unitInfo}
+              </Text>
+            )}
+          </div>
+        );
+      },
+    },
+    {
+      title: 'Cấp bậc / Chức vụ',
+      key: 'cap_bac_chuc_vu',
+      width: 180,
+      align: 'center' as const,
+      render: (_: any, record: ThanhTichItem) => {
+        // Chỉ hiển thị nếu có dữ liệu trong dataJSON
+        const capBac = record.cap_bac;
+        const chucVu = record.chuc_vu;
+
+        // Nếu không có cả cấp bậc và chức vụ, để trống
+        if (!capBac && !chucVu) {
+          return <span>-</span>;
+        }
+
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            {capBac && <Text strong>{capBac}</Text>}
+            {chucVu && (
+              <Text type="secondary" style={{ fontSize: '12px', marginTop: capBac ? '4px' : '0' }}>
+                {chucVu}
               </Text>
             )}
           </div>

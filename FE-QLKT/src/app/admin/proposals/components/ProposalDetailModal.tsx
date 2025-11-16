@@ -115,14 +115,24 @@ export default function ProposalDetailModal({
       },
     },
     {
-      title: 'Chức vụ hiện tại',
-      key: 'chuc_vu',
+      title: 'Cấp bậc / Chức vụ',
+      key: 'cap_bac_chuc_vu',
       width: 200,
       align: 'center',
       render: (_: any, record: any) => {
-        // Lấy chức vụ từ record nếu có
+        // Lấy thông tin từ record nếu có
+        const capBac = record.cap_bac;
         const chucVu = record.ChucVu?.ten_chuc_vu || record.chuc_vu;
-        return <Text>{chucVu || '-'}</Text>;
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <Text strong style={{ marginBottom: '4px' }}>
+              {capBac || '-'}
+            </Text>
+            <Text type="secondary" style={{ fontSize: '12px' }}>
+              {chucVu || '-'}
+            </Text>
+          </div>
+        );
       },
     },
   ];

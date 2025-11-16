@@ -239,6 +239,7 @@ export default function ManagerPersonnelDetailPage() {
                   label: 'Đơn vị trực thuộc',
                   value: personnel.DonViTrucThuoc?.ten_don_vi || '-',
                 },
+                { label: 'Cấp bậc', value: personnel.cap_bac || '-' },
                 { label: 'Chức vụ', value: personnel.ChucVu?.ten_chuc_vu || '-' },
                 {
                   label: 'Hệ số chức vụ',

@@ -4,6 +4,7 @@ const multer = require('multer');
 const personnelController = require('../controllers/personnel.controller');
 const { verifyToken, requireAdmin, requireManager, requireAuth } = require('../middlewares/auth');
 const { auditLog, createDescription, getResourceId } = require('../middlewares/auditLog');
+const { getLogDescription } = require('../helpers/auditLogHelper');
 
 // Sử dụng memory storage để đọc file Excel trực tiếp từ buffer
 const upload = multer({ storage: multer.memoryStorage() });
@@ -34,10 +35,7 @@ router.post(
   auditLog({
     action: 'CREATE',
     resource: 'personnel',
-    getDescription: (req, res, responseData) => {
-      const hoTen = req.body?.ho_ten || 'N/A';
-      return `Tạo mới quân nhân: ${hoTen}`;
-    },
+    getDescription: getLogDescription('personnel', 'CREATE'),
     getResourceId: getResourceId.fromResponse('id'),
   }),
   personnelController.createPersonnel
@@ -55,10 +53,7 @@ router.put(
   auditLog({
     action: 'UPDATE',
     resource: 'personnel',
-    getDescription: (req, res, responseData) => {
-      const hoTen = req.body?.ho_ten || 'N/A';
-      return `Cập nhật quân nhân: ${hoTen}`;
-    },
+    getDescription: getLogDescription('personnel', 'UPDATE'),
     getResourceId: getResourceId.fromParams('id'),
   }),
   personnelController.updatePersonnel
@@ -77,7 +72,7 @@ router.post(
   auditLog({
     action: 'IMPORT',
     resource: 'personnel',
-    getDescription: () => 'Import quân nhân từ Excel',
+    getDescription: getLogDescription('personnel', 'IMPORT'),
   }),
   personnelController.importPersonnel
 );
@@ -94,7 +89,7 @@ router.get(
   auditLog({
     action: 'EXPORT',
     resource: 'personnel',
-    getDescription: () => 'Xuất dữ liệu quân nhân',
+    getDescription: getLogDescription('personnel', 'EXPORT'),
   }),
   personnelController.exportPersonnel
 );

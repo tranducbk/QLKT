@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Card, Input, DatePicker, Select, Button, Typography } from 'antd';
+import { Card, Input, DatePicker, Select, Button, Typography, Spin } from 'antd';
 import { SearchOutlined, ClearOutlined, CalendarOutlined } from '@ant-design/icons';
 import dayjs, { Dayjs } from 'dayjs';
 import 'dayjs/locale/vi';
 import type { SelectProps } from 'antd';
+import { apiClient } from '@/lib/api-client';
 
 dayjs.locale('vi');
 
@@ -14,6 +15,44 @@ const { Text } = Typography;
 interface LogsFilterProps {
   onFilterChange: (filters: any) => void;
 }
+
+// Mapping cho vai trò tiếng Việt
+const roleLabels: Record<string, string> = {
+  SUPER_ADMIN: 'Quản trị viên cấp cao',
+  ADMIN: 'Quản trị viên',
+  MANAGER: 'Quản lý',
+  USER: 'Người dùng',
+};
+
+// Mapping cho actions tiếng Việt
+const actionLabels: Record<string, string> = {
+  CREATE: 'Tạo',
+  UPDATE: 'Cập nhật',
+  DELETE: 'Xóa',
+  APPROVE: 'Phê duyệt',
+  REJECT: 'Từ chối',
+  LOGIN: 'Đăng nhập',
+  LOGOUT: 'Đăng xuất',
+  RESET_PASSWORD: 'Đặt lại mật khẩu',
+  CHANGE_PASSWORD: 'Đổi mật khẩu',
+  IMPORT: 'Import',
+  EXPORT: 'Xuất dữ liệu',
+  BULK: 'Thêm đồng loạt',
+};
+
+// Mapping cho resources tiếng Việt
+const resourceLabels: Record<string, string> = {
+  accounts: 'Tài khoản',
+  personnel: 'Quân nhân',
+  units: 'Đơn vị',
+  positions: 'Chức vụ',
+  proposals: 'Đề xuất',
+  'annual-rewards': 'Danh hiệu hằng năm',
+  'position-history': 'Lịch sử chức vụ',
+  'scientific-achievements': 'Thành tích khoa học',
+  decisions: 'Quyết định',
+  auth: 'Xác thực',
+};
 
 export function LogsFilter({ onFilterChange }: LogsFilterProps) {
   const [search, setSearch] = useState('');
@@ -24,13 +63,36 @@ export function LogsFilter({ onFilterChange }: LogsFilterProps) {
   const [resources, setResources] = useState<string[]>([]);
   const [action, setAction] = useState<string | undefined>();
   const [resource, setResource] = useState<string | undefined>();
+  const [loading, setLoading] = useState(true);
 
-  // Initialize with common actions and resources
+  // Fetch actions and resources from API
   useEffect(() => {
-    // Common actions
-    setActions(['CREATE', 'UPDATE', 'DELETE', 'LOGIN', 'LOGOUT', 'RESET_PASSWORD']);
-    // Common resources
-    setResources(['accounts', 'personnel', 'positions', 'units']);
+    const fetchFilterOptions = async () => {
+      try {
+        setLoading(true);
+        const [actionsRes, resourcesRes] = await Promise.all([
+          apiClient.getSystemLogActions(),
+          apiClient.getSystemLogResources(),
+        ]);
+
+        if (actionsRes.success && Array.isArray(actionsRes.data)) {
+          setActions(actionsRes.data);
+        }
+
+        if (resourcesRes.success && Array.isArray(resourcesRes.data)) {
+          setResources(resourcesRes.data);
+        }
+      } catch (error) {
+        console.error('Error fetching filter options:', error);
+        // Fallback to default values
+        setActions(['CREATE', 'UPDATE', 'DELETE', 'APPROVE', 'REJECT', 'LOGIN', 'LOGOUT']);
+        setResources(['accounts', 'personnel', 'units', 'positions', 'proposals', 'annual-rewards']);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchFilterOptions();
   }, []);
 
   const handleSearch = (value: string) => {
@@ -142,127 +204,157 @@ export function LogsFilter({ onFilterChange }: LogsFilterProps) {
 
   const roleOptions: SelectProps['options'] = [
     { label: 'Tất cả', value: 'ALL' },
-    { label: 'SUPER_ADMIN', value: 'SUPER_ADMIN' },
-    { label: 'ADMIN', value: 'ADMIN' },
-    { label: 'MANAGER', value: 'MANAGER' },
-    { label: 'USER', value: 'USER' },
+    { label: roleLabels.SUPER_ADMIN || 'SUPER_ADMIN', value: 'SUPER_ADMIN' },
+    { label: roleLabels.ADMIN || 'ADMIN', value: 'ADMIN' },
+    { label: roleLabels.MANAGER || 'MANAGER', value: 'MANAGER' },
+    { label: roleLabels.USER || 'USER', value: 'USER' },
   ];
 
   const actionOptions: SelectProps['options'] = [
     { label: 'Tất cả', value: 'ALL' },
-    ...actions.map(a => ({ label: a, value: a })),
+    ...actions.map(a => ({
+      label: actionLabels[a] || a,
+      value: a,
+    })),
   ];
 
   const resourceOptions: SelectProps['options'] = [
     { label: 'Tất cả', value: 'ALL' },
-    ...resources.map(r => ({ label: r, value: r })),
+    ...resources.map(r => ({
+      label: resourceLabels[r] || r,
+      value: r,
+    })),
   ];
 
   return (
     <Card className="mb-6 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-7 gap-4">
-        {/* Search Input */}
-        <div className="md:col-span-2 lg:col-span-2 xl:col-span-2">
-          <Text className="text-sm font-medium mb-2 block text-gray-700 dark:text-gray-300">
-            Tìm kiếm
-          </Text>
-          <Input
-            placeholder="Tìm kiếm theo hành động hoặc người dùng..."
-            prefix={<SearchOutlined className="text-gray-400 dark:text-gray-500" />}
-            value={search}
-            onChange={e => handleSearch(e.target.value)}
-            size="large"
-            className="bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100"
-          />
+      {loading ? (
+        <div className="flex justify-center py-8">
+          <Spin size="large" />
         </div>
+      ) : (
+        <>
+          {/* Hàng 1: Tìm kiếm và Bộ lọc ngày */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+            {/* Search Input */}
+            <div className="md:col-span-2 lg:col-span-1">
+              <Text className="text-sm font-medium mb-2 block text-gray-700 dark:text-gray-300">
+                Tìm kiếm
+              </Text>
+              <Input
+                placeholder="Tìm kiếm theo hành động hoặc người dùng..."
+                prefix={<SearchOutlined className="text-gray-400 dark:text-gray-500" />}
+                value={search}
+                onChange={e => handleSearch(e.target.value)}
+                size="large"
+                className="bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100"
+              />
+            </div>
 
-        {/* Start Date */}
-        <div>
-          <Text className="text-sm font-medium mb-2 block text-gray-700 dark:text-gray-300">
-            Từ ngày
-          </Text>
-          <DatePicker
-            placeholder="Chọn ngày"
-            format="DD/MM/YYYY"
-            value={startDate}
-            onChange={handleStartDateChange}
-            disabledDate={disabledStartDate}
-            suffixIcon={<CalendarOutlined />}
-            size="large"
-            style={{ width: '100%' }}
-            className="bg-white dark:bg-gray-700"
-          />
-        </div>
+            {/* Start Date */}
+            <div>
+              <Text className="text-sm font-medium mb-2 block text-gray-700 dark:text-gray-300">
+                Từ ngày
+              </Text>
+              <DatePicker
+                placeholder="Chọn ngày"
+                format="DD/MM/YYYY"
+                value={startDate}
+                onChange={handleStartDateChange}
+                disabledDate={disabledStartDate}
+                suffixIcon={<CalendarOutlined />}
+                size="large"
+                style={{ width: '100%' }}
+                className="bg-white dark:bg-gray-700"
+              />
+            </div>
 
-        {/* End Date */}
-        <div>
-          <Text className="text-sm font-medium mb-2 block text-gray-700 dark:text-gray-300">
-            Đến ngày
-          </Text>
-          <DatePicker
-            placeholder="Chọn ngày"
-            format="DD/MM/YYYY"
-            value={endDate}
-            onChange={handleEndDateChange}
-            disabledDate={disabledEndDate}
-            suffixIcon={<CalendarOutlined />}
-            size="large"
-            style={{ width: '100%' }}
-            className="bg-white dark:bg-gray-700"
-          />
-        </div>
+            {/* End Date */}
+            <div>
+              <Text className="text-sm font-medium mb-2 block text-gray-700 dark:text-gray-300">
+                Đến ngày
+              </Text>
+              <DatePicker
+                placeholder="Chọn ngày"
+                format="DD/MM/YYYY"
+                value={endDate}
+                onChange={handleEndDateChange}
+                disabledDate={disabledEndDate}
+                suffixIcon={<CalendarOutlined />}
+                size="large"
+                style={{ width: '100%' }}
+                className="bg-white dark:bg-gray-700"
+              />
+            </div>
+          </div>
 
-        {/* Actor Role */}
-        <div>
-          <Text className="text-sm font-medium mb-2 block text-gray-700 dark:text-gray-300">
-            Vai trò
-          </Text>
-          <Select
-            placeholder="Chọn vai trò"
-            value={actorRole || 'ALL'}
-            onChange={handleRoleChange}
-            options={roleOptions}
-            size="large"
-            style={{ width: '100%' }}
-            className="bg-white dark:bg-gray-700"
-          />
-        </div>
+          {/* Hàng 2: Các bộ lọc Select */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {/* Actor Role */}
+            <div>
+              <Text className="text-sm font-medium mb-2 block text-gray-700 dark:text-gray-300">
+                Vai trò
+              </Text>
+              <Select
+                placeholder="Chọn vai trò"
+                value={actorRole || 'ALL'}
+                onChange={handleRoleChange}
+                options={roleOptions}
+                size="large"
+                style={{ width: '100%' }}
+                className="bg-white dark:bg-gray-700"
+                showSearch
+                filterOption={(input, option) =>
+                  (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+                }
+              />
+            </div>
 
-        {/* Action */}
-        <div>
-          <Text className="text-sm font-medium mb-2 block text-gray-700 dark:text-gray-300">
-            Hành động
-          </Text>
-          <Select
-            placeholder="Tất cả"
-            value={action || 'ALL'}
-            onChange={handleActionChange}
-            options={actionOptions}
-            size="large"
-            style={{ width: '100%' }}
-            className="bg-white dark:bg-gray-700"
-          />
-        </div>
+            {/* Action */}
+            <div>
+              <Text className="text-sm font-medium mb-2 block text-gray-700 dark:text-gray-300">
+                Hành động
+              </Text>
+              <Select
+                placeholder="Tất cả"
+                value={action || 'ALL'}
+                onChange={handleActionChange}
+                options={actionOptions}
+                size="large"
+                style={{ width: '100%' }}
+                className="bg-white dark:bg-gray-700"
+                showSearch
+                filterOption={(input, option) =>
+                  (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+                }
+              />
+            </div>
 
-        {/* Resource */}
-        <div>
-          <Text className="text-sm font-medium mb-2 block text-gray-700 dark:text-gray-300">
-            Tài nguyên
-          </Text>
-          <Select
-            placeholder="Tất cả"
-            value={resource || 'ALL'}
-            onChange={handleResourceChange}
-            options={resourceOptions}
-            size="large"
-            style={{ width: '100%' }}
-            className="bg-white dark:bg-gray-700"
-          />
-        </div>
-      </div>
+            {/* Resource */}
+            <div>
+              <Text className="text-sm font-medium mb-2 block text-gray-700 dark:text-gray-300">
+                Tài nguyên
+              </Text>
+              <Select
+                placeholder="Tất cả"
+                value={resource || 'ALL'}
+                onChange={handleResourceChange}
+                options={resourceOptions}
+                size="large"
+                style={{ width: '100%' }}
+                className="bg-white dark:bg-gray-700"
+                showSearch
+                filterOption={(input, option) =>
+                  (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+                }
+              />
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Reset Button */}
-      {hasActiveFilters && (
+      {!loading && hasActiveFilters && (
         <div className="mt-4 flex justify-end">
           <Button
             type="text"

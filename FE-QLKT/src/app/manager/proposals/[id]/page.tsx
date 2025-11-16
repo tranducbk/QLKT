@@ -44,6 +44,8 @@ interface DanhHieuItem {
   ho_ten: string;
   nam: number;
   danh_hieu: string | null;
+  cap_bac?: string | null;
+  chuc_vu?: string | null;
   so_quyet_dinh?: string | null;
   file_quyet_dinh?: string | null;
   // Các trường cũ (tương thích với dữ liệu cũ, không dùng nữa)
@@ -79,6 +81,8 @@ interface ThanhTichItem {
   status: string;
   so_quyet_dinh?: string | null;
   file_quyet_dinh?: string | null;
+  cap_bac?: string | null;
+  chuc_vu?: string | null;
   co_quan_don_vi?: {
     id: string;
     ten_co_quan_don_vi: string;
@@ -602,7 +606,22 @@ export default function ManagerProposalDetailPage() {
                           currentTheme === 'dark' ? styles.fileNameDark : styles.fileNameLight
                         }`}
                       >
-                        {decodeURIComponent(escape(file.originalName))}
+                        {(() => {
+                          try {
+                            // Thử decode nếu là URI encoded, nếu không thì hiển thị trực tiếp
+                            if (file.originalName && typeof file.originalName === 'string') {
+                              // Kiểm tra xem có phải URI encoded không
+                              if (file.originalName.includes('%')) {
+                                return decodeURIComponent(file.originalName);
+                              }
+                              return file.originalName;
+                            }
+                            return file.originalName || '-';
+                          } catch (e) {
+                            // Nếu decode lỗi, hiển thị tên file gốc
+                            return file.originalName || '-';
+                          }
+                        })()}
                       </Text>
                     </div>
                     <Text
@@ -702,6 +721,38 @@ export default function ManagerProposalDetailPage() {
                         {unitInfo && (
                           <Text type="secondary" style={{ fontSize: '12px', marginTop: '4px' }}>
                             {unitInfo}
+                          </Text>
+                        )}
+                      </div>
+                    );
+                  },
+                },
+                {
+                  title: 'Cấp bậc / Chức vụ',
+                  key: 'cap_bac_chuc_vu',
+                  width: 180,
+                  align: 'center',
+                  render: (_: any, record: any) => {
+                    // Chỉ lấy từ dataJSON, không lấy từ personnelDetails
+                    const capBac = record.cap_bac;
+                    const chucVu = record.chuc_vu;
+
+                    // Nếu không có cả cấp bậc và chức vụ, để trống
+                    if (!capBac && !chucVu) {
+                      return <span>-</span>;
+                    }
+
+                    return (
+                      <div
+                        style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}
+                      >
+                        {capBac && <Text strong>{capBac}</Text>}
+                        {chucVu && (
+                          <Text
+                            type="secondary"
+                            style={{ fontSize: '12px', marginTop: capBac ? '4px' : '0' }}
+                          >
+                            {chucVu}
                           </Text>
                         )}
                       </div>
@@ -825,14 +876,36 @@ export default function ManagerProposalDetailPage() {
                   },
                 },
                 {
-                  title: 'Chức vụ hiện tại',
-                  key: 'chuc_vu',
-                  width: 200,
+                  title: 'Cấp bậc / Chức vụ',
+                  key: 'cap_bac_chuc_vu',
+                  width: 180,
                   align: 'center',
                   render: (_: any, record: any) => {
-                    const personnelDetail = personnelDetails[record.personnel_id || ''];
-                    const chucVu = personnelDetail?.ChucVu?.ten_chuc_vu;
-                    return <Text>{chucVu || '-'}</Text>;
+                    // Chỉ lấy từ dataJSON, không lấy từ personnelDetails
+                    const capBac = record.cap_bac;
+                    const chucVu = record.chuc_vu;
+
+                    // Nếu không có cả cấp bậc và chức vụ, để trống
+                    if (!capBac && !chucVu) {
+                      return <span>-</span>;
+                    }
+
+                    return (
+                      <div
+                        style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}
+                      >
+                        {capBac && (
+                          <Text strong style={{ marginBottom: chucVu ? '4px' : '0' }}>
+                            {capBac}
+                          </Text>
+                        )}
+                        {chucVu && (
+                          <Text type="secondary" style={{ fontSize: '12px' }}>
+                            {chucVu}
+                          </Text>
+                        )}
+                      </div>
+                    );
                   },
                 },
                 {
@@ -1001,14 +1074,36 @@ export default function ManagerProposalDetailPage() {
                   },
                 },
                 {
-                  title: 'Chức vụ hiện tại',
-                  key: 'chuc_vu',
-                  width: 200,
+                  title: 'Cấp bậc / Chức vụ',
+                  key: 'cap_bac_chuc_vu',
+                  width: 180,
                   align: 'center',
                   render: (_: any, record: any) => {
-                    const personnelDetail = personnelDetails[record.personnel_id || ''];
-                    const chucVu = personnelDetail?.ChucVu?.ten_chuc_vu;
-                    return <Text>{chucVu || '-'}</Text>;
+                    // Chỉ lấy từ dataJSON, không lấy từ personnelDetails
+                    const capBac = record.cap_bac;
+                    const chucVu = record.chuc_vu;
+
+                    // Nếu không có cả cấp bậc và chức vụ, để trống
+                    if (!capBac && !chucVu) {
+                      return <span>-</span>;
+                    }
+
+                    return (
+                      <div
+                        style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}
+                      >
+                        {capBac && (
+                          <Text strong style={{ marginBottom: chucVu ? '4px' : '0' }}>
+                            {capBac}
+                          </Text>
+                        )}
+                        {chucVu && (
+                          <Text type="secondary" style={{ fontSize: '12px' }}>
+                            {chucVu}
+                          </Text>
+                        )}
+                      </div>
+                    );
                   },
                 },
                 {
@@ -1147,6 +1242,39 @@ export default function ManagerProposalDetailPage() {
                         {unitInfo && (
                           <Text type="secondary" style={{ fontSize: '12px', marginTop: '4px' }}>
                             {unitInfo}
+                          </Text>
+                        )}
+                      </div>
+                    );
+                  },
+                },
+                {
+                  title: 'Cấp bậc / Chức vụ',
+                  key: 'cap_bac_chuc_vu',
+                  width: 180,
+                  align: 'center',
+                  render: (_: any, record: any) => {
+                    // Chỉ lấy từ dataJSON, không lấy từ personnelDetails
+                    const capBac = record.cap_bac;
+                    const chucVu = record.chuc_vu;
+
+                    // Nếu không có cả cấp bậc và chức vụ, để trống
+                    if (!capBac && !chucVu) {
+                      return <span>-</span>;
+                    }
+
+                    return (
+                      <div
+                        style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}
+                      >
+                        {capBac && (
+                          <Text strong style={{ marginBottom: chucVu ? '4px' : '0' }}>
+                            {capBac}
+                          </Text>
+                        )}
+                        {chucVu && (
+                          <Text type="secondary" style={{ fontSize: '12px' }}>
+                            {chucVu}
                           </Text>
                         )}
                       </div>

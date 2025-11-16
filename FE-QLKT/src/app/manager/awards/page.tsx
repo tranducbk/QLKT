@@ -60,57 +60,31 @@ export default function ManagerAwardsPage() {
   const [awards, setAwards] = useState<Award[]>([]);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
-  const [managerUnitId, setManagerUnitId] = useState<number | null>(null);
   const [filters, setFilters] = useState({
     nam: '',
     ho_ten: '',
   });
 
-  // Lấy thông tin đơn vị của manager
+  // Backend tự động lấy đơn vị của Manager, không cần gửi don_vi_id
   useEffect(() => {
-    const getManagerUnit = async () => {
-      try {
-        const user = JSON.parse(localStorage.getItem('user') || '{}');
-        if (user?.quan_nhan_id) {
-          const res = await apiClient.getPersonnelById(user.quan_nhan_id);
-          if (res.success && res.data?.don_vi_id) {
-            setManagerUnitId(res.data.don_vi_id);
-          } else {
-            message.error('Không thể xác định đơn vị quản lý.');
-          }
-        } else {
-          message.error('Không tìm thấy thông tin quân nhân của quản lý.');
-        }
-      } catch (error) {
-        console.error('Error getting manager unit:', error);
-        message.error('Có lỗi xảy ra khi lấy thông tin đơn vị');
-      }
-    };
-
-    getManagerUnit();
-  }, []);
-
-  useEffect(() => {
-    if (managerUnitId !== null) {
-      fetchAwards();
-    }
-  }, [managerUnitId, filters]);
+    fetchAwards();
+  }, [filters]);
 
   const fetchAwards = async () => {
-    if (managerUnitId === null) return;
-
     try {
       setLoading(true);
       const params: any = {
-        don_vi_id: managerUnitId,
         limit: 1000,
       };
       if (filters.nam) params.nam = parseInt(filters.nam);
       if (filters.ho_ten) params.ho_ten = filters.ho_ten;
 
+      // Backend tự động filter theo đơn vị của Manager
       const result = await apiClient.getAwards(params);
       if (result.success) {
         setAwards(result.data.awards || result.data || []);
+      } else {
+        message.error(result.message || 'Không thể tải danh sách khen thưởng');
       }
     } catch (error) {
       console.error('Error fetching awards:', error);
@@ -121,16 +95,10 @@ export default function ManagerAwardsPage() {
   };
 
   const handleExport = async () => {
-    if (managerUnitId === null) {
-      message.error('Không thể xác định đơn vị quản lý');
-      return;
-    }
-
     try {
       setExporting(true);
-      const params: any = {
-        don_vi_id: managerUnitId,
-      };
+      const params: any = {};
+      // Backend tự động filter theo đơn vị của Manager
       if (filters.nam) params.nam = parseInt(filters.nam);
       if (filters.ho_ten) params.ho_ten = filters.ho_ten;
 
@@ -229,12 +197,24 @@ export default function ManagerAwardsPage() {
       },
     },
     {
-      title: 'Chức vụ',
-      dataIndex: 'chuc_vu',
-      key: 'chuc_vu',
-      width: 100,
+      title: 'Cấp bậc / Chức vụ',
+      key: 'cap_bac_chuc_vu',
+      width: 150,
       align: 'center',
-      render: text => <Text strong>{text}</Text>,
+      render: (_: any, record: any) => {
+        const capBac = record.cap_bac;
+        const chucVu = record.chuc_vu;
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <Text strong style={{ marginBottom: '4px' }}>
+              {capBac || '-'}
+            </Text>
+            <Text type="secondary" style={{ fontSize: '12px' }}>
+              {chucVu || '-'}
+            </Text>
+          </div>
+        );
+      },
     },
     {
       title: 'Năm',
@@ -317,7 +297,7 @@ export default function ManagerAwardsPage() {
     },
   ];
 
-  if (loading && awards.length === 0 && managerUnitId !== null) {
+  if (loading && awards.length === 0) {
     return (
       <ConfigProvider
         theme={{

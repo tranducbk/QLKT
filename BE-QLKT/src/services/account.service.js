@@ -125,16 +125,37 @@ class AccountService {
               id: account.QuanNhan.id,
               ho_ten: account.QuanNhan.ho_ten,
               cccd: account.QuanNhan.cccd,
+              gioi_tinh: account.QuanNhan.gioi_tinh,
+              ngay_sinh: account.QuanNhan.ngay_sinh,
+              que_quan_2_cap: account.QuanNhan.que_quan_2_cap,
+              que_quan_3_cap: account.QuanNhan.que_quan_3_cap,
+              tru_quan: account.QuanNhan.tru_quan,
+              cho_o_hien_nay: account.QuanNhan.cho_o_hien_nay,
+              ngay_nhap_ngu: account.QuanNhan.ngay_nhap_ngu,
+              ngay_xuat_ngu: account.QuanNhan.ngay_xuat_ngu,
+              ngay_vao_dang: account.QuanNhan.ngay_vao_dang,
+              ngay_vao_dang_chinh_thuc: account.QuanNhan.ngay_vao_dang_chinh_thuc,
+              so_the_dang_vien: account.QuanNhan.so_the_dang_vien,
+              so_dien_thoai: account.QuanNhan.so_dien_thoai,
               CoQuanDonVi: account.QuanNhan.CoQuanDonVi
                 ? {
                     id: account.QuanNhan.CoQuanDonVi.id,
+                    ma_don_vi: account.QuanNhan.CoQuanDonVi.ma_don_vi,
                     ten_don_vi: account.QuanNhan.CoQuanDonVi.ten_don_vi,
                   }
                 : null,
               DonViTrucThuoc: account.QuanNhan.DonViTrucThuoc
                 ? {
                     id: account.QuanNhan.DonViTrucThuoc.id,
+                    ma_don_vi: account.QuanNhan.DonViTrucThuoc.ma_don_vi,
                     ten_don_vi: account.QuanNhan.DonViTrucThuoc.ten_don_vi,
+                    CoQuanDonVi: account.QuanNhan.DonViTrucThuoc.CoQuanDonVi
+                      ? {
+                          id: account.QuanNhan.DonViTrucThuoc.CoQuanDonVi.id,
+                          ma_don_vi: account.QuanNhan.DonViTrucThuoc.CoQuanDonVi.ma_don_vi,
+                          ten_don_vi: account.QuanNhan.DonViTrucThuoc.CoQuanDonVi.ten_don_vi,
+                        }
+                      : null,
                   }
                 : null,
               ChucVu: account.QuanNhan.ChucVu

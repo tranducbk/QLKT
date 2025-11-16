@@ -3,6 +3,7 @@ const router = express.Router();
 const positionController = require('../controllers/position.controller');
 const { verifyToken, requireAdmin, requireManager } = require('../middlewares/auth');
 const { auditLog, createDescription, getResourceId } = require('../middlewares/auditLog');
+const { getLogDescription } = require('../helpers/auditLogHelper');
 
 /**
  * @route   GET /api/positions?unit_id={id}
@@ -23,11 +24,7 @@ router.post(
   auditLog({
     action: 'CREATE',
     resource: 'positions',
-    getDescription: (req, res, responseData) => {
-      // Lấy tên chức vụ từ request body
-      const tenChucVu = req.body?.ten_chuc_vu || 'N/A';
-      return `Tạo mới chức vụ: ${tenChucVu}`;
-    },
+    getDescription: getLogDescription('positions', 'CREATE'),
     getResourceId: getResourceId.fromResponse('id'),
   }),
   positionController.createPosition
@@ -45,11 +42,7 @@ router.put(
   auditLog({
     action: 'UPDATE',
     resource: 'positions',
-    getDescription: (req, res, responseData) => {
-      // Lấy tên chức vụ từ request body
-      const tenChucVu = req.body?.ten_chuc_vu || 'N/A';
-      return `Cập nhật chức vụ: ${tenChucVu}`;
-    },
+    getDescription: getLogDescription('positions', 'UPDATE'),
     getResourceId: getResourceId.fromParams('id'),
   }),
   positionController.updatePosition
@@ -67,16 +60,7 @@ router.delete(
   auditLog({
     action: 'DELETE',
     resource: 'positions',
-    getDescription: (req, res, responseData) => {
-      // Cố gắng lấy tên chức vụ từ response nếu có
-      try {
-        const data = typeof responseData === 'string' ? JSON.parse(responseData) : responseData;
-        const tenChucVu = data?.data?.ten_chuc_vu || `ID ${req.params.id}`;
-        return `Xóa chức vụ: ${tenChucVu}`;
-      } catch {
-        return `Xóa chức vụ: ID ${req.params.id}`;
-      }
-    },
+    getDescription: getLogDescription('positions', 'DELETE'),
     getResourceId: getResourceId.fromParams('id'),
   }),
   positionController.deletePosition

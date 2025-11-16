@@ -254,12 +254,24 @@ export default function AdminAwardsPage() {
       },
     },
     {
-      title: 'Chức vụ',
-      dataIndex: 'chuc_vu',
-      key: 'chuc_vu',
-      width: 100,
+      title: 'Cấp bậc / Chức vụ',
+      key: 'cap_bac_chuc_vu',
+      width: 150,
       align: 'center',
-      render: text => <Text strong>{text}</Text>,
+      render: (_: any, record: any) => {
+        const capBac = record.cap_bac;
+        const chucVu = record.chuc_vu;
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <Text strong style={{ marginBottom: '4px' }}>
+              {capBac || '-'}
+            </Text>
+            <Text type="secondary" style={{ fontSize: '12px' }}>
+              {chucVu || '-'}
+            </Text>
+          </div>
+        );
+      },
     },
     {
       title: 'Năm',

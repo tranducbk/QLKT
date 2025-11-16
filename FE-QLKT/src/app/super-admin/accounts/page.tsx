@@ -74,7 +74,7 @@ export default function AccountsListPage() {
         setPagination({
           current: page,
           pageSize,
-          total: response.data?.total || 0,
+          total: response.data?.pagination?.total || response.data?.total || 0,
         });
       } else {
         message.error(response.message || 'Không thể tải danh sách tài khoản');

@@ -178,11 +178,24 @@ export default function BulkAddAnnualRewardsPage() {
       render: donVi => donVi?.ten_don_vi || '-',
     },
     {
-      title: 'Chức vụ',
-      dataIndex: 'ChucVu',
-      key: 'chuc_vu',
-      width: 150,
-      render: chucVu => chucVu?.ten_chuc_vu || '-',
+      title: 'Cấp bậc / Chức vụ',
+      key: 'cap_bac_chuc_vu',
+      width: 180,
+      align: 'center',
+      render: (_: any, record: any) => {
+        const capBac = record.cap_bac;
+        const chucVu = record.ChucVu?.ten_chuc_vu;
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <Text strong style={{ marginBottom: '4px' }}>
+              {capBac || '-'}
+            </Text>
+            <Text type="secondary" style={{ fontSize: '12px' }}>
+              {chucVu || '-'}
+            </Text>
+          </div>
+        );
+      },
     },
   ];
 
@@ -316,7 +329,7 @@ export default function BulkAddAnnualRewardsPage() {
           <Space wrap style={{ width: '100%' }} size="middle">
             <div style={{ flex: 1, minWidth: 250 }}>
               <Input
-                placeholder="Tìm theo tên hoặc CCCD"
+                placeholder="Tìm theo tên"
                 prefix={<SearchOutlined />}
                 value={searchText}
                 onChange={e => setSearchText(e.target.value)}

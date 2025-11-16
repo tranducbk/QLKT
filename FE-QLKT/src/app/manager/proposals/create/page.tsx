@@ -907,17 +907,27 @@ export default function CreateProposalPage() {
               },
             },
             {
-              title: 'Chức vụ hiện tại',
-              key: 'chuc_vu',
+              title: 'Cấp bậc / Chức vụ',
+              key: 'cap_bac_chuc_vu',
               width: 200,
               align: 'center',
               render: (_, record: any) => {
-                // Lấy chức vụ từ personnel details nếu có
+                // Lấy thông tin từ personnel details nếu có
                 const personnelDetail = personnelDetails.find(
                   (p: any) => p.id === record.personnel_id || p.id === record.id
                 );
-                const chucVu = personnelDetail?.ChucVu?.ten_chuc_vu;
-                return <Text>{chucVu || '-'}</Text>;
+                const capBac = personnelDetail?.cap_bac || record.cap_bac;
+                const chucVu = personnelDetail?.ChucVu?.ten_chuc_vu || record.ChucVu?.ten_chuc_vu;
+                return (
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                    <Text strong style={{ marginBottom: '4px' }}>
+                      {capBac || '-'}
+                    </Text>
+                    <Text type="secondary" style={{ fontSize: '12px' }}>
+                      {chucVu || '-'}
+                    </Text>
+                  </div>
+                );
               },
             }
           );

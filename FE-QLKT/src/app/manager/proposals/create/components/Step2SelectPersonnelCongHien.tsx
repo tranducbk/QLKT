@@ -17,6 +17,7 @@ interface Personnel {
   co_quan_don_vi_id: string;
   don_vi_truc_thuoc_id: string;
   chuc_vu_id: string;
+  cap_bac?: string;
   CoQuanDonVi?: {
     id: string;
     ten_don_vi: string;
@@ -219,11 +220,24 @@ export default function Step2SelectPersonnelCongHien({
       },
     },
     {
-      title: 'Chức vụ',
-      key: 'chuc_vu',
-      width: 160,
+      title: 'Cấp bậc / Chức vụ',
+      key: 'cap_bac_chuc_vu',
+      width: 180,
       align: 'center',
-      render: (_, record) => record.ChucVu?.ten_chuc_vu || '-',
+      render: (_, record) => {
+        const capBac = record.cap_bac;
+        const chucVu = record.ChucVu?.ten_chuc_vu;
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <Text strong style={{ marginBottom: '4px' }}>
+              {capBac || '-'}
+            </Text>
+            <Text type="secondary" style={{ fontSize: '12px' }}>
+              {chucVu || '-'}
+            </Text>
+          </div>
+        );
+      },
     },
     {
       title: 'Tổng thời gian (0.7)',

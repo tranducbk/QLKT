@@ -42,8 +42,71 @@ class SystemLogsController {
       // - ADMIN: xem được USER, MANAGER, ADMIN
       // - SUPER_ADMIN: xem được tất cả (USER, MANAGER, ADMIN, SUPER_ADMIN)
       if (currentUser.role === 'MANAGER') {
-        // MANAGER chỉ xem được USER và MANAGER
+        // MANAGER chỉ xem được USER và MANAGER trong đơn vị của mình
         where.actor_role = { in: ['USER', 'MANAGER'] };
+
+        // Filter theo đơn vị của Manager
+        if (currentUser.quan_nhan_id) {
+          const managerPersonnel = await prisma.quanNhan.findUnique({
+            where: { id: currentUser.quan_nhan_id },
+            select: {
+              co_quan_don_vi_id: true,
+              don_vi_truc_thuoc_id: true,
+            },
+          });
+
+          if (managerPersonnel) {
+            // Lấy danh sách quân nhân trong đơn vị của Manager
+            let personnelInUnit = [];
+
+            if (managerPersonnel.co_quan_don_vi_id) {
+              // Manager thuộc cơ quan đơn vị - lấy tất cả quân nhân trong cơ quan đơn vị và các đơn vị trực thuộc
+              const donViTrucThuocIds = await prisma.donViTrucThuoc.findMany({
+                where: { co_quan_don_vi_id: managerPersonnel.co_quan_don_vi_id },
+                select: { id: true },
+              });
+              const donViTrucThuocIdList = donViTrucThuocIds.map(d => d.id);
+
+              personnelInUnit = await prisma.quanNhan.findMany({
+                where: {
+                  OR: [
+                    { co_quan_don_vi_id: managerPersonnel.co_quan_don_vi_id },
+                    { don_vi_truc_thuoc_id: { in: donViTrucThuocIdList } },
+                  ],
+                },
+                select: { id: true },
+              });
+            } else if (managerPersonnel.don_vi_truc_thuoc_id) {
+              // Manager thuộc đơn vị trực thuộc - chỉ lấy quân nhân trong đơn vị đó
+              personnelInUnit = await prisma.quanNhan.findMany({
+                where: { don_vi_truc_thuoc_id: managerPersonnel.don_vi_truc_thuoc_id },
+                select: { id: true },
+              });
+            }
+
+            // Lấy danh sách tài khoản của các quân nhân trong đơn vị
+            const personnelIds = personnelInUnit.map(p => p.id);
+            if (personnelIds.length > 0) {
+              const accountsInUnit = await prisma.taiKhoan.findMany({
+                where: {
+                  quan_nhan_id: { in: personnelIds },
+                },
+                select: { id: true },
+              });
+              const accountIds = accountsInUnit.map(a => a.id);
+
+              if (accountIds.length > 0) {
+                where.nguoi_thuc_hien_id = { in: accountIds };
+              } else {
+                // Không có tài khoản nào trong đơn vị, trả về rỗng
+                where.nguoi_thuc_hien_id = { in: [] };
+              }
+            } else {
+              // Không có quân nhân nào trong đơn vị, trả về rỗng
+              where.nguoi_thuc_hien_id = { in: [] };
+            }
+          }
+        }
       } else if (currentUser.role === 'ADMIN') {
         // ADMIN xem được USER, MANAGER, ADMIN
         where.actor_role = { in: ['USER', 'MANAGER', 'ADMIN'] };

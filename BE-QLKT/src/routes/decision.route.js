@@ -6,6 +6,7 @@ const fs = require('fs');
 const decisionController = require('../controllers/decision.controller');
 const { verifyToken, requireAdmin } = require('../middlewares/auth');
 const { auditLog, createDescription, getResourceId } = require('../middlewares/auditLog');
+const { getLogDescription } = require('../helpers/auditLogHelper');
 
 // Cấu hình multer để lưu file vào thư mục uploads/decisions
 const storage = multer.diskStorage({
@@ -21,17 +22,17 @@ const storage = multer.diskStorage({
     const originalName = Buffer.from(file.originalname, 'latin1').toString('utf8'); // Xử lý tên file có ký tự đặc biệt
     const ext = path.extname(originalName);
     const baseName = path.basename(originalName, ext);
-    
+
     let filename = originalName;
     let counter = 1;
     const uploadDir = path.join(__dirname, '..', '..', 'uploads', 'decisions');
-    
+
     // Kiểm tra nếu file đã tồn tại, thêm số thứ tự
     while (fs.existsSync(path.join(uploadDir, filename))) {
       filename = `${baseName}(${counter})${ext}`;
       counter++;
     }
-    
+
     cb(null, filename);
   },
 });
@@ -113,10 +114,7 @@ router.post(
   auditLog({
     action: 'CREATE',
     resource: 'decisions',
-    getDescription: (req, res, responseData) => {
-      const soQuyetDinh = req.body?.so_quyet_dinh || 'N/A';
-      return `Tạo mới quyết định: ${soQuyetDinh}`;
-    },
+    getDescription: getLogDescription('decisions', 'CREATE'),
     getResourceId: getResourceId.fromResponse('id'),
   }),
   decisionController.createDecision
@@ -135,10 +133,7 @@ router.put(
   auditLog({
     action: 'UPDATE',
     resource: 'decisions',
-    getDescription: (req, res, responseData) => {
-      const soQuyetDinh = req.body?.so_quyet_dinh || `ID ${req.params.id}`;
-      return `Cập nhật quyết định: ${soQuyetDinh}`;
-    },
+    getDescription: getLogDescription('decisions', 'UPDATE'),
     getResourceId: getResourceId.fromParams('id'),
   }),
   decisionController.updateDecision
@@ -156,9 +151,7 @@ router.delete(
   auditLog({
     action: 'DELETE',
     resource: 'decisions',
-    getDescription: (req, res, responseData) => {
-      return `Xóa quyết định: ID ${req.params.id}`;
-    },
+    getDescription: getLogDescription('decisions', 'DELETE'),
     getResourceId: getResourceId.fromParams('id'),
   }),
   decisionController.deleteDecision

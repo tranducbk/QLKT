@@ -31,14 +31,11 @@ export default function AccountEditPage() {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [fetchLoading, setFetchLoading] = useState(true);
-  const [personnel, setPersonnel] = useState([]);
-  const [loadingPersonnel, setLoadingPersonnel] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
     if (accountId) {
       fetchAccountDetail();
-      fetchPersonnel();
     }
   }, [accountId]);
 
@@ -51,7 +48,6 @@ export default function AccountEditPage() {
         form.setFieldsValue({
           username: account.username,
           role: account.role,
-          quan_nhan_id: account.quan_nhan_id,
         });
       } else {
         message.error(response.message || 'Lỗi khi lấy thông tin tài khoản');
@@ -63,41 +59,11 @@ export default function AccountEditPage() {
     }
   };
 
-  const fetchPersonnel = async () => {
-    setLoadingPersonnel(true);
-    try {
-      const response = await apiClient.getPersonnel();
-      let personnelList = [];
-
-      if (response.success) {
-        // Xử lý các cấu trúc response khác nhau
-        if (Array.isArray(response.data)) {
-          personnelList = response.data;
-        } else if (response.data?.personnel && Array.isArray(response.data.personnel)) {
-          personnelList = response.data.personnel;
-        } else if (response.data?.data && Array.isArray(response.data.data)) {
-          personnelList = response.data.data;
-        } else if (response.data?.items && Array.isArray(response.data.items)) {
-          personnelList = response.data.items;
-        }
-      }
-
-      setPersonnel(personnelList);
-    } catch (error: any) {
-      console.error('Error fetching personnel:', error);
-      message.error('Lỗi khi lấy danh sách quân nhân');
-      setPersonnel([]);
-    } finally {
-      setLoadingPersonnel(false);
-    }
-  };
-
   const handleSubmit = async (values: any) => {
     setLoading(true);
     try {
       const updateData: any = {
         role: values.role,
-        quan_nhan_id: values.quan_nhan_id || null,
       };
 
       // Chỉ gửi password nếu có thay đổi
@@ -203,31 +169,6 @@ export default function AccountEditPage() {
                 <Option value="MANAGER">Quản lý</Option>
                 <Option value="USER">Người dùng</Option>
               </Select>
-            </Form.Item>
-
-            <Form.Item
-              name="quan_nhan_id"
-              label="Quân nhân (tùy chọn)"
-              help="Liên kết tài khoản với quân nhân nếu cần"
-            >
-              <Select
-                placeholder="Chọn quân nhân"
-                loading={loadingPersonnel}
-                showSearch
-                allowClear
-                optionFilterProp="children"
-                filterOption={(input, option) =>
-                  (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
-                }
-                options={
-                  Array.isArray(personnel)
-                    ? personnel.map((p: any) => ({
-                        value: p.id,
-                        label: `${p.ho_ten} (${p.cccd})`,
-                      }))
-                    : []
-                }
-              />
             </Form.Item>
 
             <Form.Item>

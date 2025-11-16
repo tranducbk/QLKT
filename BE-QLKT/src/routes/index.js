@@ -18,6 +18,7 @@ const decisionRoute = require('./decision.route');
 const awardsRoute = require('./awards.route');
 const notificationRoute = require('./notification.route');
 const unitAnnualAwardRoute = require('./unitAnnualAward.routes');
+const dashboardRoute = require('./dashboard.route');
 
 // API Routes
 // 1. Authentication
@@ -61,6 +62,9 @@ router.use('/api/awards/units/annual', unitAnnualAwardRoute);
 // 6. Profile & Calculation (Output)
 router.use('/api/profiles', profileRoute);
 router.use('/api/system-logs', systemLogsRoute);
+
+// 7. Dashboard Statistics
+router.use('/api/dashboard', dashboardRoute);
 
 // 7. Notifications
 router.use('/api/notifications', notificationRoute);

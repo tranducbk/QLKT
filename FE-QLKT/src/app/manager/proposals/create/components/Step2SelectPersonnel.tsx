@@ -156,10 +156,24 @@ export default function Step2SelectPersonnel({
       },
     },
     {
-      title: 'Chức vụ',
-      key: 'chuc_vu',
-      width: 160,
-      render: (_, record) => record.ChucVu?.ten_chuc_vu || '-',
+      title: 'Cấp bậc / Chức vụ',
+      key: 'cap_bac_chuc_vu',
+      width: 180,
+      align: 'center',
+      render: (_, record) => {
+        const capBac = record.cap_bac;
+        const chucVu = record.ChucVu?.ten_chuc_vu;
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <Text strong style={{ marginBottom: '4px' }}>
+              {capBac || '-'}
+            </Text>
+            <Text type="secondary" style={{ fontSize: '12px' }}>
+              {chucVu || '-'}
+            </Text>
+          </div>
+        );
+      },
     },
   ];
 

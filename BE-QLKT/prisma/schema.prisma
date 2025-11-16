@@ -90,6 +90,7 @@ model QuanNhan {
   ngay_vao_dang_chinh_thuc DateTime? @db.Date // Ngày vào Đảng chính thức
   so_the_dang_vien         String?   @db.VarChar(50) // Số thẻ Đảng viên
   so_dien_thoai            String?   @db.VarChar(20) // Số điện thoại
+  cap_bac                  String?   @db.VarChar(50) // Cấp bậc: Binh nhì, Binh nhất, Hạ sĩ, Trung sĩ, Thượng sĩ, Thiếu úy, Trung úy, Thượng úy, Đại úy, Thiếu tá, Trung tá, Thượng tá, Đại tá, Thiếu tướng, Trung tướng, Thượng tướng, Đại tướng
   co_quan_don_vi_id        String?   @db.VarChar(30) // ID cơ quan đơn vị (nullable)
   don_vi_truc_thuoc_id     String?   @db.VarChar(30) // ID đơn vị trực thuộc (nullable)
   chuc_vu_id               String    @db.VarChar(30)

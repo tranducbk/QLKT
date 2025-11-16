@@ -7,7 +7,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
+import { Tag } from 'antd';
 import { Loader2, Clock, User, Shield, Activity, FileText } from 'lucide-react';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
@@ -18,30 +18,69 @@ interface LogsTableProps {
 }
 
 const actionLabels: Record<string, string> = {
+  // Accounts
   CREATE_ACCOUNT: 'Tạo tài khoản',
   UPDATE_ACCOUNT: 'Cập nhật tài khoản',
   DELETE_ACCOUNT: 'Xóa tài khoản',
   RESET_PASSWORD: 'Đặt lại mật khẩu',
+  // Personnel
   CREATE_PERSONNEL: 'Tạo quân nhân',
   UPDATE_PERSONNEL: 'Cập nhật quân nhân',
   DELETE_PERSONNEL: 'Xóa quân nhân',
+  // Units
   CREATE_UNIT: 'Tạo cơ quan đơn vị/đơn vị trực thuộc',
   UPDATE_UNIT: 'Cập nhật cơ quan đơn vị/đơn vị trực thuộc',
   DELETE_UNIT: 'Xóa cơ quan đơn vị/đơn vị trực thuộc',
+  // Positions
   CREATE_POSITIONS: 'Tạo chức vụ',
   UPDATE_POSITIONS: 'Cập nhật chức vụ',
   DELETE_POSITIONS: 'Xóa chức vụ',
+  // Proposals
+  CREATE_PROPOSALS: 'Tạo đề xuất',
+  UPDATE_PROPOSALS: 'Cập nhật đề xuất',
+  DELETE_PROPOSALS: 'Xóa đề xuất',
+  APPROVE_PROPOSALS: 'Phê duyệt đề xuất',
+  REJECT_PROPOSALS: 'Từ chối đề xuất',
+  // Annual Rewards
+  CREATE_ANNUAL_REWARDS: 'Tạo danh hiệu hằng năm',
+  UPDATE_ANNUAL_REWARDS: 'Cập nhật danh hiệu hằng năm',
+  DELETE_ANNUAL_REWARDS: 'Xóa danh hiệu hằng năm',
+  BULK_ANNUAL_REWARDS: 'Thêm đồng loạt danh hiệu hằng năm',
+  IMPORT_ANNUAL_REWARDS: 'Import danh hiệu hằng năm',
+  // Position History
+  CREATE_POSITION_HISTORY: 'Tạo lịch sử chức vụ',
+  UPDATE_POSITION_HISTORY: 'Cập nhật lịch sử chức vụ',
+  DELETE_POSITION_HISTORY: 'Xóa lịch sử chức vụ',
+  // Scientific Achievements
+  CREATE_SCIENTIFIC_ACHIEVEMENTS: 'Tạo thành tích khoa học',
+  UPDATE_SCIENTIFIC_ACHIEVEMENTS: 'Cập nhật thành tích khoa học',
+  DELETE_SCIENTIFIC_ACHIEVEMENTS: 'Xóa thành tích khoa học',
+  // Decisions
+  CREATE_DECISIONS: 'Tạo quyết định',
+  UPDATE_DECISIONS: 'Cập nhật quyết định',
+  DELETE_DECISIONS: 'Xóa quyết định',
+  // Auth
+  LOGIN: 'Đăng nhập',
+  LOGOUT: 'Đăng xuất',
+  CHANGE_PASSWORD: 'Đổi mật khẩu',
+  // Personnel
+  IMPORT_PERSONNEL: 'Import quân nhân',
+  EXPORT_PERSONNEL: 'Xuất dữ liệu quân nhân',
 };
 
 const actionColors: Record<string, string> = {
   CREATE:
-    'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 border-green-200 dark:border-green-800',
+    'bg-green-100/50 text-green-900 dark:bg-green-900/60 dark:text-green-50 border-green-300 dark:border-green-600',
   UPDATE:
-    'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400 border-blue-200 dark:border-blue-800',
+    'bg-blue-100/50 text-blue-900 dark:bg-blue-900/60 dark:text-blue-50 border-blue-300 dark:border-blue-600',
   DELETE:
-    'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400 border-red-200 dark:border-red-800',
+    'bg-red-100/50 text-red-900 dark:bg-red-900/60 dark:text-red-50 border-red-300 dark:border-red-600',
   RESET:
-    'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400 border-yellow-200 dark:border-yellow-800',
+    'bg-yellow-100/50 text-yellow-900 dark:bg-yellow-900/60 dark:text-yellow-50 border-yellow-300 dark:border-yellow-600',
+  APPROVE:
+    'bg-emerald-100/50 text-emerald-900 dark:bg-emerald-900/60 dark:text-emerald-50 border-emerald-300 dark:border-emerald-600',
+  REJECT:
+    'bg-orange-100/50 text-orange-900 dark:bg-orange-900/60 dark:text-orange-50 border-orange-300 dark:border-orange-600',
 };
 
 function getActionColor(action: string): string {
@@ -49,24 +88,39 @@ function getActionColor(action: string): string {
   if (action.includes('UPDATE')) return actionColors.UPDATE;
   if (action.includes('DELETE')) return actionColors.DELETE;
   if (action.includes('RESET')) return actionColors.RESET;
-  return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600';
+  if (action.includes('APPROVE')) return actionColors.APPROVE;
+  if (action.includes('REJECT')) return actionColors.REJECT;
+  return 'bg-gray-100/50 text-gray-900 dark:bg-gray-800/60 dark:text-gray-50 border-gray-300 dark:border-gray-600';
 }
 
 const roleColors: Record<string, string> = {
   SUPER_ADMIN:
-    'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400 border-red-200 dark:border-red-800',
+    'bg-red-100/50 text-red-900 dark:bg-red-900/60 dark:text-red-50 border-red-300 dark:border-red-600',
   ADMIN:
-    'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400 border-orange-200 dark:border-orange-800',
+    'bg-orange-100/50 text-orange-900 dark:bg-orange-900/60 dark:text-orange-50 border-orange-300 dark:border-orange-600',
   MANAGER:
-    'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400 border-blue-200 dark:border-blue-800',
-  USER: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 border-green-200 dark:border-green-800',
+    'bg-blue-100/50 text-blue-900 dark:bg-blue-900/60 dark:text-blue-50 border-blue-300 dark:border-blue-600',
+  USER: 'bg-green-100/50 text-green-900 dark:bg-green-900/60 dark:text-green-50 border-green-300 dark:border-green-600',
 };
 
-function getRoleColor(role: string): string {
-  return (
-    roleColors[role] ||
-    'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600'
-  );
+function getRoleTagColor(role: string): string {
+  const colorMap: Record<string, string> = {
+    SUPER_ADMIN: 'red',
+    ADMIN: 'orange',
+    MANAGER: 'blue',
+    USER: 'green',
+  };
+  return colorMap[role] || 'default';
+}
+
+function getRoleText(role: string): string {
+  const textMap: Record<string, string> = {
+    SUPER_ADMIN: 'Super Admin',
+    ADMIN: 'Admin',
+    MANAGER: 'Quản lý',
+    USER: 'Người dùng',
+  };
+  return textMap[role] || role;
 }
 
 export function LogsTable({ logs, loading }: LogsTableProps) {
@@ -143,18 +197,16 @@ export function LogsTable({ logs, loading }: LogsTableProps) {
                 {log.actor_name || log.actor_id}
               </TableCell>
               <TableCell>
-                <Badge variant="outline" className={getRoleColor(log.actor_role)}>
-                  {log.actor_role}
-                </Badge>
+                <Tag color={getRoleTagColor(log.actor_role)}>{getRoleText(log.actor_role)}</Tag>
               </TableCell>
-              <TableCell>
-                <Badge variant="outline" className={getActionColor(log.action)}>
-                  {actionLabels[log.action] || log.action}
-                </Badge>
+              <TableCell className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                {actionLabels[log.action] ||
+                  actionLabels[log.action?.replace(/-/g, '_')] ||
+                  log.action}
               </TableCell>
               <TableCell className="text-sm text-gray-600 dark:text-gray-400 max-w-md">
-                <div className="truncate" title={log.details}>
-                  {log.details}
+                <div className="truncate" title={log.details || log.description || ''}>
+                  {log.details || log.description || '-'}
                 </div>
               </TableCell>
             </TableRow>

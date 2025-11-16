@@ -31,6 +31,7 @@ const { TabPane } = Tabs;
 export default function UserProfilePage() {
   const [loading, setLoading] = useState(true);
   const [personnelId, setPersonnelId] = useState<string | null>(null);
+  const [personnelInfo, setPersonnelInfo] = useState<any>(null);
   const [annualRewards, setAnnualRewards] = useState<any[]>([]);
   const [scientificAchievements, setScientificAchievements] = useState<any[]>([]);
   const [positionHistory, setPositionHistory] = useState<any[]>([]);
@@ -53,14 +54,19 @@ export default function UserProfilePage() {
         setPersonnelId(user.quan_nhan_id);
 
         // Lấy dữ liệu song song
-        const [annualRes, scientificRes, positionRes, serviceRes, annualProfileRes] =
+        const [personnelRes, annualRes, scientificRes, positionRes, serviceRes, annualProfileRes] =
           await Promise.all([
+            apiClient.getPersonnelById(user.quan_nhan_id),
             apiClient.getAnnualRewards(user.quan_nhan_id),
             apiClient.getScientificAchievements(user.quan_nhan_id),
             apiClient.getPositionHistory(user.quan_nhan_id),
             apiClient.getServiceProfile(user.quan_nhan_id),
             apiClient.getAnnualProfile(user.quan_nhan_id),
           ]);
+
+        if (personnelRes.success) {
+          setPersonnelInfo(personnelRes.data);
+        }
 
         if (annualRes.success) {
           setAnnualRewards(annualRes.data || []);
@@ -269,6 +275,46 @@ export default function UserProfilePage() {
         </Title>
         <Text type="secondary">Xem lịch sử danh hiệu, thành tích khoa học và chức vụ của bạn</Text>
       </div>
+
+      {/* Thông tin cá nhân */}
+      {personnelInfo && (
+        <Card className="shadow-sm" bodyStyle={{ padding: '24px' }}>
+          <Descriptions bordered column={{ xs: 1, sm: 2, md: 3 }} size="middle">
+            <Descriptions.Item label="Họ và tên" labelStyle={{ fontWeight: 600 }}>
+              <Text strong style={{ fontSize: '16px' }}>
+                {personnelInfo.ho_ten || '-'}
+              </Text>
+            </Descriptions.Item>
+            <Descriptions.Item label="Cấp bậc" labelStyle={{ fontWeight: 600 }}>
+              {personnelInfo.cap_bac ? (
+                <Tag color="purple" style={{ fontSize: '14px', padding: '4px 12px' }}>
+                  {personnelInfo.cap_bac}
+                </Tag>
+              ) : (
+                '-'
+              )}
+            </Descriptions.Item>
+            <Descriptions.Item label="Chức vụ" labelStyle={{ fontWeight: 600 }}>
+              {personnelInfo.ChucVu?.ten_chuc_vu ? (
+                <Tag color="green">{personnelInfo.ChucVu.ten_chuc_vu}</Tag>
+              ) : (
+                '-'
+              )}
+            </Descriptions.Item>
+            <Descriptions.Item label="CCCD" labelStyle={{ fontWeight: 600 }}>
+              {personnelInfo.cccd || '-'}
+            </Descriptions.Item>
+            <Descriptions.Item label="Đơn vị" labelStyle={{ fontWeight: 600 }}>
+              {personnelInfo.DonViTrucThuoc?.ten_don_vi ||
+                personnelInfo.CoQuanDonVi?.ten_don_vi ||
+                '-'}
+            </Descriptions.Item>
+            <Descriptions.Item label="Ngày sinh" labelStyle={{ fontWeight: 600 }}>
+              {personnelInfo.ngay_sinh ? formatDate(personnelInfo.ngay_sinh) : '-'}
+            </Descriptions.Item>
+          </Descriptions>
+        </Card>
+      )}
 
       {/* Tabs */}
       <Card className="shadow-sm" bodyStyle={{ padding: '24px', overflow: 'visible' }}>

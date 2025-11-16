@@ -319,7 +319,7 @@ export default function ServiceAwardsPage() {
       {/* Search */}
       <Card>
         <Search
-          placeholder="Tìm theo tên hoặc CCCD"
+          placeholder="Tìm theo tên"
           onSearch={setSearchText}
           onChange={e => setSearchText(e.target.value)}
           style={{ width: 400 }}

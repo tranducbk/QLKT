@@ -1,7 +1,16 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Card, Typography, Button, Breadcrumb, ConfigProvider, theme as antdTheme } from 'antd';
+import {
+  Card,
+  Typography,
+  Button,
+  Breadcrumb,
+  ConfigProvider,
+  theme as antdTheme,
+  Row,
+  Col,
+} from 'antd';
 import { Loading } from '@/components/ui/loading';
 import {
   TeamOutlined,
@@ -16,6 +25,8 @@ import Link from 'next/link';
 import { useTheme } from '@/components/theme-provider';
 import { apiClient } from '@/lib/api-client';
 import { formatDateTime } from '@/lib/utils';
+import '@/lib/chart-config';
+import { ActionBarChart, ActivityLineChart, PieChart, RoleDistributionChart } from '@/components/charts';
 
 const { Title } = Typography;
 
@@ -27,6 +38,16 @@ export default function ManagerDashboard() {
     totalCSTDCS: 89,
     totalNCKH: 34,
     totalAwards: 0,
+  });
+  const [chartData, setChartData] = useState({
+    awardsByType: [],
+    proposalsByType: [],
+    proposalsByStatus: [],
+    awardsByMonth: [],
+    personnelByRank: [],
+    scientificAchievementsByMonth: [],
+    scientificAchievementsByType: [],
+    personnelByPosition: [],
   });
 
   useEffect(() => {
@@ -46,9 +67,10 @@ export default function ManagerDashboard() {
         }
 
         // Fetch actual data from API - chỉ lấy dữ liệu đơn vị của manager
-        const [personnelRes, awardsRes] = await Promise.all([
+        const [personnelRes, awardsRes, statisticsRes] = await Promise.all([
           apiClient.getPersonnel({ page: 1, limit: 1000, unit_id: unitId }),
           apiClient.getAwards({ don_vi_id: unitId, limit: 1000 }),
+          apiClient.getManagerDashboardStatistics(),
         ]);
 
         // Tính toán thống kê
@@ -85,6 +107,22 @@ export default function ManagerDashboard() {
           totalNCKH,
           totalAwards: awardsList.length,
         });
+
+        if (statisticsRes.success && statisticsRes.data) {
+          console.log('Manager Statistics Data:', statisticsRes.data);
+          setChartData({
+            awardsByType: statisticsRes.data.awardsByType || [],
+            proposalsByType: statisticsRes.data.proposalsByType || [],
+            proposalsByStatus: statisticsRes.data.proposalsByStatus || [],
+            awardsByMonth: statisticsRes.data.awardsByMonth || [],
+            personnelByRank: statisticsRes.data.personnelByRank || [],
+            scientificAchievementsByMonth: statisticsRes.data.scientificAchievementsByMonth || [],
+            scientificAchievementsByType: statisticsRes.data.scientificAchievementsByType || [],
+            personnelByPosition: statisticsRes.data.personnelByPosition || [],
+          });
+        } else {
+          console.error('Manager Statistics API failed:', statisticsRes);
+        }
       } catch (error) {
         console.error('Error fetching stats:', error);
         // Giữ giá trị mặc định nếu có lỗi
@@ -206,6 +244,128 @@ export default function ManagerDashboard() {
             })}
           </div>
         )}
+
+        {/* Charts Section */}
+        <Row gutter={[16, 16]} style={{ marginBottom: '24px' }}>
+          <Col xs={24} lg={8}>
+            <PieChart
+              data={chartData.awardsByType.map((item: any) => ({
+                label: (() => {
+                  const awardTypeMap: Record<string, string> = {
+                    CSTDCS: 'Chiến sĩ thi đua cơ sở',
+                    CSTT: 'Chiến sĩ tiên tiến',
+                    BKBQP: 'Bằng khen Bộ Quốc phòng',
+                    CSTDTQ: 'Chiến sĩ thi đua toàn quân',
+                    HCCSVV_HANG_BA: 'HCCSVV Hạng Ba',
+                    HCCSVV_HANG_NHI: 'HCCSVV Hạng Nhì',
+                    HCCSVV_HANG_NHAT: 'HCCSVV Hạng Nhất',
+                  };
+                  return awardTypeMap[item.type] || item.type;
+                })(),
+                value: item.count,
+              }))}
+              title="Khen thưởng theo loại"
+            />
+          </Col>
+          <Col xs={24} lg={8}>
+            <PieChart
+              data={chartData.proposalsByStatus.map((item: any) => ({
+                label: (() => {
+                  const statusMap: Record<string, string> = {
+                    PENDING: 'Đang chờ phê duyệt',
+                    APPROVED: 'Đã phê duyệt',
+                    REJECTED: 'Đã từ chối',
+                  };
+                  return statusMap[item.status] || item.status;
+                })(),
+                value: item.count,
+              }))}
+              title="Đề xuất theo trạng thái"
+              colors={['rgba(255, 193, 7, 0.8)', 'rgba(40, 167, 69, 0.8)', 'rgba(220, 53, 69, 0.8)']}
+            />
+          </Col>
+          <Col xs={24} lg={8}>
+            <ActionBarChart
+              data={chartData.proposalsByType.map((item: any) => ({
+                action: item.type,
+                count: item.count,
+              }))}
+              title="Đề xuất theo loại"
+              maxLabelLength={15}
+              labelMapper={(label: string) => {
+                const proposalTypeMap: Record<string, string> = {
+                  CA_NHAN_HANG_NAM: 'Cá nhân Hằng năm',
+                  DON_VI_HANG_NAM: 'Đơn vị Hằng năm',
+                  NIEN_HAN: 'Niên hạn',
+                  CONG_HIEN: 'Cống hiến',
+                  DOT_XUAT: 'Đột xuất',
+                  NCKH: 'ĐTKH/SKKH',
+                  HC_QKQT: 'Huy chương Quân kỳ',
+                  KNC_VSNXD_QDNDVN: 'Kỷ niệm chương',
+                };
+                return proposalTypeMap[label] || label;
+              }}
+            />
+          </Col>
+        </Row>
+
+        <Row gutter={[16, 16]} style={{ marginBottom: '24px' }}>
+          <Col xs={24} lg={8}>
+            <PieChart
+              data={chartData.scientificAchievementsByType.map((item: any) => ({
+                label: item.type === 'NCKH' ? 'Đề tài khoa học' : 'Sáng kiến khoa học',
+                value: item.count,
+              }))}
+              title="Thành tích khoa học theo loại"
+              colors={['rgba(59, 130, 246, 0.8)', 'rgba(34, 197, 94, 0.8)']}
+            />
+          </Col>
+          <Col xs={24} lg={8}>
+            <ActivityLineChart
+              data={chartData.awardsByMonth.map((item: any) => ({
+                date: item.month,
+                count: item.count,
+              }))}
+              title="Khen thưởng theo tháng (6 tháng gần nhất)"
+              label="Số lượng khen thưởng"
+              color="rgba(147, 51, 234, 1)"
+            />
+          </Col>
+          <Col xs={24} lg={8}>
+            <ActivityLineChart
+              data={chartData.scientificAchievementsByMonth.map((item: any) => ({
+                date: item.month,
+                count: item.count,
+              }))}
+              title="Thành tích khoa học (6 tháng gần nhất)"
+              label="Số lượng thành tích"
+              color="rgba(34, 197, 94, 1)"
+            />
+          </Col>
+        </Row>
+
+        <Row gutter={[16, 16]} style={{ marginBottom: '24px' }}>
+          <Col xs={24} lg={12}>
+            <ActionBarChart
+              data={chartData.personnelByRank.map((item: any) => ({
+                action: item.rank,
+                count: item.count,
+              }))}
+              title="Quân nhân theo cấp bậc"
+              maxLabelLength={15}
+            />
+          </Col>
+          <Col xs={24} lg={12}>
+            <ActionBarChart
+              data={chartData.personnelByPosition.map((item: any) => ({
+                action: item.positionName,
+                count: item.count,
+              }))}
+              title="Quân nhân theo chức vụ"
+              maxLabelLength={20}
+            />
+          </Col>
+        </Row>
 
         {/* Quick Actions */}
         <Card title={<span className="text-lg font-semibold">Lối tắt</span>} className="shadow-lg">

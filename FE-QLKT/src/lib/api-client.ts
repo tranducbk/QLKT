@@ -99,7 +99,7 @@ export const apiClient = {
   async resetAccountPassword(accountId: string): Promise<ApiResponse> {
     try {
       const res = await axiosInstance.post('/api/accounts/reset-password', {
-        account_id: Number(accountId),
+        account_id: accountId,
       });
       return { success: true, data: res.data?.data || res.data };
     } catch (e: any) {
@@ -153,6 +153,24 @@ export const apiClient = {
   async getSystemLogs(params?: any): Promise<ApiResponse> {
     try {
       const res = await axiosInstance.get('/api/system-logs', { params });
+      return { success: true, data: res.data?.data || res.data };
+    } catch (e: any) {
+      return { success: false, message: e?.response?.data?.message || e.message };
+    }
+  },
+
+  async getSystemLogActions(): Promise<ApiResponse> {
+    try {
+      const res = await axiosInstance.get('/api/system-logs/actions');
+      return { success: true, data: res.data?.data || res.data };
+    } catch (e: any) {
+      return { success: false, message: e?.response?.data?.message || e.message };
+    }
+  },
+
+  async getSystemLogResources(): Promise<ApiResponse> {
+    try {
+      const res = await axiosInstance.get('/api/system-logs/resources');
       return { success: true, data: res.data?.data || res.data };
     } catch (e: any) {
       return { success: false, message: e?.response?.data?.message || e.message };
@@ -687,6 +705,34 @@ export const apiClient = {
     try {
       const res = await axiosInstance.post('/api/profiles/recalculate-all');
       return { success: true, data: res.data?.data || res.data, message: res.data?.message };
+    } catch (e: any) {
+      return { success: false, message: e?.response?.data?.message || e.message };
+    }
+  },
+
+  // Dashboard Statistics
+  async getDashboardStatistics(): Promise<ApiResponse> {
+    try {
+      const res = await axiosInstance.get('/api/dashboard/statistics');
+      return { success: true, data: res.data?.data || res.data };
+    } catch (e: any) {
+      return { success: false, message: e?.response?.data?.message || e.message };
+    }
+  },
+
+  async getAdminDashboardStatistics(): Promise<ApiResponse> {
+    try {
+      const res = await axiosInstance.get('/api/dashboard/statistics/admin');
+      return { success: true, data: res.data?.data || res.data };
+    } catch (e: any) {
+      return { success: false, message: e?.response?.data?.message || e.message };
+    }
+  },
+
+  async getManagerDashboardStatistics(): Promise<ApiResponse> {
+    try {
+      const res = await axiosInstance.get('/api/dashboard/statistics/manager');
+      return { success: true, data: res.data?.data || res.data };
     } catch (e: any) {
       return { success: false, message: e?.response?.data?.message || e.message };
     }

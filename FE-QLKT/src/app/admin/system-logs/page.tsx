@@ -2,8 +2,16 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Card, Breadcrumb, Typography, message, ConfigProvider, theme as antdTheme } from 'antd';
-import { FileTextOutlined, DashboardOutlined, FundOutlined } from '@ant-design/icons';
+import {
+  Card,
+  Breadcrumb,
+  Typography,
+  message,
+  ConfigProvider,
+  theme as antdTheme,
+  Pagination,
+} from 'antd';
+import { FileTextOutlined, DashboardOutlined, FundOutlined, HomeOutlined } from '@ant-design/icons';
 import { LogsFilter } from '@/components/system-logs/logs-filter';
 import { LogsTable } from '@/components/system-logs/logs-table';
 import { apiClient } from '@/lib/api-client';
@@ -17,33 +25,63 @@ export default function AdminSystemLogsPage() {
   const { theme } = useTheme();
   const [logs, setLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [pagination, setPagination] = useState({
+    current: 1,
+    pageSize: 20,
+    total: 0,
+  });
   const [filters, setFilters] = useState({
     search: '',
     startDate: undefined,
     endDate: undefined,
   });
 
+  // Reset về trang 1 khi filter thay đổi
+  useEffect(() => {
+    setPagination(prev => ({ ...prev, current: 1 }));
+  }, [filters]);
+
   useEffect(() => {
     const fetchLogs = async () => {
       try {
         setLoading(true);
-        const res = await apiClient.getSystemLogs(filters);
+        const res = await apiClient.getSystemLogs({
+          ...filters,
+          page: pagination.current,
+          limit: pagination.pageSize,
+        });
         const payload: any = res?.data ?? res;
-        // Chuẩn hóa dữ liệu về mảng
-        const list: any[] = Array.isArray(payload)
-          ? payload
-          : payload?.logs || payload?.items || payload?.results || payload?.data || [];
+
+        // Lấy dữ liệu từ response
+        const data = payload?.data || payload;
+        const list: any[] = Array.isArray(data)
+          ? data
+          : data?.logs || data?.items || data?.results || [];
+
+        // Cập nhật pagination từ response
+        if (data?.pagination) {
+          setPagination(prev => ({
+            ...prev,
+            total: data.pagination.total || 0,
+          }));
+        }
 
         // Chuẩn hóa dữ liệu cho UI
         const normalized = list.map((l: any) => {
           const actionCombined = [l?.action, l?.resource].filter(Boolean).join('_').toUpperCase();
           const actorName =
-            l?.NguoiThucHien?.QuanNhan?.ho_ten || l?.NguoiThucHien?.username || l?.Actor?.QuanNhan?.ho_ten || l?.Actor?.username || l?.actor_name || l?.actor_id;
+            l?.NguoiThucHien?.QuanNhan?.ho_ten ||
+            l?.NguoiThucHien?.username ||
+            l?.Actor?.QuanNhan?.ho_ten ||
+            l?.Actor?.username ||
+            l?.actor_name ||
+            l?.actor_id;
           return {
             ...l,
             action: actionCombined, // dùng kết hợp ACTION_RESOURCE để map nhãn
             actor_name: actorName,
-            details: l?.description ?? l?.details,
+            details: l?.description || l?.details || '', // Ưu tiên description từ backend (đã dịch tiếng Việt)
+            description: l?.description || l?.details || '', // Đảm bảo có description
             created_at: l?.created_at ?? l?.createdAt ?? l?.time ?? l?.timestamp,
           };
         });
@@ -58,7 +96,7 @@ export default function AdminSystemLogsPage() {
     };
 
     fetchLogs();
-  }, [filters]);
+  }, [filters, pagination.current, pagination.pageSize]);
 
   if (loading && logs.length === 0) {
     return (
@@ -83,7 +121,7 @@ export default function AdminSystemLogsPage() {
         <Breadcrumb style={{ marginBottom: '24px' }}>
           <Breadcrumb.Item>
             <Link href="/admin/dashboard">
-              <DashboardOutlined />
+              <HomeOutlined />
             </Link>
           </Breadcrumb.Item>
           <Breadcrumb.Item>Nhật ký hệ thống</Breadcrumb.Item>
@@ -125,7 +163,7 @@ export default function AdminSystemLogsPage() {
                 <Text type="secondary" style={{ fontSize: '14px' }}>
                   Tổng nhật ký
                 </Text>
-                <div style={{ fontSize: '24px', fontWeight: 'bold' }}>{logs.length}</div>
+                <div style={{ fontSize: '24px', fontWeight: 'bold' }}>{pagination.total}</div>
               </div>
             </div>
           </Card>
@@ -175,10 +213,36 @@ export default function AdminSystemLogsPage() {
           </div>
           <div style={{ padding: 0 }}>
             <LogsTable logs={logs} loading={loading} />
+            {pagination.total > 0 && (
+              <div
+                style={{
+                  padding: '16px',
+                  display: 'flex',
+                  justifyContent: 'center',
+                  borderTop: '1px solid #f0f0f0',
+                }}
+              >
+                <Pagination
+                  current={pagination.current}
+                  pageSize={pagination.pageSize}
+                  total={pagination.total}
+                  showSizeChanger
+                  showQuickJumper
+                  showTotal={(total, range) => `${range[0]}-${range[1]} của ${total} nhật ký`}
+                  pageSizeOptions={['10', '20', '50', '100']}
+                  onChange={(page, pageSize) => {
+                    setPagination(prev => ({
+                      ...prev,
+                      current: page,
+                      pageSize: pageSize || prev.pageSize,
+                    }));
+                  }}
+                />
+              </div>
+            )}
           </div>
         </Card>
       </div>
     </ConfigProvider>
   );
 }
-
