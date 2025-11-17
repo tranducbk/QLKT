@@ -273,7 +273,6 @@ export default function Step3SetTitlesNienHan({
       }
 
       // Kiểm tra thứ tự hạng (phải nhận từ thấp lên cao)
-      const personnelRecord = personnel.find(p => p.id === id);
       if (personnelRecord) {
         const serviceProfile = serviceProfilesMap[id];
         const hasHangBa = serviceProfile?.hccsvv_hang_ba_status === 'DA_NHAN';
@@ -526,8 +525,8 @@ export default function Step3SetTitlesNienHan({
               <strong>{personnel.length}</strong> quân nhân)
             </p>
             <p>
-              2. <strong>Yêu cầu thời gian:</strong> Hạng Ba: 10 năm, Hạng Nhì: 15 năm, Hạng Nhất: 20
-              năm
+              2. <strong>Yêu cầu thời gian:</strong> Hạng Ba: 10 năm, Hạng Nhì: 15 năm, Hạng Nhất:
+              20 năm
             </p>
             <p>
               3. <strong>Lưu ý:</strong> Phải nhận từ thấp lên cao: Hạng Ba → Hạng Nhì → Hạng Nhất
