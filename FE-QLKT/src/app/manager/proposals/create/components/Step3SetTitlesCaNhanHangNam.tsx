@@ -378,6 +378,7 @@ export default function Step3SetTitlesCaNhanHangNam({
             popupMatchSelectWidth={false}
             styles={{ popup: { root: { minWidth: 'max-content' } } }}
             options={availableOptions}
+            loading={loadingProfiles}
           />
         );
       },
