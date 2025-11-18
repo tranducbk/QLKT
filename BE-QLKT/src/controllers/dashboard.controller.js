@@ -1,3 +1,4 @@
+const { where } = require('sequelize');
 const { PrismaClient } = require('../generated/prisma');
 
 const prisma = new PrismaClient();
@@ -211,6 +212,20 @@ class DashboardController {
         });
       }
 
+      // 5. Total personnel
+      const totalPersonnel = await prisma.quanNhan.count();
+
+      // 6. Total units
+      const totalUnits = await prisma.donViTrucThuoc.count();
+
+      // 7. Total positions
+      const totalPositions = await prisma.chucVu.count();
+
+      // 8. Total proposals
+      const pendingApprovals = await prisma.bangDeXuat.count({
+        where: { status: 'PENDING' }
+      });
+
       return res.status(200).json({
         success: true,
         message: 'Lấy thống kê Admin thành công',
@@ -228,6 +243,10 @@ class DashboardController {
             count: item._count.id,
           })),
           scientificAchievementsByMonth: last6Months,
+          totalPersonnel: totalPersonnel,
+          totalUnits: totalUnits,
+          totalPositions: totalPositions,
+          pendingApprovals: pendingApprovals,
         },
       });
     } catch (error) {
@@ -545,7 +564,6 @@ class DashboardController {
               { co_quan_don_vi_id: unitId },
               { don_vi_truc_thuoc_id: { in: donViTrucThuocIdList } },
             ],
-            chuc_vu_id: { not: null },
           },
           select: {
             chuc_vu_id: true,
@@ -556,7 +574,6 @@ class DashboardController {
         personnelWithPositions = await prisma.quanNhan.findMany({
           where: {
             don_vi_truc_thuoc_id: unitId,
-            chuc_vu_id: { not: null },
           },
           select: {
             chuc_vu_id: true,
@@ -640,6 +657,7 @@ class DashboardController {
             positionName: positionMap[positionId] || 'Chưa xác định',
             count,
           })),
+          totalPersonnel: personnelIds.length,
         },
       });
     } catch (error) {

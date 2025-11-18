@@ -436,12 +436,11 @@ export default function Step3SetTitlesCaNhanHangNam({
         <Text type={allTitlesSet ? 'success' : 'warning'}>
           Đã set danh hiệu:{' '}
           <strong>
-            {titleData.filter(d => d.danh_hieu).length}/{personnel.length}
+            {titleData.filter(d => selectedPersonnelIds.includes(d.personnel_id)).length}/{personnel.length}
           </strong>
           {allTitlesSet && ' ✓'}
         </Text>
       </Space>
-
       <Table<Personnel>
         columns={columns}
         dataSource={personnel}

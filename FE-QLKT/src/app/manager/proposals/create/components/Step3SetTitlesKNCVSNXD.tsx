@@ -23,6 +23,7 @@ interface Personnel {
     id: string;
     ten_chuc_vu: string;
   };
+  cap_bac?: string;
   CoQuanDonVi?: {
     ten_don_vi: string;
   };
