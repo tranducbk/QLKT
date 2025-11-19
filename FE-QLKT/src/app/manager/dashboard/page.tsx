@@ -75,24 +75,24 @@ export default function ManagerDashboard() {
         const statisticsRes = await apiClient.getManagerDashboardStatistics();
         console.log('Fetched Manager Dashboard Statistics:', statisticsRes);
 
-        // Tính toán thống kê
-        const totalPersonnel = statisticsRes.data.totalPersonnel || 0;
-
-        // Đếm số lượng CSTDCS và NCKH
-        const totalCSTDCS =
-          statisticsRes.data.awardsByType.find(a => a.type === 'CSTDCS')?.count || 0;
-        const totalNCKH =
-          statisticsRes.data.scientificAchievementsByType.reduce((sum, a) => sum + a.count, 0) || 0;
-        const totalAwards = statisticsRes.data.awardsByType.reduce((sum, a) => sum + a.count, 0);
-        setStats({
-          totalPersonnel,
-          totalCSTDCS,
-          totalNCKH,
-          totalAwards,
-        });
-
         if (statisticsRes.success && statisticsRes.data) {
           console.log('Manager Statistics Data:', statisticsRes.data);
+          // Tính toán thống kê
+          const totalPersonnel = statisticsRes.data.totalPersonnel || 0;
+
+          // Đếm số lượng CSTDCS và NCKH
+          const totalCSTDCS =
+            statisticsRes.data.awardsByType.find(a => a.type === 'CSTDCS')?.count || 0;
+          const totalNCKH =
+            statisticsRes.data.scientificAchievementsByType.reduce((sum, a) => sum + a.count, 0) ||
+            0;
+          const totalAwards = statisticsRes.data.awardsByType.reduce((sum, a) => sum + a.count, 0);
+          setStats({
+            totalPersonnel,
+            totalCSTDCS,
+            totalNCKH,
+            totalAwards,
+          });
           setChartData({
             awardsByType: statisticsRes.data.awardsByType || [],
             proposalsByType: statisticsRes.data.proposalsByType || [],
