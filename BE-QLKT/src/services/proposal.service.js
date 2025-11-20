@@ -2755,9 +2755,9 @@ class ProposalService {
       };
 
       // ============================================
-      // IMPORT DANH HIỆU HẰNG NĂM
+      // IMPORT DANH HIỆU ĐƠN VỊ HẰNG NĂM
       // ============================================
-      // Với đề xuất DON_VI_HANG_NAM, lưu vào bảng TheoDoiKhenThuongDonVi
+      // Với đề xuất DON_VI_HANG_NAM, lưu vào bảng `danh_hieu_don_vi_hang_nam` và cập nhật `ho_so_don_vi_hang_nam`
       if (proposal.loai_de_xuat === 'DON_VI_HANG_NAM') {
         for (const item of danhHieuData) {
           try {
@@ -2777,19 +2777,25 @@ class ProposalService {
             const donViTrucThuocId =
               item.don_vi_type === 'DON_VI_TRUC_THUOC' ? item.don_vi_id : null;
 
-            // Lấy số quyết định và file từ item (đã được Admin thêm vào)
-            const soQuyetDinh = item.so_quyet_dinh || null;
-            const fileQuyetDinh = item.file_quyet_dinh || null;
+            // Lấy số quyết định và file từ mapping theo danh hiệu
+            const decisionInfo = decisionMapping[item.danh_hieu] || {};
+            const soQuyetDinh = decisionInfo.so_quyet_dinh || null;
+            const fileQuyetDinh = decisionInfo.file_pdf || null;
 
-            // Lấy thông tin đơn vị cha (null nếu là đơn vị cha)
-            const coQuanDonViChaId =
-              item.don_vi_type === 'DON_VI_TRUC_THUOC' && item.co_quan_don_vi_cha?.id
-                ? item.co_quan_don_vi_cha.id
-                : null;
+            // Lấy thông tin bằng khen đặc biệt (nếu có)
+            const nhanBKBQP = item.nhan_bkbqp || false;
+            const soQuyetDinhBKBQP = nhanBKBQP ? specialDecisionMapping.BKBQP?.so_quyet_dinh : null;
+            const fileQuyetDinhBKBQP = nhanBKBQP ? specialDecisionMapping.BKBQP?.file_pdf : null;
 
-            // Upsert vào bảng TheoDoiKhenThuongDonVi
-            // Tìm bản ghi hiện có theo (co_quan_don_vi_id hoặc don_vi_truc_thuoc_id) và nam
+            const nhanBKTTCP = item.nhan_bkttcp || false;
+            const soQuyetDinhBKTTCP = nhanBKTTCP
+              ? specialDecisionMapping.CSTDTQ?.so_quyet_dinh
+              : null;
+            const fileQuyetDinhBKTTCP = nhanBKTTCP ? specialDecisionMapping.CSTDTQ?.file_pdf : null;
+
             const namValue = typeof item.nam === 'string' ? parseInt(item.nam, 10) : item.nam;
+
+            // Tìm bản ghi DanhHieuDonViHangNam hiện tại
             const whereCondition = {
               nam: namValue,
               OR: [
@@ -2798,110 +2804,135 @@ class ProposalService {
               ],
             };
 
-            const existingRecord = await prisma.theoDoiKhenThuongDonVi.findFirst({
+            const existingAward = await prisma.danhHieuDonViHangNam.findFirst({
               where: whereCondition,
             });
 
-            let savedRecord;
-            if (existingRecord) {
-              // Cập nhật bản ghi hiện có
-              savedRecord = await prisma.theoDoiKhenThuongDonVi.update({
-                where: { id: existingRecord.id },
+            let savedAward;
+            if (existingAward) {
+              savedAward = await prisma.danhHieuDonViHangNam.update({
+                where: { id: existingAward.id },
                 data: {
                   danh_hieu: item.danh_hieu,
-                  ten_don_vi: item.ten_don_vi || null,
-                  ma_don_vi: item.ma_don_vi || null,
-                  co_quan_don_vi_cha_id: coQuanDonViChaId,
                   so_quyet_dinh: soQuyetDinh,
-                  ten_file_pdf: fileQuyetDinh,
+                  file_quyet_dinh: fileQuyetDinh,
+                  nhan_bkbqp: nhanBKBQP,
+                  so_quyet_dinh_bkbqp: soQuyetDinhBKBQP,
+                  file_quyet_dinh_bkbqp: fileQuyetDinhBKBQP,
+                  nhan_bkttcp: nhanBKTTCP,
+                  so_quyet_dinh_bkttcp: soQuyetDinhBKTTCP,
+                  file_quyet_dinh_bkttcp: fileQuyetDinhBKTTCP,
                   status: 'APPROVED',
                   nguoi_duyet_id: adminId,
                   ngay_duyet: new Date(),
+                  ghi_chu: item.ghi_chu || null,
                 },
               });
             } else {
-              // Tạo bản ghi mới
-              savedRecord = await prisma.theoDoiKhenThuongDonVi.create({
+              savedAward = await prisma.danhHieuDonViHangNam.create({
                 data: {
-                  co_quan_don_vi_id: coQuanDonViId,
-                  don_vi_truc_thuoc_id: donViTrucThuocId,
+                  ...(coQuanDonViId && {
+                    CoQuanDonVi: { connect: { id: coQuanDonViId } },
+                  }),
+                  ...(donViTrucThuocId && {
+                    DonViTrucThuoc: { connect: { id: donViTrucThuocId } },
+                  }),
                   nam: namValue,
                   danh_hieu: item.danh_hieu,
-                  ten_don_vi: item.ten_don_vi || null,
-                  ma_don_vi: item.ma_don_vi || null,
-                  co_quan_don_vi_cha_id: coQuanDonViChaId,
                   so_quyet_dinh: soQuyetDinh,
-                  ten_file_pdf: fileQuyetDinh,
+                  file_quyet_dinh: fileQuyetDinh,
+                  nhan_bkbqp: nhanBKBQP,
+                  so_quyet_dinh_bkbqp: soQuyetDinhBKBQP,
+                  file_quyet_dinh_bkbqp: fileQuyetDinhBKBQP,
+                  nhan_bkttcp: nhanBKTTCP,
+                  so_quyet_dinh_bkttcp: soQuyetDinhBKTTCP,
+                  file_quyet_dinh_bkttcp: fileQuyetDinhBKTTCP,
                   status: 'APPROVED',
                   nguoi_tao_id: adminId,
                   nguoi_duyet_id: adminId,
                   ngay_duyet: new Date(),
+                  ghi_chu: item.ghi_chu || null,
                 },
               });
             }
 
-            // Tính toán so_nam_lien_tuc và các flag
-            // Query lại tất cả records của đơn vị này từ năm hiện tại trở về trước (bao gồm cả bản ghi vừa lưu)
-            const whereConditionForYears = {
-              nam: { lte: namValue },
-              OR: [
-                ...(coQuanDonViId ? [{ co_quan_don_vi_id: coQuanDonViId }] : []),
-                ...(donViTrucThuocId ? [{ don_vi_truc_thuoc_id: donViTrucThuocId }] : []),
-              ],
-            };
-
-            const allRecords = await prisma.theoDoiKhenThuongDonVi.findMany({
-              where: whereConditionForYears,
+            // Tính toán số năm liên tục DVQT và tổng số lần đạt DVQT
+            const donViId = coQuanDonViId || donViTrucThuocId;
+            const allAwardRecords = await prisma.danhHieuDonViHangNam.findMany({
+              where: {
+                nam: { lte: namValue },
+                status: 'APPROVED',
+                OR: [
+                  ...(coQuanDonViId ? [{ co_quan_don_vi_id: coQuanDonViId }] : []),
+                  ...(donViTrucThuocId ? [{ don_vi_truc_thuoc_id: donViTrucThuocId }] : []),
+                ],
+              },
               orderBy: { nam: 'desc' },
               select: { nam: true, danh_hieu: true },
             });
 
-            // Tính số năm liên tục từ năm hiện tại trở về trước
-            // Có danh hiệu = có danh_hieu không null và không rỗng
-            let soNamLienTuc = 0;
+            // Tính số năm liên tục
+            let dvqtLienTuc = 0;
             let currentYear = namValue;
-
-            // Tạo map để dễ tra cứu
             const recordsByYear = {};
-            for (const r of allRecords) {
-              if (!recordsByYear[r.nam]) {
-                recordsByYear[r.nam] = [];
-              }
+            for (const r of allAwardRecords) {
+              if (!recordsByYear[r.nam]) recordsByYear[r.nam] = [];
               recordsByYear[r.nam].push(r);
             }
 
-            // Đếm từ năm hiện tại trở về trước
             while (currentYear > 0) {
               const yearRecords = recordsByYear[currentYear] || [];
-              // Kiểm tra xem năm này có danh hiệu không
               const hasAward = yearRecords.some(r => r.danh_hieu && r.danh_hieu.trim() !== '');
-
               if (hasAward) {
-                soNamLienTuc++;
+                dvqtLienTuc++;
                 currentYear--;
-              } else {
-                // Nếu năm này không có danh hiệu, dừng lại
-                break;
-              }
+              } else break;
             }
 
-            // Tính các flag và gợi ý (chỉ khi chính xác bằng 3 hoặc 5)
-            const du3 = soNamLienTuc === 3;
-            const du5 = soNamLienTuc === 5;
+            // Tính tổng số lần đạt DVQT
+            const validRecords = allAwardRecords.filter(
+              r => r.danh_hieu && r.danh_hieu.trim() !== ''
+            );
+            const tongDVQT = validRecords.length;
+            const tongDVQTJson = validRecords.map(r => ({ nam: r.nam, danh_hieu: r.danh_hieu }));
+
+            const du3 = dvqtLienTuc >= 3;
+            const du5 = dvqtLienTuc >= 5;
             let goi_y = null;
             if (!soQuyetDinh) {
-              if (du5) {
-                goi_y = 'Đủ điều kiện đề xuất Bằng khen Thủ tướng Chính phủ (5 năm liên tục).';
-              } else if (du3) {
-                goi_y = 'Đủ điều kiện đề xuất Bằng khen Tổng cục (3 năm liên tục).';
-              }
+              if (du5)
+                goi_y = 'Đủ điều kiện đề xuất Bằng khen Thủ tướng Chính phủ (5 năm liên tục DVQT).';
+              else if (du3)
+                goi_y = 'Đủ điều kiện đề xuất Bằng khen Tổng cục (3 năm liên tục DVQT).';
             }
 
-            // Cập nhật lại các trường tính toán
-            await prisma.theoDoiKhenThuongDonVi.update({
-              where: { id: savedRecord.id },
-              data: {
-                so_nam_lien_tuc: soNamLienTuc,
+            // Cập nhật hoặc tạo HoSoDonViHangNam
+            const hoSoWhereCondition = coQuanDonViId
+              ? { unique_co_quan_don_vi_nam: { co_quan_don_vi_id: coQuanDonViId, nam: namValue } }
+              : {
+                  unique_don_vi_truc_thuoc_nam: {
+                    don_vi_truc_thuoc_id: donViTrucThuocId,
+                    nam: namValue,
+                  },
+                };
+
+            await prisma.hoSoDonViHangNam.upsert({
+              where: hoSoWhereCondition,
+              update: {
+                tong_dvqt: tongDVQT,
+                tong_dvqt_json: tongDVQTJson,
+                dvqt_lien_tuc: dvqtLienTuc,
+                du_dieu_kien_bk_tong_cuc: du3,
+                du_dieu_kien_bk_thu_tuong: du5,
+                goi_y: goi_y,
+              },
+              create: {
+                co_quan_don_vi_id: coQuanDonViId,
+                don_vi_truc_thuoc_id: donViTrucThuocId,
+                nam: namValue,
+                tong_dvqt: tongDVQT,
+                tong_dvqt_json: tongDVQTJson,
+                dvqt_lien_tuc: dvqtLienTuc,
                 du_dieu_kien_bk_tong_cuc: du3,
                 du_dieu_kien_bk_thu_tuong: du5,
                 goi_y: goi_y,
@@ -4609,8 +4640,8 @@ class ProposalService {
         },
       });
 
-      // 5. Thống kê TheoDoiKhenThuongDonVi (Đơn vị Hằng năm)
-      const donViHangNamCount = await prisma.theoDoiKhenThuongDonVi.count({
+      // 5. Thống kê DanhHieuDonViHangNam (Đơn vị Hằng năm)
+      const donViHangNamCount = await prisma.danhHieuDonViHangNam.count({
         where: {
           danh_hieu: {
             not: null,

@@ -56,8 +56,9 @@ axiosInstance.interceptors.response.use(
 
     // Nếu lỗi 401 và chưa retry
     // Bỏ qua interceptor cho login request để tránh reload trang
-    const isLoginRequest = originalRequest?.url?.includes('/api/auth/login') ||
-                          originalRequest?.url?.includes('/auth/login');
+    const isLoginRequest =
+      originalRequest?.url?.includes('/api/auth/login') ||
+      originalRequest?.url?.includes('/auth/login');
 
     if (error.response?.status === 401 && !originalRequest._retry && !isLoginRequest) {
       if (isRefreshing) {
@@ -78,7 +79,8 @@ axiosInstance.interceptors.response.use(
 
       try {
         // Lấy refreshToken từ localStorage (backend hiện mong nhận trong body)
-        const storedRefresh = typeof window !== 'undefined' ? localStorage.getItem('refreshToken') : null;
+        const storedRefresh =
+          typeof window !== 'undefined' ? localStorage.getItem('refreshToken') : null;
 
         if (!storedRefresh) {
           // Không có refresh token -> bắt buộc đăng nhập lại
@@ -98,8 +100,10 @@ axiosInstance.interceptors.response.use(
 
         // Fallback: Lưu token mới vào localStorage nếu backend trả
         if (refreshResponse.data?.data?.accessToken || refreshResponse.data?.accessToken) {
-          const newAccess = refreshResponse.data?.data?.accessToken || refreshResponse.data?.accessToken;
-          const newRefresh = refreshResponse.data?.data?.refreshToken || refreshResponse.data?.refreshToken;
+          const newAccess =
+            refreshResponse.data?.data?.accessToken || refreshResponse.data?.accessToken;
+          const newRefresh =
+            refreshResponse.data?.data?.refreshToken || refreshResponse.data?.refreshToken;
           localStorage.setItem('accessToken', newAccess);
           if (newRefresh) localStorage.setItem('refreshToken', newRefresh);
         }

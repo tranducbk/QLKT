@@ -39,6 +39,7 @@ export default function UnitAnnualAwardHistoryModal({
   loading,
   onClose,
 }: UnitAnnualAwardHistoryModalProps) {
+  console.log('awards', awards);
   const columns: ColumnsType<UnitAnnualAward> = [
     {
       title: 'Năm',
@@ -58,8 +59,8 @@ export default function UnitAnnualAwardHistoryModal({
       render: (danhHieu: string | null) => {
         if (!danhHieu) return <Text type="secondary">-</Text>;
         const map: Record<string, { text: string; color: string }> = {
-          DVTT: { text: 'Đơn vị tiên tiến', color: 'blue' },
-          DVQT: { text: 'Đơn vị quyết thắng', color: 'green' },
+          ĐVTT: { text: 'Đơn vị tiên tiến', color: 'blue' },
+          ĐVQT: { text: 'Đơn vị quyết thắng', color: 'green' },
           BKTTCP: { text: 'Bằng khen Thủ tướng Chính phủ', color: 'orange' },
           BKBQP: { text: 'Bằng khen Bộ Quốc phòng', color: 'purple' },
         };
@@ -144,4 +145,3 @@ export default function UnitAnnualAwardHistoryModal({
     </Modal>
   );
 }
-
