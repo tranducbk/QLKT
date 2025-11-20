@@ -589,11 +589,11 @@ class ProposalController {
 
         await prisma.systemLog.create({
           data: {
-            actor_id: userId,
+            nguoi_thuc_hien_id: userId,
             actor_role: userRole,
             action: 'DELETE',
             resource: 'proposals',
-            resource_id: id,
+            tai_nguyen_id: id,
             description: `Xóa đề xuất khen thưởng ID ${id} - Đơn vị: ${result.proposal.don_vi}`,
             payload: {
               proposal_id: id,

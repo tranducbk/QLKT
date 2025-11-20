@@ -81,36 +81,44 @@ export default function AdminDashboard() {
       title: 'Tổng số Quân nhân',
       value: stats.totalPersonnel,
       icon: TeamOutlined,
-      iconColor: 'text-blue-600 dark:text-blue-400',
+      iconColor: theme === 'dark' ? 'text-blue-400' : 'text-blue-600',
       bgColor:
-        'bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/20',
+        theme === 'dark'
+          ? 'bg-gradient-to-br from-blue-900/30 to-blue-800/20'
+          : 'bg-gradient-to-br from-blue-50 to-blue-100',
       link: '/admin/personnel',
     },
     {
       title: 'Tổng số Đơn vị',
       value: stats.totalUnits,
       icon: ApartmentOutlined,
-      iconColor: 'text-green-600 dark:text-green-400',
+      iconColor: theme === 'dark' ? 'text-green-400' : 'text-green-600',
       bgColor:
-        'bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/30 dark:to-green-800/20',
+        theme === 'dark'
+          ? 'bg-gradient-to-br from-green-900/30 to-green-800/20'
+          : 'bg-gradient-to-br from-green-50 to-green-100',
       link: '/admin/categories',
     },
     {
       title: 'Tổng số Chức vụ',
       value: stats.totalPositions,
       icon: FileTextOutlined,
-      iconColor: 'text-purple-600 dark:text-purple-400',
+      iconColor: theme === 'dark' ? 'text-purple-400' : 'text-purple-600',
       bgColor:
-        'bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/30 dark:to-purple-800/20',
+        theme === 'dark'
+          ? 'bg-gradient-to-br from-purple-900/30 to-purple-800/20'
+          : 'bg-gradient-to-br from-purple-50 to-purple-100',
       link: '/admin/positions',
     },
     {
       title: 'Thành tích chờ duyệt',
       value: stats.pendingApprovals,
       icon: CheckCircleOutlined,
-      iconColor: 'text-orange-600 dark:text-orange-400',
+      iconColor: theme === 'dark' ? 'text-orange-400' : 'text-orange-600',
       bgColor:
-        'bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/30 dark:to-orange-800/20',
+        theme === 'dark'
+          ? 'bg-gradient-to-br from-orange-900/30 to-orange-800/20'
+          : 'bg-gradient-to-br from-orange-50 to-orange-100',
       link: '#',
     },
   ];

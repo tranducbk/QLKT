@@ -128,36 +128,44 @@ export default function ManagerDashboard() {
       title: 'Quân số Đơn vị',
       value: stats.totalPersonnel,
       icon: TeamOutlined,
-      iconColor: 'text-blue-600 dark:text-blue-400',
+      iconColor: theme === 'dark' ? 'text-blue-400' : 'text-blue-600',
       bgColor:
-        'bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/20',
+        theme === 'dark'
+          ? 'bg-gradient-to-br from-blue-900/30 to-blue-800/20'
+          : 'bg-gradient-to-br from-blue-50 to-blue-100',
       link: '/manager/personnel',
     },
     {
       title: 'Tổng CSTDCS',
       value: stats.totalCSTDCS,
       icon: FileTextOutlined,
-      iconColor: 'text-green-600 dark:text-green-400',
+      iconColor: theme === 'dark' ? 'text-green-400' : 'text-green-600',
       bgColor:
-        'bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/30 dark:to-green-800/20',
+        theme === 'dark'
+          ? 'bg-gradient-to-br from-green-900/30 to-green-800/20'
+          : 'bg-gradient-to-br from-green-50 to-green-100',
       link: '#',
     },
     {
       title: 'Tổng NCKH',
       value: stats.totalNCKH,
       icon: StarOutlined,
-      iconColor: 'text-yellow-600 dark:text-yellow-400',
+      iconColor: theme === 'dark' ? 'text-yellow-400' : 'text-yellow-600',
       bgColor:
-        'bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-900/30 dark:to-yellow-800/20',
+        theme === 'dark'
+          ? 'bg-gradient-to-br from-yellow-900/30 to-yellow-800/20'
+          : 'bg-gradient-to-br from-yellow-50 to-yellow-100',
       link: '#',
     },
     {
       title: 'Khen thưởng',
       value: stats.totalAwards,
       icon: TrophyOutlined,
-      iconColor: 'text-purple-600 dark:text-purple-400',
+      iconColor: theme === 'dark' ? 'text-purple-400' : 'text-purple-600',
       bgColor:
-        'bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/30 dark:to-purple-800/20',
+        theme === 'dark'
+          ? 'bg-gradient-to-br from-purple-900/30 to-purple-800/20'
+          : 'bg-gradient-to-br from-purple-50 to-purple-100',
       link: '/manager/awards',
     },
   ];
