@@ -320,7 +320,10 @@ export default function PersonnelEditPage() {
                     </Select>
                   </Form.Item>
 
-                  <Form.Item name="ngay_sinh" label="Ngày sinh">
+                  <Form.Item 
+                  name="ngay_sinh" 
+                  label="Ngày sinh"
+                  rules={[{ required: true, message: 'Vui lòng chọn ngày sinh' }]}>
                     <DatePicker
                       placeholder="Chọn ngày sinh"
                       format="DD/MM/YYYY"

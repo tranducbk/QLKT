@@ -16,6 +16,7 @@ interface Personnel {
   cccd: string;
   cap_bac?: string;
   gioi_tinh?: string | null;
+  ngay_sinh?: string | null;
   co_quan_don_vi_id: string;
   don_vi_truc_thuoc_id: string;
   chuc_vu_id: string;
@@ -317,6 +318,14 @@ export default function Step2SelectPersonnelNienHan({
           </div>
         );
       },
+    },
+    {
+      title: 'Ngày sinh',
+      dataIndex: 'ngay_sinh',
+      key: 'ngay_sinh',
+      width: 140,
+      align: 'center',
+      render: (date: string | undefined | null) => (date ? formatDate(date) : '-'),
     },
     {
       title: 'Cấp bậc / Chức vụ',

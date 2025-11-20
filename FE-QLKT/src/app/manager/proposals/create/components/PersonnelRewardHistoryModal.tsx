@@ -4,12 +4,14 @@ import { Modal, Button, Descriptions, Tabs, Table, Tag, Typography, message } fr
 import { HistoryOutlined, DownloadOutlined, FileTextOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import axiosInstance from '@/utils/axiosInstance';
+import { formatDate } from '@/lib/utils';
 
 const { Text } = Typography;
 
 interface Personnel {
   id: string;
   ho_ten: string;
+  ngay_sinh?: string | null;
 }
 
 interface AnnualProfile {

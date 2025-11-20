@@ -9,6 +9,7 @@ const { Text, Title } = Typography;
 interface Personnel {
   id: string;
   ho_ten: string;
+  ngay_sinh?: string | null;
 }
 
 interface ServiceProfile {

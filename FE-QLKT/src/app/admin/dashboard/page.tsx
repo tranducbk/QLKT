@@ -49,21 +49,16 @@ export default function AdminDashboard() {
     const fetchStats = async () => {
       try {
         setLoading(true);
-        const [personnelRes, unitsRes, positionsRes, statisticsRes] = await Promise.all([
-          apiClient.getPersonnel({ page: 1, limit: 1 }),
-          apiClient.getUnits(),
-          apiClient.getPositions(),
-          apiClient.getAdminDashboardStatistics(),
-        ]);
-
-        setStats({
-          totalPersonnel: personnelRes?.data?.pagination?.total || 0,
-          totalUnits: Array.isArray(unitsRes?.data) ? unitsRes.data.length : 0,
-          totalPositions: Array.isArray(positionsRes?.data) ? positionsRes.data.length : 0,
-          pendingApprovals: 0,
-        });
+        const statisticsRes = await apiClient.getAdminDashboardStatistics();
 
         if (statisticsRes.success && statisticsRes.data) {
+          setStats({
+            totalPersonnel: statisticsRes.data.totalPersonnel || 0,
+            totalUnits: statisticsRes.data.totalUnits || 0,
+            totalPositions: statisticsRes.data.totalPositions || 0,
+            pendingApprovals: statisticsRes.data.pendingApprovals || 0,
+          });
+
           setChartData({
             scientificAchievementsByType: statisticsRes.data.scientificAchievementsByType || [],
             proposalsByType: statisticsRes.data.proposalsByType || [],

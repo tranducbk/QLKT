@@ -64,6 +64,7 @@ interface Personnel {
     id: string;
     ten_chuc_vu: string;
   };
+  cap_bac?: string;
   CoQuanDonVi?: {
     ten_don_vi: string;
   };
@@ -153,8 +154,8 @@ export default function CreateProposalPage() {
   // Chỉ set năm hiện tại lần đầu khi component mount (nếu chưa có giá trị)
   useEffect(() => {
     if (!nam) {
-    const currentYear = new Date().getFullYear();
-    setNam(currentYear);
+      const currentYear = new Date().getFullYear();
+      setNam(currentYear);
     }
   }, []);
 
@@ -400,7 +401,9 @@ export default function CreateProposalPage() {
         if (failed.length > 0) {
           console.warn('Một số quân nhân không thể tính toán gợi ý:', failed);
           antMessage.warning(
-            `Đã tính toán gợi ý cho ${results.length - failed.length}/${results.length} quân nhân. Một số quân nhân có thể chưa có đủ dữ liệu.`
+            `Đã tính toán gợi ý cho ${results.length - failed.length}/${
+              results.length
+            } quân nhân. Một số quân nhân có thể chưa có đủ dữ liệu.`
           );
         } else {
           antMessage.success(`Đã tính toán gợi ý cho ${results.length} quân nhân`);
@@ -446,6 +449,9 @@ export default function CreateProposalPage() {
 
   // Handle previous step
   const handlePrev = () => {
+    if (currentStep == 2) {
+      setTitleData([]);
+    }
     setCurrentStep(currentStep - 1);
   };
 

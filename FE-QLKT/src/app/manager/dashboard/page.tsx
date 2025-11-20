@@ -26,7 +26,12 @@ import { useTheme } from '@/components/theme-provider';
 import { apiClient } from '@/lib/api-client';
 import { formatDateTime } from '@/lib/utils';
 import '@/lib/chart-config';
-import { ActionBarChart, ActivityLineChart, PieChart, RoleDistributionChart } from '@/components/charts';
+import {
+  ActionBarChart,
+  ActivityLineChart,
+  PieChart,
+  RoleDistributionChart,
+} from '@/components/charts';
 
 const { Title } = Typography;
 
@@ -67,49 +72,27 @@ export default function ManagerDashboard() {
         }
 
         // Fetch actual data from API - chỉ lấy dữ liệu đơn vị của manager
-        const [personnelRes, awardsRes, statisticsRes] = await Promise.all([
-          apiClient.getPersonnel({ page: 1, limit: 1000, unit_id: unitId }),
-          apiClient.getAwards({ don_vi_id: unitId, limit: 1000 }),
-          apiClient.getManagerDashboardStatistics(),
-        ]);
-
-        // Tính toán thống kê
-        const personnelList = personnelRes?.data?.personnel || personnelRes?.data || [];
-        const totalPersonnel = personnelRes?.data?.pagination?.total || personnelList.length || 0;
-
-        const awardsList = awardsRes?.data?.awards || awardsRes?.data || [];
-
-        // Đếm số lượng CSTDCS và NCKH
-        let totalCSTDCS = 0;
-        let totalNCKH = 0;
-
-        // Duyệt qua từng quân nhân để đếm
-        for (const person of personnelList) {
-          try {
-            // Lấy danh hiệu hằng năm
-            const annualRes = await apiClient.getAnnualRewards(person.id);
-            const annualRewards = annualRes?.data || [];
-            totalCSTDCS += annualRewards.filter((r: any) => r.danh_hieu === 'CSTDCS').length;
-
-            // Lấy thành tích khoa học
-            const scientificRes = await apiClient.getScientificAchievements(person.id);
-            const scientificAchievements = scientificRes?.data || [];
-            totalNCKH += scientificAchievements.filter((s: any) => s.status === 'APPROVED').length;
-          } catch (err) {
-            // Bỏ qua lỗi cho từng quân nhân
-            console.error(`Error fetching data for personnel ${person.id}:`, err);
-          }
-        }
-
-        setStats({
-          totalPersonnel,
-          totalCSTDCS,
-          totalNCKH,
-          totalAwards: awardsList.length,
-        });
+        const statisticsRes = await apiClient.getManagerDashboardStatistics();
+        console.log('Fetched Manager Dashboard Statistics:', statisticsRes);
 
         if (statisticsRes.success && statisticsRes.data) {
           console.log('Manager Statistics Data:', statisticsRes.data);
+          // Tính toán thống kê
+          const totalPersonnel = statisticsRes.data.totalPersonnel || 0;
+
+          // Đếm số lượng CSTDCS và NCKH
+          const totalCSTDCS =
+            statisticsRes.data.awardsByType.find(a => a.type === 'CSTDCS')?.count || 0;
+          const totalNCKH =
+            statisticsRes.data.scientificAchievementsByType.reduce((sum, a) => sum + a.count, 0) ||
+            0;
+          const totalAwards = statisticsRes.data.awardsByType.reduce((sum, a) => sum + a.count, 0);
+          setStats({
+            totalPersonnel,
+            totalCSTDCS,
+            totalNCKH,
+            totalAwards,
+          });
           setChartData({
             awardsByType: statisticsRes.data.awardsByType || [],
             proposalsByType: statisticsRes.data.proposalsByType || [],
@@ -281,7 +264,11 @@ export default function ManagerDashboard() {
                 value: item.count,
               }))}
               title="Đề xuất theo trạng thái"
-              colors={['rgba(255, 193, 7, 0.8)', 'rgba(40, 167, 69, 0.8)', 'rgba(220, 53, 69, 0.8)']}
+              colors={[
+                'rgba(255, 193, 7, 0.8)',
+                'rgba(40, 167, 69, 0.8)',
+                'rgba(220, 53, 69, 0.8)',
+              ]}
             />
           </Col>
           <Col xs={24} lg={8}>

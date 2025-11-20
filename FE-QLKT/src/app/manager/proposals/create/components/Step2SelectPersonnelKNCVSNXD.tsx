@@ -13,6 +13,7 @@ interface Personnel {
   id: string;
   ho_ten: string;
   cccd: string;
+  ngay_sinh?: string | null;
   gioi_tinh?: string | null;
   co_quan_don_vi_id: string;
   don_vi_truc_thuoc_id: string;
@@ -237,6 +238,14 @@ export default function Step2SelectPersonnelKNCVSNXD({
           </div>
         );
       },
+    },
+    {
+      title: 'Ngày sinh',
+      dataIndex: 'ngay_sinh',
+      key: 'ngay_sinh',
+      width: 140,
+      align: 'center',
+      render: (date: string | undefined | null) => (date ? formatDate(date) : '-'),
     },
     {
       title: 'Cấp bậc / Chức vụ',

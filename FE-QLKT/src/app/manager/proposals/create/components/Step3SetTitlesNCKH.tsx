@@ -5,6 +5,7 @@ import { Table, Select, Input, Alert, Typography, Space, Button, Modal, Tabs, Ta
 import { EditOutlined, HistoryOutlined, EyeOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import axiosInstance from '@/utils/axiosInstance';
+import { formatDate } from '@/lib/utils';
 import { apiClient } from '@/lib/api-client';
 import ScientificAchievementHistoryModal from './ScientificAchievementHistoryModal';
 
@@ -15,6 +16,7 @@ interface Personnel {
   id: string;
   ho_ten: string;
   cccd: string;
+  ngay_sinh?: string | null;
   cap_bac?: string;
   ChucVu?: {
     id: string;
@@ -203,6 +205,14 @@ export default function Step3SetTitlesNCKH({
           </div>
         );
       },
+    },
+    {
+      title: 'Ngày sinh',
+      dataIndex: 'ngay_sinh',
+      key: 'ngay_sinh',
+      width: 140,
+      align: 'center',
+      render: (date: string) => (date ? formatDate(date) : '-'),
     },
     {
       title: (

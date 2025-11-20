@@ -77,19 +77,31 @@ axiosInstance.interceptors.response.use(
       isRefreshing = true;
 
       try {
+        // Lấy refreshToken từ localStorage (backend hiện mong nhận trong body)
+        const storedRefresh = typeof window !== 'undefined' ? localStorage.getItem('refreshToken') : null;
+
+        if (!storedRefresh) {
+          // Không có refresh token -> bắt buộc đăng nhập lại
+          isRefreshing = false;
+          if (typeof window !== 'undefined') window.location.href = '/login';
+          return Promise.reject(new Error('No refresh token available'));
+        }
+
         const refreshResponse = await axiosInstance.post(
-          `/user/refresh-token`,
-          {},
+          `/api/auth/refresh`,
+          { refreshToken: storedRefresh },
           {
             withCredentials: true,
             timeout: 10000,
           }
         );
 
-        // Fallback: Lưu token mới vào localStorage nếu cookies không hoạt động
-        if (refreshResponse.data.accessToken) {
-          localStorage.setItem('accessToken', refreshResponse.data.accessToken);
-          localStorage.setItem('refreshToken', refreshResponse.data.refreshToken);
+        // Fallback: Lưu token mới vào localStorage nếu backend trả
+        if (refreshResponse.data?.data?.accessToken || refreshResponse.data?.accessToken) {
+          const newAccess = refreshResponse.data?.data?.accessToken || refreshResponse.data?.accessToken;
+          const newRefresh = refreshResponse.data?.data?.refreshToken || refreshResponse.data?.refreshToken;
+          localStorage.setItem('accessToken', newAccess);
+          if (newRefresh) localStorage.setItem('refreshToken', newRefresh);
         }
 
         processQueue(null, true);
@@ -97,6 +109,7 @@ axiosInstance.interceptors.response.use(
 
         return axiosInstance(originalRequest);
       } catch (refreshError) {
+        console.error('Refresh token failed:', refreshError);
         processQueue(refreshError, false);
         isRefreshing = false;
 
