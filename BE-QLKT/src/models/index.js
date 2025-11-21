@@ -22,6 +22,7 @@ const LichSuChucVu = require('./LichSuChucVu');
 const ThanhTichKhoaHoc = require('./ThanhTichKhoaHoc');
 const DanhHieuHangNam = require('./DanhHieuHangNam');
 const HoSoNienHan = require('./HoSoNienHan');
+const HoSoCongHien = require('./HoSoCongHien');
 const HoSoHangNam = require('./HoSoHangNam');
 const ThongBao = require('./ThongBao');
 const HoSoDonViHangNam = require('./HoSoDonViHangNam');
@@ -111,6 +112,7 @@ QuanNhan.hasMany(DanhHieuHangNam, {
   as: 'danhHieuHangNam',
 });
 QuanNhan.hasOne(HoSoNienHan, { foreignKey: 'quan_nhan_id', as: 'hoSoNienHan' });
+QuanNhan.hasOne(HoSoCongHien, { foreignKey: 'quan_nhan_id', as: 'hoSoCongHien' });
 QuanNhan.hasOne(HoSoHangNam, { foreignKey: 'quan_nhan_id', as: 'hoSoHangNam' });
 
 // TaiKhoan relationships
@@ -138,6 +140,9 @@ DanhHieuHangNam.belongsTo(QuanNhan, {
 
 // HoSoNienHan relationships
 HoSoNienHan.belongsTo(QuanNhan, { foreignKey: 'quan_nhan_id', as: 'quanNhan' });
+
+// HoSoCongHien relationships
+HoSoCongHien.belongsTo(QuanNhan, { foreignKey: 'quan_nhan_id', as: 'quanNhan' });
 
 // HoSoHangNam relationships
 HoSoHangNam.belongsTo(QuanNhan, { foreignKey: 'quan_nhan_id', as: 'quanNhan' });
@@ -201,6 +206,7 @@ module.exports.LichSuChucVu = LichSuChucVu;
 module.exports.ThanhTichKhoaHoc = ThanhTichKhoaHoc;
 module.exports.DanhHieuHangNam = DanhHieuHangNam;
 module.exports.HoSoNienHan = HoSoNienHan;
+module.exports.HoSoCongHien = HoSoCongHien;
 module.exports.HoSoHangNam = HoSoHangNam;
 module.exports.ThongBao = ThongBao;
 module.exports.HoSoDonViHangNam = HoSoDonViHangNam;

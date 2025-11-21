@@ -226,6 +226,7 @@ class ProposalController {
         data_danh_hieu: JSON.parse(req.body.data_danh_hieu || '[]'),
         data_thanh_tich: JSON.parse(req.body.data_thanh_tich || '[]'),
         data_nien_han: JSON.parse(req.body.data_nien_han || '[]'),
+        data_cong_hien: JSON.parse(req.body.data_cong_hien || '[]'),
       };
 
       // Lấy số quyết định cho từng loại đề xuất

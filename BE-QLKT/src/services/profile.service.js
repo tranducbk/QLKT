@@ -1186,31 +1186,75 @@ class ProfileService {
       // ==============================================
       // TÍNH TOÁN HỒ SƠ NIÊN HẠN
       // ==============================================
+      await this.recalculateTenureProfile(personnelId);
+
+      // ==============================================
+      // TÍNH TOÁN HỒ SƠ CỐNG HIẾN
+      // ==============================================
+      await this.recalculateContributionProfile(personnelId);
+
+      return { message: 'Tính toán lại hồ sơ thành công' };
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
+   * Tính toán lại hồ sơ niên hạn cho 1 quân nhân (chỉ HCCSVV - Huân chương Chiến sỹ Vẻ vang)
+   * @param {string} personnelId - ID quân nhân
+   */
+  async recalculateTenureProfile(personnelId) {
+    try {
+      // Load thông tin quân nhân
+      const personnel = await prisma.quanNhan.findUnique({
+        where: { id: personnelId },
+      });
+
+      if (!personnel) {
+        throw new Error('Quân nhân không tồn tại');
+      }
+
+      // Lấy hồ sơ niên hạn hiện tại
+      const existingProfile = await prisma.hoSoNienHan.findUnique({
+        where: { quan_nhan_id: personnelId },
+      });
+
+      const khenthuonghccsvv = await prisma.khenThuongHCCSVV.findMany({
+        where: { quan_nhan_id: personnelId },
+      });
+
+      // update status huân chương từ khen thưởng hccsvv
+      for (const kt of khenthuonghccsvv) {
+        if (kt.danh_hieu === 'HCCSVV_HANG_BA') {
+          existingProfile.hccsvv_hang_ba_status = 'DA_NHAN';
+        }
+        if (kt.danh_hieu === 'HCCSVV_HANG_NHI') {
+          existingProfile.hccsvv_hang_nhi_status = 'DA_NHAN';
+        }
+        if (kt.danh_hieu === 'HCCSVV_HANG_NHAT') {
+          existingProfile.hccsvv_hang_nhat_status = 'DA_NHAN';
+        }
+      }
 
       // Tính HCCSVV (Huân chương Chiến sỹ Vẻ vang)
       // Logic thứ bậc: Phải NHẬN hạng thấp trước mới được đề xuất hạng cao
-      // Ví dụ: 15 năm đủ hạng nhì nhưng chưa có hạng ba → chỉ được đề xuất hạng ba
-      // Nếu có hạng ba (DA_NHAN) thì mới được đề xuất hạng nhì
       const hccsvvBa = this.calculateHCCSVV(
         personnel.ngay_nhap_ngu,
         10,
-        existingServiceProfile?.hccsvv_hang_ba_status || 'CHUA_DU',
+        existingProfile.hccsvv_hang_ba_status || 'CHUA_DU',
         'Ba'
       );
 
       // Chỉ xét Hạng Nhì nếu ĐÃ NHẬN Hạng Ba (DA_NHAN)
-      // Không xét nếu chỉ đủ điều kiện (DU_DIEU_KIEN) mà chưa nhận
       let hccsvvNhi;
-      if (existingServiceProfile?.hccsvv_hang_ba_status === 'DA_NHAN') {
-        // Đã nhận Hạng Ba, mới được xét Hạng Nhì
+      if (existingProfile.hccsvv_hang_ba_status === 'DA_NHAN') {
         hccsvvNhi = this.calculateHCCSVV(
           personnel.ngay_nhap_ngu,
           15,
-          existingServiceProfile?.hccsvv_hang_nhi_status || 'CHUA_DU',
+          existingProfile.hccsvv_hang_nhi_status || 'CHUA_DU',
           'Nhì'
         );
       } else {
-        // Chưa nhận Hạng Ba, không được xét Hạng Nhì
         hccsvvNhi = {
           status: 'CHUA_DU',
           ngay: null,
@@ -1219,18 +1263,15 @@ class ProfileService {
       }
 
       // Chỉ xét Hạng Nhất nếu ĐÃ NHẬN Hạng Nhì (DA_NHAN)
-      // Không xét nếu chỉ đủ điều kiện (DU_DIEU_KIEN) mà chưa nhận
       let hccsvvNhat;
-      if (existingServiceProfile?.hccsvv_hang_nhi_status === 'DA_NHAN') {
-        // Đã nhận Hạng Nhì, mới được xét Hạng Nhất
+      if (existingProfile.hccsvv_hang_nhi_status === 'DA_NHAN') {
         hccsvvNhat = this.calculateHCCSVV(
           personnel.ngay_nhap_ngu,
           20,
-          existingServiceProfile?.hccsvv_hang_nhat_status || 'CHUA_DU',
+          existingProfile.hccsvv_hang_nhat_status || 'CHUA_DU',
           'Nhất'
         );
       } else {
-        // Chưa nhận Hạng Nhì, không được xét Hạng Nhất
         hccsvvNhat = {
           status: 'CHUA_DU',
           ngay: null,
@@ -1238,26 +1279,13 @@ class ProfileService {
         };
       }
 
-      // Không tính toán HCBVTQ nữa - giữ nguyên giá trị hiện có trong database
-      const hcbvtqBa = {
-        status: existingServiceProfile?.hcbvtq_hang_ba_status || 'CHUA_DU',
-      };
-      const hcbvtqNhi = {
-        status: existingServiceProfile?.hcbvtq_hang_nhi_status || 'CHUA_DU',
-      };
-      const hcbvtqNhat = {
-        status: existingServiceProfile?.hcbvtq_hang_nhat_status || 'CHUA_DU',
-      };
-      const totalMonths = existingServiceProfile?.hcbvtq_total_months || 0;
-
-      // Tổng hợp gợi ý niên hạn - chỉ hiển thị gợi ý của HCCSVV
+      // Tổng hợp gợi ý niên hạn
       const goiYList = [];
       if (hccsvvBa.goiY) goiYList.push(hccsvvBa.goiY);
       if (hccsvvNhi.goiY) goiYList.push(hccsvvNhi.goiY);
       if (hccsvvNhat.goiY) goiYList.push(hccsvvNhat.goiY);
-      // Không thêm gợi ý HCBVTQ vào danh sách
 
-      const finalGoiYNienHan =
+      const finalGoiY =
         goiYList.length > 0
           ? goiYList.join('\n')
           : 'Chưa đủ điều kiện xét huân chương Chiến sĩ Vẻ vang.';
@@ -1272,11 +1300,7 @@ class ProfileService {
           hccsvv_hang_nhi_ngay: hccsvvNhi.ngay,
           hccsvv_hang_nhat_status: hccsvvNhat.status,
           hccsvv_hang_nhat_ngay: hccsvvNhat.ngay,
-          hcbvtq_total_months: totalMonths,
-          hcbvtq_hang_ba_status: hcbvtqBa.status,
-          hcbvtq_hang_nhi_status: hcbvtqNhi.status,
-          hcbvtq_hang_nhat_status: hcbvtqNhat.status,
-          goi_y: finalGoiYNienHan,
+          goi_y: finalGoiY,
         },
         create: {
           quan_nhan_id: personnelId,
@@ -1286,18 +1310,215 @@ class ProfileService {
           hccsvv_hang_nhi_ngay: hccsvvNhi.ngay,
           hccsvv_hang_nhat_status: hccsvvNhat.status,
           hccsvv_hang_nhat_ngay: hccsvvNhat.ngay,
-          hcbvtq_total_months: totalMonths,
-          hcbvtq_hang_ba_status: hcbvtqBa.status,
-          hcbvtq_hang_nhi_status: hcbvtqNhi.status,
-          hcbvtq_hang_nhat_status: hcbvtqNhat.status,
-          goi_y: finalGoiYNienHan,
+          goi_y: finalGoiY,
+        },
+      });
+      return { message: 'Tính toán lại hồ sơ niên hạn thành công' };
+    } catch (error) {
+      console.error('Lỗi recalculateTenureProfile:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Tính toán lại hồ sơ cống hiến cho 1 quân nhân (chỉ HCBVTQ - Huân chương Bảo vệ Tổ quốc)
+   * @param {string} personnelId - ID quân nhân
+   */
+  async recalculateContributionProfile(personnelId) {
+    try {
+      // Load thông tin quân nhân và lịch sử chức vụ
+      const personnel = await prisma.quanNhan.findUnique({
+        where: { id: personnelId },
+        include: {
+          LichSuChucVu: {
+            include: {
+              ChucVu: true,
+            },
+            orderBy: {
+              ngay_bat_dau: 'asc',
+            },
+          },
         },
       });
 
-      return { message: 'Tính toán lại hồ sơ thành công' };
+      if (!personnel) {
+        throw new Error('Quân nhân không tồn tại');
+      }
+
+      // Lấy hồ sơ cống hiến hiện tại
+      const existingProfile = await prisma.hoSoCongHien.findUnique({
+        where: { quan_nhan_id: personnelId },
+      });
+
+      // Tính toán tổng số tháng công tác
+      let totalMonths = 0;
+      if (personnel.ngay_nhap_ngu) {
+        const ngayNhapNgu = new Date(personnel.ngay_nhap_ngu);
+        const ngayKetThuc = personnel.ngay_xuat_ngu
+          ? new Date(personnel.ngay_xuat_ngu)
+          : new Date();
+
+        totalMonths = (ngayKetThuc.getFullYear() - ngayNhapNgu.getFullYear()) * 12;
+        totalMonths += ngayKetThuc.getMonth() - ngayNhapNgu.getMonth();
+        if (ngayKetThuc.getDate() < ngayNhapNgu.getDate()) {
+          totalMonths--;
+        }
+        totalMonths = Math.max(0, totalMonths);
+      }
+
+      // Tính HCBVTQ dựa trên tổng số tháng công tác
+      // Logic thứ bậc: Phải NHẬN hạng thấp trước mới được đề xuất hạng cao
+      const hcbvtqBa = this.calculateHCBVTQ(
+        totalMonths,
+        120, // 10 năm
+        existingProfile?.hcbvtq_hang_ba_status || 'CHUA_DU',
+        'Ba'
+      );
+
+      // Chỉ xét Hạng Nhì nếu ĐÃ NHẬN Hạng Ba
+      let hcbvtqNhi;
+      if (existingProfile?.hcbvtq_hang_ba_status === 'DA_NHAN') {
+        hcbvtqNhi = this.calculateHCBVTQ(
+          totalMonths,
+          180, // 15 năm
+          existingProfile?.hcbvtq_hang_nhi_status || 'CHUA_DU',
+          'Nhì'
+        );
+      } else {
+        hcbvtqNhi = {
+          status: 'CHUA_DU',
+          ngay: null,
+          goiY: '',
+        };
+      }
+
+      // Chỉ xét Hạng Nhất nếu ĐÃ NHẬN Hạng Nhì
+      let hcbvtqNhat;
+      if (existingProfile?.hcbvtq_hang_nhi_status === 'DA_NHAN') {
+        hcbvtqNhat = this.calculateHCBVTQ(
+          totalMonths,
+          240, // 20 năm
+          existingProfile?.hcbvtq_hang_nhat_status || 'CHUA_DU',
+          'Nhất'
+        );
+      } else {
+        hcbvtqNhat = {
+          status: 'CHUA_DU',
+          ngay: null,
+          goiY: '',
+        };
+      }
+
+      // Tổng hợp gợi ý cống hiến
+      const goiYList = [];
+      if (hcbvtqBa.goiY) goiYList.push(hcbvtqBa.goiY);
+      if (hcbvtqNhi.goiY) goiYList.push(hcbvtqNhi.goiY);
+      if (hcbvtqNhat.goiY) goiYList.push(hcbvtqNhat.goiY);
+
+      const finalGoiY =
+        goiYList.length > 0
+          ? goiYList.join('\n')
+          : 'Chưa đủ điều kiện xét huân chương Bảo vệ Tổ quốc.';
+
+      // Cập nhật hoặc tạo mới hồ sơ cống hiến
+      await prisma.hoSoCongHien.upsert({
+        where: { quan_nhan_id: personnelId },
+        update: {
+          hcbvtq_total_months: totalMonths,
+          hcbvtq_hang_ba_status: hcbvtqBa.status,
+          hcbvtq_hang_ba_ngay: hcbvtqBa.ngay,
+          hcbvtq_hang_nhi_status: hcbvtqNhi.status,
+          hcbvtq_hang_nhi_ngay: hcbvtqNhi.ngay,
+          hcbvtq_hang_nhat_status: hcbvtqNhat.status,
+          hcbvtq_hang_nhat_ngay: hcbvtqNhat.ngay,
+          goi_y: finalGoiY,
+        },
+        create: {
+          quan_nhan_id: personnelId,
+          hcbvtq_total_months: totalMonths,
+          hcbvtq_hang_ba_status: hcbvtqBa.status,
+          hcbvtq_hang_ba_ngay: hcbvtqBa.ngay,
+          hcbvtq_hang_nhi_status: hcbvtqNhi.status,
+          hcbvtq_hang_nhi_ngay: hcbvtqNhi.ngay,
+          hcbvtq_hang_nhat_status: hcbvtqNhat.status,
+          hcbvtq_hang_nhat_ngay: hcbvtqNhat.ngay,
+          goi_y: finalGoiY,
+        },
+      });
+
+      // ============================================
+      // ĐỒNG BỘ STATUS VÀO BẢNG KhenThuongCongHien
+      // Kiểm tra và cập nhật status của huân chương đã có
+      // ============================================
+
+      const existingCongHien = await prisma.khenThuongCongHien.findUnique({
+        where: { quan_nhan_id: personnelId },
+      });
+
+      if (existingCongHien) {
+        // Xác định status dựa trên hạng đã nhận
+        let updatedStatus = existingCongHien.danh_hieu;
+
+        // Kiểm tra và cập nhật dữ liệu nếu cần
+        // Ví dụ: Nếu đã đủ điều kiện hạng cao hơn, có thể cập nhật gợi ý
+        await prisma.khenThuongCongHien.update({
+          where: { id: existingCongHien.id },
+          data: {
+            // Cập nhật thời gian tính toán (nếu có thay đổi)
+            thoi_gian_nhom_0_7: existingCongHien.thoi_gian_nhom_0_7,
+            thoi_gian_nhom_0_8: existingCongHien.thoi_gian_nhom_0_8,
+            thoi_gian_nhom_0_9_1_0: existingCongHien.thoi_gian_nhom_0_9_1_0,
+          },
+        });
+      }
+
+      return { message: 'Tính toán lại hồ sơ cống hiến thành công' };
     } catch (error) {
+      console.error('Lỗi recalculateContributionProfile:', error);
       throw error;
     }
+  }
+
+  /**
+   * Hàm helper tính toán HCBVTQ (Huân chương Bảo vệ Tổ quốc)
+   * @param {number} totalMonths - Tổng số tháng công tác
+   * @param {number} requiredMonths - Số tháng yêu cầu
+   * @param {string} currentStatus - Trạng thái hiện tại
+   * @param {string} rank - Hạng (Ba, Nhì, Nhất)
+   */
+  calculateHCBVTQ(totalMonths, requiredMonths, currentStatus, rank) {
+    // Nếu đã nhận rồi, giữ nguyên trạng thái
+    if (currentStatus === 'DA_NHAN') {
+      return {
+        status: 'DA_NHAN',
+        ngay: null,
+        goiY: '',
+      };
+    }
+
+    // Kiểm tra đủ điều kiện
+    if (totalMonths >= requiredMonths) {
+      const years = Math.floor(totalMonths / 12);
+      return {
+        status: 'DU_DIEU_KIEN',
+        ngay: new Date(), // Ngày đủ điều kiện
+        goiY: `Đủ điều kiện xét Huân chương Bảo vệ Tổ quốc Hạng ${rank} (đã công tác ${years} năm).`,
+      };
+    }
+
+    // Chưa đủ điều kiện
+    const remainingMonths = requiredMonths - totalMonths;
+    const remainingYears = Math.floor(remainingMonths / 12);
+    const remainingMonthsOnly = remainingMonths % 12;
+
+    return {
+      status: 'CHUA_DU',
+      ngay: null,
+      goiY:
+        remainingYears > 0
+          ? `Còn ${remainingYears} năm ${remainingMonthsOnly} tháng nữa mới đủ điều kiện xét Huân chương Bảo vệ Tổ quốc Hạng ${rank}.`
+          : `Còn ${remainingMonthsOnly} tháng nữa mới đủ điều kiện xét Huân chương Bảo vệ Tổ quốc Hạng ${rank}.`,
+    };
   }
 
   /**

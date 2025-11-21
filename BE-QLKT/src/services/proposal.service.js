@@ -3,6 +3,7 @@ const ExcelJS = require('exceljs');
 const fs = require('fs').promises;
 const path = require('path');
 const profileService = require('./profile.service');
+const unitAnnualAwardService = require('./unitAnnualAward.service');
 
 // Dynamic import for uuid (ES Module) - load once and cache
 let uuidv4;
@@ -3804,7 +3805,12 @@ class ProposalService {
       });
 
       // ============================================
-      // TÍNH TOÁN LẠI HỒ SƠ HẰNG NĂM CHO CÁC QUÂN NHÂN BỊ ẢNH HƯỞNG
+      // TÍNH TOÁN LẠI HỒ SƠ CHO CÁC QUÂN NHÂN/ĐƠN VỊ BỊ ẢNH HƯỞNG
+      // - Nếu là CA_NHAN_HANG_NAM: gọi recalculateAnnualProfile (tính hồ sơ hằng năm cá nhân)
+      // - Nếu là DON_VI_HANG_NAM: gọi recalculateAnnualUnit (tính hồ sơ hằng năm đơn vị)
+      // - Nếu là NIEN_HAN: gọi recalculateTenureProfile (chỉ tính niên hạn HCCSVV)
+      // - Nếu là CONG_HIEN: gọi recalculateContributionProfile (chỉ tính cống hiến HCBVTQ)
+      // - Các loại khác: gọi recalculateAnnualProfile (tính toàn bộ hồ sơ hằng năm)
       // Đảm bảo tất cả dữ liệu đã được commit trước khi recalculate
       // ============================================
       let recalculateSuccess = 0;
@@ -3814,33 +3820,90 @@ class ProposalService {
       // Prisma tự động commit sau mỗi operation, nhưng để chắc chắn
       await new Promise(resolve => setTimeout(resolve, 100));
 
-      // Log để debug
-      console.log(
-        `📊 Bắt đầu recalculate hồ sơ hằng năm cho ${affectedPersonnelIds.size} quân nhân (loại đề xuất: ${proposal.loai_de_xuat})`
-      );
-      console.log(
-        `📋 Danh sách quân nhân cần recalculate: ${Array.from(affectedPersonnelIds).join(', ')}`
-      );
+      // Xử lý riêng cho đề xuất đơn vị hằng năm
+      if (proposal.loai_de_xuat === 'DON_VI_HANG_NAM') {
+        console.log(`📊 Bắt đầu recalculate hồ sơ đơn vị hằng năm (năm: ${proposal.nam})`);
 
-      if (affectedPersonnelIds.size === 0) {
-        console.warn(
-          `⚠️ Cảnh báo: Không có quân nhân nào trong affectedPersonnelIds để recalculate!`
+        // Thu thập danh sách đơn vị bị ảnh hưởng từ danhHieuData
+        const affectedUnits = new Set();
+        for (const item of danhHieuData) {
+          if (item.don_vi_id) {
+            affectedUnits.add(item.don_vi_id);
+          }
+        }
+
+        console.log(
+          `📋 Danh sách ${affectedUnits.size} đơn vị cần recalculate: ${Array.from(
+            affectedUnits
+          ).join(', ')}`
         );
-      }
 
-      for (const personnelId of affectedPersonnelIds) {
-        try {
-          console.log(`🔄 Đang recalculate hồ sơ cho quân nhân ID: ${personnelId}...`);
-          await profileService.recalculateAnnualProfile(personnelId);
-          recalculateSuccess++;
-          console.log(`✅ Đã recalculate hồ sơ cho quân nhân ID: ${personnelId}`);
-        } catch (recalcError) {
-          recalculateErrors++;
-          console.error(
-            `❌ Lỗi tính toán hồ sơ cho quân nhân ID ${personnelId}:`,
-            recalcError.message
+        for (const donViId of affectedUnits) {
+          try {
+            console.log(`🔄 Đang recalculate hồ sơ đơn vị ID: ${donViId}, năm: ${proposal.nam}...`);
+
+            // Gọi recalculateAnnualUnit với đơn vị ID và năm
+            await unitAnnualAwardService.recalculateAnnualUnit(donViId, proposal.nam);
+
+            recalculateSuccess++;
+            console.log(`✅ Đã recalculate hồ sơ đơn vị ID: ${donViId}`);
+          } catch (recalcError) {
+            recalculateErrors++;
+            console.error(`❌ Lỗi tính toán hồ sơ cho đơn vị ID ${donViId}:`, recalcError.message);
+            console.error(`❌ Stack trace:`, recalcError.stack);
+          }
+        }
+      } else {
+        // Xử lý cho các đề xuất cá nhân
+        const recalculateType =
+          proposal.loai_de_xuat === 'NIEN_HAN'
+            ? 'hồ sơ niên hạn (HCCSVV)'
+            : proposal.loai_de_xuat === 'CONG_HIEN'
+            ? 'hồ sơ cống hiến (HCBVTQ)'
+            : 'hồ sơ hằng năm';
+
+        // Log để debug
+        console.log(
+          `📊 Bắt đầu recalculate ${recalculateType} cho ${affectedPersonnelIds.size} quân nhân (loại đề xuất: ${proposal.loai_de_xuat})`
+        );
+        console.log(
+          `📋 Danh sách quân nhân cần recalculate: ${Array.from(affectedPersonnelIds).join(', ')}`
+        );
+
+        if (affectedPersonnelIds.size === 0) {
+          console.warn(
+            `⚠️ Cảnh báo: Không có quân nhân nào trong affectedPersonnelIds để recalculate!`
           );
-          console.error(`❌ Stack trace:`, recalcError.stack);
+        }
+
+        for (const personnelId of affectedPersonnelIds) {
+          try {
+            console.log(
+              `🔄 Đang recalculate ${recalculateType} cho quân nhân ID: ${personnelId}...`
+            );
+
+            // Gọi hàm recalculate tương ứng dựa trên loại đề xuất
+            if (proposal.loai_de_xuat === 'NIEN_HAN') {
+              // Chỉ tính toán lại hồ sơ niên hạn (HCCSVV)
+              await profileService.recalculateTenureProfile(personnelId);
+            } else if (proposal.loai_de_xuat === 'CONG_HIEN') {
+              // Chỉ tính toán lại hồ sơ cống hiến (HCBVTQ)
+              await profileService.recalculateContributionProfile(personnelId);
+            } else {
+              // Chỉ tính toán lại hồ sơ hằng năm
+              await profileService.recalculateAnnualProfile(personnelId);
+            }
+
+            recalculateSuccess++;
+            console.log(`✅ Đã recalculate ${recalculateType} cho quân nhân ID: ${personnelId}`);
+          } catch (recalcError) {
+            recalculateErrors++;
+            console.error(
+              `❌ Lỗi tính toán hồ sơ cho quân nhân ID ${personnelId}:`,
+              recalcError.message
+            );
+            console.error(`❌ Stack trace:`, recalcError.stack);
+          }
         }
       }
 

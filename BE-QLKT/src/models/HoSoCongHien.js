@@ -1,8 +1,8 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('./database');
 
-const HoSoNienHan = sequelize.define(
-  'HoSoNienHan',
+const HoSoCongHien = sequelize.define(
+  'HoSoCongHien',
   {
     id: {
       type: DataTypes.STRING(30),
@@ -19,29 +19,34 @@ const HoSoNienHan = sequelize.define(
       },
       onDelete: 'CASCADE',
     },
-    // Huân chương Chiến sĩ vẻ vang (HCCSVV)
-    hccsvv_hang_ba_status: {
+    // Huân chương Bảo vệ Tổ quốc (HCBVTQ - Cống hiến)
+    hcbvtq_total_months: {
+      type: DataTypes.INTEGER,
+      defaultValue: 0,
+      comment: 'Tổng số tháng công tác',
+    },
+    hcbvtq_hang_ba_status: {
       type: DataTypes.STRING(20),
       defaultValue: 'CHUA_DU',
       comment: 'CHUA_DU, DU_DIEU_KIEN, DA_NHAN',
     },
-    hccsvv_hang_ba_ngay: {
+    hcbvtq_hang_ba_ngay: {
       type: DataTypes.DATEONLY,
       allowNull: true,
     },
-    hccsvv_hang_nhi_status: {
+    hcbvtq_hang_nhi_status: {
       type: DataTypes.STRING(20),
       defaultValue: 'CHUA_DU',
     },
-    hccsvv_hang_nhi_ngay: {
+    hcbvtq_hang_nhi_ngay: {
       type: DataTypes.DATEONLY,
       allowNull: true,
     },
-    hccsvv_hang_nhat_status: {
+    hcbvtq_hang_nhat_status: {
       type: DataTypes.STRING(20),
       defaultValue: 'CHUA_DU',
     },
-    hccsvv_hang_nhat_ngay: {
+    hcbvtq_hang_nhat_ngay: {
       type: DataTypes.DATEONLY,
       allowNull: true,
     },
@@ -61,9 +66,9 @@ const HoSoNienHan = sequelize.define(
     },
   },
   {
-    tableName: 'ho_so_nien_han',
+    tableName: 'ho_so_cong_hien',
     timestamps: true,
   }
 );
 
-module.exports = HoSoNienHan;
+module.exports = HoSoCongHien;

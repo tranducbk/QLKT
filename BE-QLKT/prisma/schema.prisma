@@ -112,6 +112,7 @@ model QuanNhan {
   HuanChuongQuanKyQuyetThang HuanChuongQuanKyQuyetThang?
   KyNiemChuongVSNXDQDNDVN KyNiemChuongVSNXDQDNDVN?
   HoSoNienHan       HoSoNienHan?
+  HoSoCongHien      HoSoCongHien?
   HoSoHangNam       HoSoHangNam?
 
   @@map("quan_nhan")
@@ -303,7 +304,7 @@ model KhenThuongDotXuat {
   @@map("khen_thuong_dot_xuat")
 }
 
-// 14. Bảng Hồ sơ Niên hạn (OUTPUT)
+// 14. Bảng Hồ sơ Niên hạn (OUTPUT - chỉ cho HCCSVV)
 model HoSoNienHan {
   id           String @id @default(cuid()) @db.VarChar(30)
   quan_nhan_id String @unique @db.VarChar(30)
@@ -316,12 +317,6 @@ model HoSoNienHan {
   hccsvv_hang_nhat_status String    @default("CHUA_DU") @db.VarChar(20)
   hccsvv_hang_nhat_ngay   DateTime? @db.Date
 
-  // Huân chương Bảo vệ Tổ quốc (HCBVTQ - Cống hiến) - DEPRECATED: Dùng bảng KhenThuongCongHien
-  hcbvtq_total_months     Int    @default(0)
-  hcbvtq_hang_ba_status   String @default("CHUA_DU") @db.VarChar(20)
-  hcbvtq_hang_nhi_status  String @default("CHUA_DU") @db.VarChar(20)
-  hcbvtq_hang_nhat_status String @default("CHUA_DU") @db.VarChar(20)
-
   goi_y     String?  @db.Text
   createdAt DateTime @default(now()) @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @db.Timestamptz(6)
@@ -330,6 +325,30 @@ model HoSoNienHan {
   QuanNhan QuanNhan @relation(fields: [quan_nhan_id], references: [id], onDelete: Cascade)
 
   @@map("ho_so_nien_han")
+}
+
+// 14b. Bảng Hồ sơ Cống hiến (OUTPUT - cho HCBVTQ)
+model HoSoCongHien {
+  id           String @id @default(cuid()) @db.VarChar(30)
+  quan_nhan_id String @unique @db.VarChar(30)
+
+  // Huân chương Bảo vệ Tổ quốc (HCBVTQ - Cống hiến)
+  hcbvtq_total_months     Int    @default(0)
+  hcbvtq_hang_ba_status   String @default("CHUA_DU") @db.VarChar(20) // CHUA_DU, DU_DIEU_KIEN, DA_NHAN
+  hcbvtq_hang_ba_ngay     DateTime? @db.Date
+  hcbvtq_hang_nhi_status  String @default("CHUA_DU") @db.VarChar(20)
+  hcbvtq_hang_nhi_ngay    DateTime? @db.Date
+  hcbvtq_hang_nhat_status String @default("CHUA_DU") @db.VarChar(20)
+  hcbvtq_hang_nhat_ngay   DateTime? @db.Date
+
+  goi_y     String?  @db.Text
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+
+  // Relations
+  QuanNhan QuanNhan @relation(fields: [quan_nhan_id], references: [id], onDelete: Cascade)
+
+  @@map("ho_so_cong_hien")
 }
 
 // 10. Bảng Hồ sơ Hằng năm (OUTPUT)
