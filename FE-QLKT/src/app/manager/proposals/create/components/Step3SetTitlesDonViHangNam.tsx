@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Table, Select, Alert, Typography, Space, Tag, Button } from 'antd';
+import { Table, Select, Alert, Typography, Space, Tag, Button, message } from 'antd';
 import { EditOutlined, HistoryOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { apiClient } from '@/lib/api-client';
 import UnitAnnualAwardHistoryModal from './UnitAnnualAwardHistoryModal';
+import axiosInstance from '@/utils/axiosInstance';
 
 const { Text } = Typography;
 
@@ -46,6 +47,7 @@ export default function Step3SetTitlesDonViHangNam({
     useState(false);
   const [selectedUnit, setSelectedUnit] = useState<Unit | null>(null);
   const [unitAnnualAwards, setUnitAnnualAwards] = useState<any[]>([]);
+  const [allUnitAnnualAwards, setAllUnitAnnualAwards] = useState<Record<string, any>>({});
   const [loadingModal, setLoadingModal] = useState(false);
 
   useEffect(() => {
@@ -64,7 +66,26 @@ export default function Step3SetTitlesDonViHangNam({
 
       if (unitsRes.success) {
         const unitsData = unitsRes.data || [];
+        // Select units that are returned from /my-units
         const selectedUnits = unitsData.filter((unit: any) => selectedUnitIds.includes(unit.id));
+
+        // If some selectedUnitIds are not present in my-units (e.g. co quan don vi ids), fetch them individually
+        const missingIds = selectedUnitIds.filter(
+          (id: string) => !selectedUnits.find((u: any) => u.id === id)
+        );
+        if (missingIds.length > 0) {
+          const fetchedMissing: any[] = [];
+          for (const mid of missingIds) {
+            try {
+              const res = await apiClient.getUnitById(mid);
+              if (res.success && res.data) fetchedMissing.push(res.data);
+            } catch (e) {
+              // ignore missing unit
+            }
+          }
+          // append fetched missing units
+          selectedUnits.push(...fetchedMissing);
+        }
 
         const formattedUnits: Unit[] = selectedUnits.map((unit: any) => ({
           id: unit.id,
@@ -75,6 +96,29 @@ export default function Step3SetTitlesDonViHangNam({
         }));
 
         setUnits(formattedUnits);
+
+        // Prefetch unit annual profiles for all selected units and store in a map
+        try {
+          const profilesMap: Record<string, any> = {};
+          await Promise.all(
+            formattedUnits.map(async unit => {
+              try {
+                const profileRes = await apiClient.getUnitAnnualProfile(unit.id, nam);
+                if (profileRes.success && profileRes.data) {
+                  profilesMap[unit.id] = profileRes.data;
+                } else {
+                  profilesMap[unit.id] = null;
+                }
+              } catch (e) {
+                profilesMap[unit.id] = null;
+              }
+            })
+          );
+          console.log('Prefetched all unit annual profiles:', profilesMap);
+          setAllUnitAnnualAwards(profilesMap);
+        } catch (e) {
+          // ignore prefetch errors
+        }
 
         // Initialize title data if empty
         if (titleData.length === 0 && formattedUnits.length > 0) {
@@ -94,16 +138,79 @@ export default function Step3SetTitlesDonViHangNam({
     }
   };
 
-  const getDanhHieuOptions = () => {
-    return [
+  const getSelectedDanhHieuType = () => {
+    const selectedDanhHieus = titleData.map(item => item.danh_hieu).filter(Boolean);
+    if (selectedDanhHieus.length === 0) return null;
+
+    const hasDonVi = selectedDanhHieus.some(dh => dh === 'ĐVQT' || dh === 'ĐVTT');
+    const hasBk = selectedDanhHieus.some(dh => dh === 'BKBQP' || dh === 'BKTTCP');
+
+    if (hasDonVi) return 'donvi';
+    if (hasBk) return 'bkbqp_bkttcp';
+    return null;
+  };
+
+  const getDanhHieuOptions = (id: string) => {
+    const selectedType = getSelectedDanhHieuType();
+    let allOptions = [
       { label: 'Đơn vị Quyết thắng (ĐVQT)', value: 'ĐVQT' },
       { label: 'Đơn vị Tiên tiến (ĐVTT)', value: 'ĐVTT' },
       { label: 'Bằng khen của Bộ trưởng Bộ Quốc phòng (BKBQP)', value: 'BKBQP' },
       { label: 'Bằng khen Thủ tướng Chính phủ (BKTTCP)', value: 'BKTTCP' },
     ];
+
+    // Use prefetched annual profile for this unit to determine eligibility
+    const profile = allUnitAnnualAwards[id];
+    if (profile) {
+      // profile.du_dieu_kien_bk_tong_cuc -> eligible for BKBQP (3 years)
+      if (profile.du_dieu_kien_bk_tong_cuc === false) {
+        allOptions = allOptions.filter(opt => opt.value !== 'BKBQP');
+      }
+      // profile.du_dieu_kien_bk_thu_tuong -> eligible for BKTTCP (5 years)
+      if (profile.du_dieu_kien_bk_thu_tuong === false) {
+        allOptions = allOptions.filter(opt => opt.value !== 'BKTTCP');
+      }
+    }
+
+    if (selectedType === 'donvi') {
+      return allOptions.filter(opt => opt.value === 'ĐVQT' || opt.value === 'ĐVTT');
+    }
+
+    if (selectedType === 'bkbqp_bkttcp') {
+      return allOptions.filter(opt => opt.value === 'BKBQP' || opt.value === 'BKTTCP');
+    }
+
+    return allOptions;
   };
 
-  const updateTitle = (id: string, field: string, value: any) => {
+  const updateTitle = async (id: string, field: string, value: any) => {
+    // Kiểm tra đề xuất trùng: cùng năm và cùng danh hiệu
+    if (field === 'danh_hieu' && value) {
+      const unitDetail = units.find(u => u.id === id);
+      if (unitDetail) {
+        try {
+          const response = await axiosInstance.get('/api/proposals/check-duplicate-unit', {
+            params: {
+              don_vi_id: id,
+              nam: nam,
+              danh_hieu: value,
+              proposal_type: 'DON_VI_HANG_NAM',
+            },
+          });
+
+          if (response.data.success && response.data.data.exists) {
+            message.warning(
+              `${unitDetail.ten_don_vi}: ${response.data.data.message}. Vui lòng kiểm tra lại.`
+            );
+            // Vẫn cho phép chọn nhưng cảnh báo
+          }
+        } catch (error: any) {
+          console.error('Error checking duplicate unit award:', error);
+          // Không block nếu lỗi API, chỉ log
+        }
+      }
+    }
+
     const newData = [...titleData];
     const index = newData.findIndex(d => d.don_vi_id === id);
     if (index >= 0) {
@@ -130,7 +237,8 @@ export default function Step3SetTitlesDonViHangNam({
     setUnitAnnualAwardHistoryModalVisible(true);
 
     try {
-      const awardsRes = await apiClient.getUnitAnnualAwards(record.id);
+      // Fetch awards for history modal (separate from profile)
+      const awardsRes = await apiClient.getUnitAnnualAwards(record.id, nam);
       if (awardsRes.success && awardsRes.data) {
         setUnitAnnualAwards(Array.isArray(awardsRes.data) ? awardsRes.data : []);
       } else {
@@ -193,7 +301,7 @@ export default function Step3SetTitlesDonViHangNam({
       align: 'center',
       render: (_, record) => {
         const data = getTitleData(record.id);
-        const availableOptions = getDanhHieuOptions();
+        const availableOptions = getDanhHieuOptions(record.id);
 
         return (
           <Select

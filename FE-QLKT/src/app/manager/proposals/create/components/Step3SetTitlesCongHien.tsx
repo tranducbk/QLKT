@@ -5,6 +5,7 @@ import { Table, Select, Alert, Typography, Space, message, Button } from 'antd';
 import { EditOutlined, HistoryOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import axiosInstance from '@/utils/axiosInstance';
+import { formatDate } from '@/lib/utils';
 import { apiClient } from '@/lib/api-client';
 import PositionHistoryModal from './PositionHistoryModal';
 
@@ -14,6 +15,7 @@ interface Personnel {
   id: string;
   ho_ten: string;
   cccd: string;
+  ngay_sinh?: string | null;
   cap_bac?: string;
   gioi_tinh?: string | null;
   ChucVu?: {
@@ -332,11 +334,7 @@ export default function Step3SetTitlesCongHien({
         const unitInfo = parts.length > 0 ? parts.join(', ') : null;
 
         const genderText =
-          record.gioi_tinh === 'NAM'
-            ? 'Nam'
-            : record.gioi_tinh === 'NU'
-            ? 'Nữ'
-            : null;
+          record.gioi_tinh === 'NAM' ? 'Nam' : record.gioi_tinh === 'NU' ? 'Nữ' : null;
 
         return (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
@@ -354,6 +352,14 @@ export default function Step3SetTitlesCongHien({
           </div>
         );
       },
+    },
+    {
+      title: 'Ngày sinh',
+      dataIndex: 'ngay_sinh',
+      key: 'ngay_sinh',
+      width: 140,
+      align: 'center',
+      render: (date: string) => (date ? formatDate(date) : '-'),
     },
     {
       title: 'Cấp bậc / Chức vụ',

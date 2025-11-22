@@ -565,6 +565,8 @@ export default function ManagerProposalDetailPage() {
                 proposal.loai_de_xuat === 'HC_QKQT' ||
                 proposal.loai_de_xuat === 'KNC_VSNXD_QDNDVN' ? (
                 <Tag color="blue">{proposal.data_nien_han?.length || 0} quân nhân</Tag>
+              ) : proposal.loai_de_xuat === 'CONG_HIEN' ? (
+                <Tag color="purple">{proposal.data_cong_hien?.length || 0} quân nhân</Tag>
               ) : (
                 <Tag color="blue">{proposal.data_danh_hieu?.length || 0} quân nhân</Tag>
               )}

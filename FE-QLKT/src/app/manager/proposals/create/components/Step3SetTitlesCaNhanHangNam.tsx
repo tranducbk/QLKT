@@ -7,6 +7,7 @@ import type { ColumnsType } from 'antd/es/table';
 import axiosInstance from '@/utils/axiosInstance';
 import { apiClient } from '@/lib/api-client';
 import PersonnelRewardHistoryModal from './PersonnelRewardHistoryModal';
+import { formatDate } from '@/lib/utils';
 
 const { Text } = Typography;
 
@@ -14,6 +15,7 @@ interface Personnel {
   id: string;
   ho_ten: string;
   cccd: string;
+  ngay_sinh?: string | null;
   cap_bac?: string;
   ChucVu?: {
     id: string;
@@ -28,6 +30,11 @@ interface Personnel {
       ten_don_vi: string;
     };
   };
+}
+
+interface PersonnelAnnualProfile {
+  tong_cstdcs: CSTDCSItem[];
+  tong_nckh: NCKHItem[];
 }
 
 interface TitleData {
@@ -72,12 +79,15 @@ export default function Step3SetTitlesCaNhanHangNam({
   const [modalVisible, setModalVisible] = useState(false);
   const [historyModalVisible, setHistoryModalVisible] = useState(false);
   const [selectedPersonnel, setSelectedPersonnel] = useState<Personnel | null>(null);
-  const [annualProfile, setAnnualProfile] = useState<any>(null);
   const [loadingModal, setLoadingModal] = useState(false);
+  const [selectedAnnualProfile, setSelectedAnnualProfile] = useState<any>(null);
+  const [annualProfiles, setAnnualProfiles] = useState<Record<string, any>>({});
+  const [loadingProfiles, setLoadingProfiles] = useState(false);
 
   useEffect(() => {
     if (selectedPersonnelIds.length > 0) {
       fetchPersonnelDetails();
+      fetchAnnualProfiles();
     } else {
       setPersonnel([]);
       onTitleDataChange([]);
@@ -106,6 +116,34 @@ export default function Step3SetTitlesCaNhanHangNam({
     }
   };
 
+  const fetchAnnualProfiles = async () => {
+    if (!selectedPersonnelIds || selectedPersonnelIds.length === 0) return;
+    try {
+      setLoadingProfiles(true);
+      const promises = selectedPersonnelIds.map(id =>
+        apiClient
+          .getAnnualProfile(id, nam)
+          .then(res => ({ id, res }))
+          .catch(err => ({ id, res: null }))
+      );
+      const results = await Promise.all(promises);
+      const map: Record<string, any> = {};
+      results.forEach((r: any) => {
+        if (r && r.res && r.res.success && r.res.data) {
+          map[r.id] = r.res.data;
+        } else {
+          map[r.id] = null;
+        }
+      });
+      console.log('Prefetched annual profiles:', map);
+      setAnnualProfiles(prev => ({ ...prev, ...map }));
+    } catch (error) {
+      console.error('Error prefetching annual profiles:', error);
+    } finally {
+      setLoadingProfiles(false);
+    }
+  };
+
   // Xác định loại danh hiệu đã được chọn trong đề xuất
   const getSelectedDanhHieuType = () => {
     const selectedDanhHieus = titleData.map(item => item.danh_hieu).filter(Boolean);
@@ -125,14 +163,24 @@ export default function Step3SetTitlesCaNhanHangNam({
     return null;
   };
 
-  const getDanhHieuOptions = () => {
+  const getDanhHieuOptions = (id: string) => {
     const selectedType = getSelectedDanhHieuType();
-    const allOptions = [
+    let allOptions = [
       { label: 'Chiến sĩ thi đua cơ sở (CSTDCS)', value: 'CSTDCS' },
       { label: 'Chiến sĩ tiên tiến (CSTT)', value: 'CSTT' },
       { label: 'Bằng khen của Bộ trưởng Bộ Quốc phòng (BKBQP)', value: 'BKBQP' },
       { label: 'Chiến sĩ thi đua toàn quân (CSTDTQ)', value: 'CSTDTQ' },
     ];
+    if (annualProfiles[id]) {
+      if (annualProfiles[id].du_dieu_kien_bkbqp === false) {
+        // Loại bỏ BKBQP nếu không đủ điều kiện
+        allOptions = allOptions.filter(opt => opt.value !== 'BKBQP');
+      }
+      if (annualProfiles[id].du_dieu_kien_cstdtq === false) {
+        // Loại bỏ CSTDTQ nếu không đủ điều kiện
+        allOptions = allOptions.filter(opt => opt.value !== 'CSTDTQ');
+      }
+    }
 
     // Nếu đã chọn CSTDCS/CSTT, chỉ hiển thị CSTDCS/CSTT
     // Nếu đã chọn BKBQP/CSTDTQ, có thể chọn cả BKBQP và CSTDTQ
@@ -220,44 +268,14 @@ export default function Step3SetTitlesCaNhanHangNam({
 
   const handleViewDetails = async (record: Personnel) => {
     setSelectedPersonnel(record);
-    setLoadingModal(true);
     setModalVisible(true);
-
-    try {
-      const profileRes = await apiClient.getAnnualProfile(record.id, nam);
-      if (profileRes.success && profileRes.data) {
-        setAnnualProfile(profileRes.data);
-      } else {
-        setAnnualProfile(null);
-      }
-    } catch (error: any) {
-      console.error('Error fetching profile:', error);
-      message.error('Không thể tải thông tin chi tiết');
-      setAnnualProfile(null);
-    } finally {
-      setLoadingModal(false);
-    }
+    setSelectedAnnualProfile(annualProfiles[record.id]);
   };
 
   const handleViewHistory = async (record: Personnel) => {
     setSelectedPersonnel(record);
-    setLoadingModal(true);
     setHistoryModalVisible(true);
-
-    try {
-      const profileRes = await apiClient.getAnnualProfile(record.id, nam);
-      if (profileRes.success && profileRes.data) {
-        setAnnualProfile(profileRes.data);
-      } else {
-        setAnnualProfile(null);
-      }
-    } catch (error: any) {
-      console.error('Error fetching history:', error);
-      message.error('Không thể tải lịch sử khen thưởng');
-      setAnnualProfile(null);
-    } finally {
-      setLoadingModal(false);
-    }
+    setSelectedAnnualProfile(annualProfiles[record.id]);
   };
 
   const columns: ColumnsType<Personnel> = [
@@ -309,6 +327,14 @@ export default function Step3SetTitlesCaNhanHangNam({
       },
     },
     {
+      title: 'Ngày sinh',
+      dataIndex: 'ngay_sinh',
+      key: 'ngay_sinh',
+      width: 140,
+      align: 'center',
+      render: (date: string) => (date ? formatDate(date) : '-'),
+    },
+    {
       title: 'Cấp bậc / Chức vụ',
       key: 'cap_bac_chuc_vu',
       width: 200,
@@ -339,7 +365,7 @@ export default function Step3SetTitlesCaNhanHangNam({
       align: 'center',
       render: (_, record) => {
         const data = getTitleData(record.id);
-        const availableOptions = getDanhHieuOptions();
+        const availableOptions = getDanhHieuOptions(record.id);
 
         return (
           <Select
@@ -352,6 +378,7 @@ export default function Step3SetTitlesCaNhanHangNam({
             popupMatchSelectWidth={false}
             styles={{ popup: { root: { minWidth: 'max-content' } } }}
             options={availableOptions}
+            loading={loadingProfiles}
           />
         );
       },
@@ -410,12 +437,11 @@ export default function Step3SetTitlesCaNhanHangNam({
         <Text type={allTitlesSet ? 'success' : 'warning'}>
           Đã set danh hiệu:{' '}
           <strong>
-            {titleData.filter(d => d.danh_hieu).length}/{personnel.length}
+            {titleData.filter(d => selectedPersonnelIds.includes(d.personnel_id)).length}/{personnel.length}
           </strong>
           {allTitlesSet && ' ✓'}
         </Text>
       </Space>
-
       <Table<Personnel>
         columns={columns}
         dataSource={personnel}
@@ -435,14 +461,19 @@ export default function Step3SetTitlesCaNhanHangNam({
       <Modal
         title={
           <span>
-            <EyeOutlined /> Thông tin danh hiệu và NCKH - {selectedPersonnel?.ho_ten}
+            <EyeOutlined /> Thông tin danh hiệu và NCKH - {selectedPersonnel?.ho_ten}{' '}
+            {selectedPersonnel?.ngay_sinh ? (
+              <Text type="secondary" style={{ fontSize: '12px' }}>
+                ({formatDate(selectedPersonnel.ngay_sinh)})
+              </Text>
+            ) : null}
           </span>
         }
         open={modalVisible}
         onCancel={() => {
           setModalVisible(false);
           setSelectedPersonnel(null);
-          setAnnualProfile(null);
+          setSelectedAnnualProfile(null);
         }}
         footer={[
           <Button
@@ -450,7 +481,7 @@ export default function Step3SetTitlesCaNhanHangNam({
             onClick={() => {
               setModalVisible(false);
               setSelectedPersonnel(null);
-              setAnnualProfile(null);
+              setSelectedAnnualProfile(null);
             }}
           >
             Đóng
@@ -459,20 +490,17 @@ export default function Step3SetTitlesCaNhanHangNam({
         width={800}
         loading={loadingModal}
       >
-        {annualProfile && (
+        {selectedAnnualProfile && (
           <Tabs
             items={[
               {
                 key: 'CSTDCS',
-                label: `Danh hiệu CSTDCS (${
-                  Array.isArray(annualProfile.tong_cstdcs) ? annualProfile.tong_cstdcs.length : 0
-                })`,
+                label: `Danh hiệu CSTDCS (${selectedAnnualProfile.tong_cstdcs})`,
                 children: (
                   <div>
-                    {Array.isArray(annualProfile.tong_cstdcs) &&
-                    annualProfile.tong_cstdcs.length > 0 ? (
+                    {selectedAnnualProfile.tong_cstdcs > 0 ? (
                       <Table<CSTDCSItem>
-                        dataSource={annualProfile.tong_cstdcs}
+                        dataSource={selectedAnnualProfile.tong_cstdcs_json}
                         rowKey={(record, index) => `${record.nam}-${index}`}
                         pagination={false}
                         size="small"
@@ -543,14 +571,15 @@ export default function Step3SetTitlesCaNhanHangNam({
               {
                 key: 'nckh',
                 label: `NCKH/SKKH (${
-                  Array.isArray(annualProfile.tong_nckh) ? annualProfile.tong_nckh.length : 0
+                  Array.isArray(selectedAnnualProfile.tong_nckh)
+                    ? selectedAnnualProfile.tong_nckh.length
+                    : 0
                 })`,
                 children: (
                   <div>
-                    {Array.isArray(annualProfile.tong_nckh) &&
-                    annualProfile.tong_nckh.length > 0 ? (
+                    {selectedAnnualProfile.tong_nckh > 0 ? (
                       <Table<NCKHItem>
-                        dataSource={annualProfile.tong_nckh}
+                        dataSource={selectedAnnualProfile.tong_nckh_json}
                         rowKey={(record, index) => `${record.nam}-${index}`}
                         pagination={false}
                         size="small"
@@ -613,7 +642,7 @@ export default function Step3SetTitlesCaNhanHangNam({
             ]}
           />
         )}
-        {!annualProfile && !loadingModal && (
+        {!selectedAnnualProfile && !loadingModal && (
           <Text type="secondary">Không có dữ liệu hồ sơ hằng năm</Text>
         )}
       </Modal>
@@ -621,12 +650,12 @@ export default function Step3SetTitlesCaNhanHangNam({
       <PersonnelRewardHistoryModal
         visible={historyModalVisible}
         personnel={selectedPersonnel}
-        annualProfile={annualProfile}
+        annualProfile={selectedAnnualProfile}
         loading={loadingModal}
         onClose={() => {
           setHistoryModalVisible(false);
           setSelectedPersonnel(null);
-          setAnnualProfile(null);
+          setSelectedAnnualProfile(null);
         }}
       />
     </div>

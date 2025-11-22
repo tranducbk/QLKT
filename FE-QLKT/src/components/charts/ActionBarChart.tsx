@@ -45,7 +45,9 @@ export function ActionBarChart({
         label: 'Số lượng',
         data:
           data.length > 0
-            ? data.filter(item => item.action && item.action !== 'Chưa xác định').map(item => item.count)
+            ? data
+                .filter(item => item.action && item.action !== 'Chưa xác định')
+                .map(item => item.count)
             : [0],
         backgroundColor: 'rgba(147, 51, 234, 0.8)',
         borderColor: 'rgba(147, 51, 234, 1)',
@@ -90,7 +92,6 @@ export function ActionBarChart({
         ticks: {
           color: textColor,
           maxRotation: 45,
-          minRotation: 45,
         },
         grid: {
           display: false,
@@ -107,4 +108,3 @@ export function ActionBarChart({
     </Card>
   );
 }
-

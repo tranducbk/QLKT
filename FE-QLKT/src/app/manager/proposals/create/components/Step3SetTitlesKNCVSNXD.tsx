@@ -5,6 +5,7 @@ import { Table, Alert, Typography, Space, message, Button } from 'antd';
 import { EditOutlined, HistoryOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import axiosInstance from '@/utils/axiosInstance';
+import { formatDate } from '@/lib/utils';
 import { apiClient } from '@/lib/api-client';
 import PersonnelRewardHistoryModal from './PersonnelRewardHistoryModal';
 
@@ -14,6 +15,7 @@ interface Personnel {
   id: string;
   ho_ten: string;
   cccd: string;
+  ngay_sinh?: string | null;
   gioi_tinh?: string | null;
   ngay_nhap_ngu?: string | Date | null;
   ngay_xuat_ngu?: string | Date | null;
@@ -21,6 +23,7 @@ interface Personnel {
     id: string;
     ten_chuc_vu: string;
   };
+  cap_bac?: string;
   CoQuanDonVi?: {
     ten_don_vi: string;
   };
@@ -202,6 +205,14 @@ export default function Step3SetTitlesKNCVSNXD({
       },
     },
     {
+      title: 'Ngày sinh',
+      dataIndex: 'ngay_sinh',
+      key: 'ngay_sinh',
+      width: 140,
+      align: 'center',
+      render: (date: string) => (date ? formatDate(date) : '-'),
+    },
+    {
       title: 'Cấp bậc / Chức vụ',
       key: 'cap_bac_chuc_vu',
       width: 200,
@@ -318,7 +329,10 @@ export default function Step3SetTitlesKNCVSNXD({
           Tổng số quân nhân: <strong>{personnel.length}</strong>
         </Text>
         <Text type={allTitlesSet ? 'success' : 'warning'}>
-          Đã set danh hiệu: <strong>{titleData.filter(d => d.danh_hieu).length}/{personnel.length}</strong>
+          Đã set danh hiệu:{' '}
+          <strong>
+            {titleData.filter(d => d.danh_hieu).length}/{personnel.length}
+          </strong>
           {allTitlesSet && ' ✓'}
         </Text>
       </Space>
@@ -352,4 +366,3 @@ export default function Step3SetTitlesKNCVSNXD({
     </div>
   );
 }
-

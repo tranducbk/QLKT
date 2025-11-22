@@ -5,6 +5,7 @@ import { Table, Input, Select, Space, Alert, Typography, InputNumber } from 'ant
 import { SearchOutlined, TeamOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import axiosInstance from '@/utils/axiosInstance';
+import { formatDate } from '@/lib/utils';
 
 const { Text } = Typography;
 
@@ -12,9 +13,11 @@ interface Personnel {
   id: string;
   ho_ten: string;
   cccd: string;
+  ngay_sinh?: string | null;
   co_quan_don_vi_id: string;
   don_vi_truc_thuoc_id: string;
   chuc_vu_id: string;
+  cap_bac?: string;
   CoQuanDonVi?: {
     id: string;
     ten_don_vi: string;
@@ -145,6 +148,14 @@ export default function Step2SelectPersonnelNCKH({
           </div>
         );
       },
+    },
+    {
+      title: 'Ngày sinh',
+      dataIndex: 'ngay_sinh',
+      key: 'ngay_sinh',
+      width: 140,
+      align: 'center',
+      render: (date: string | undefined | null) => (date ? formatDate(date) : '-'),
     },
     {
       title: 'Cấp bậc / Chức vụ',

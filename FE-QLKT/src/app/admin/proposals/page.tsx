@@ -56,6 +56,8 @@ interface Proposal {
   };
   data_danh_hieu?: Array<{ so_quyet_dinh?: string | null }>;
   data_thanh_tich?: Array<{ so_quyet_dinh?: string | null }>;
+  data_nien_han?: Array<{ so_quyet_dinh?: string | null }>;
+  data_cong_hien?: Array<{ so_quyet_dinh?: string | null }>;
   selected_personnel?: string[];
 }
 
@@ -198,12 +200,28 @@ export default function AdminProposalsPage() {
       align: 'center',
     },
     {
-      title: 'Số quân nhân',
-      key: 'so_can_bo',
+      title: 'Số lượng',
+      key: 'so_luong',
       width: 100,
       align: 'center',
       render: (_, record) => {
-        const count = record.selected_personnel?.length || record.data_danh_hieu?.length || 0;
+        let count = 0;
+        switch (record.loai_de_xuat) {
+          case 'NCKH':
+            count = record.data_thanh_tich?.length || 0;
+            break;
+          case 'NIEN_HAN':
+          case 'HC_QKQT':
+          case 'KNC_VSNXD_QDNDVN':
+            count = record.data_nien_han?.length || 0;
+            break;
+          case 'CONG_HIEN':
+            count = record.data_cong_hien?.length || 0;
+            break;
+          default:
+            count = record.selected_personnel?.length || record.data_danh_hieu?.length || 0;
+            break;
+        }
         return <Tag color="cyan">{count}</Tag>;
       },
     },

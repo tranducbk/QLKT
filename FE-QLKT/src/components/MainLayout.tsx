@@ -322,7 +322,7 @@ export default function MainLayout({ children, role = 'ADMIN' }: MainLayoutProps
       icon: <UserOutlined />,
       onClick: () => {
         const roleSlug = actualRole === 'SUPER_ADMIN' ? 'super-admin' : actualRole.toLowerCase();
-        router.push(`/${roleSlug}/dashboard`);
+        router.push(`/${roleSlug}/profile`);
       },
     },
     {

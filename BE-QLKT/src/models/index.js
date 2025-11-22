@@ -22,9 +22,11 @@ const LichSuChucVu = require('./LichSuChucVu');
 const ThanhTichKhoaHoc = require('./ThanhTichKhoaHoc');
 const DanhHieuHangNam = require('./DanhHieuHangNam');
 const HoSoNienHan = require('./HoSoNienHan');
+const HoSoCongHien = require('./HoSoCongHien');
 const HoSoHangNam = require('./HoSoHangNam');
 const ThongBao = require('./ThongBao');
-const TheoDoiKhenThuongDonVi = require('./TheoDoiKhenThuongDonVi');
+const HoSoDonViHangNam = require('./HoSoDonViHangNam');
+const DanhHieuDonViHangNam = require('./DanhHieuDonViHangNam');
 
 // ============================================
 // SEQUELIZE RELATIONSHIPS
@@ -43,9 +45,13 @@ CoQuanDonVi.hasMany(QuanNhan, {
   foreignKey: 'co_quan_don_vi_id',
   as: 'quanNhan',
 });
-CoQuanDonVi.hasMany(TheoDoiKhenThuongDonVi, {
+CoQuanDonVi.hasMany(HoSoDonViHangNam, {
   foreignKey: 'co_quan_don_vi_id',
-  as: 'theoDoiKhenThuong',
+  as: 'hoSoDonViHangNam',
+});
+CoQuanDonVi.hasMany(DanhHieuDonViHangNam, {
+  foreignKey: 'co_quan_don_vi_id',
+  as: 'danhHieuDonViHangNam',
 });
 
 // DonViTrucThuoc relationships
@@ -61,9 +67,13 @@ DonViTrucThuoc.hasMany(QuanNhan, {
   foreignKey: 'don_vi_truc_thuoc_id',
   as: 'quanNhan',
 });
-DonViTrucThuoc.hasMany(TheoDoiKhenThuongDonVi, {
+DonViTrucThuoc.hasMany(HoSoDonViHangNam, {
   foreignKey: 'don_vi_truc_thuoc_id',
-  as: 'theoDoiKhenThuong',
+  as: 'hoSoDonViHangNam',
+});
+DonViTrucThuoc.hasMany(DanhHieuDonViHangNam, {
+  foreignKey: 'don_vi_truc_thuoc_id',
+  as: 'danhHieuDonViHangNam',
 });
 
 // ChucVu relationships
@@ -102,6 +112,7 @@ QuanNhan.hasMany(DanhHieuHangNam, {
   as: 'danhHieuHangNam',
 });
 QuanNhan.hasOne(HoSoNienHan, { foreignKey: 'quan_nhan_id', as: 'hoSoNienHan' });
+QuanNhan.hasOne(HoSoCongHien, { foreignKey: 'quan_nhan_id', as: 'hoSoCongHien' });
 QuanNhan.hasOne(HoSoHangNam, { foreignKey: 'quan_nhan_id', as: 'hoSoHangNam' });
 
 // TaiKhoan relationships
@@ -130,40 +141,49 @@ DanhHieuHangNam.belongsTo(QuanNhan, {
 // HoSoNienHan relationships
 HoSoNienHan.belongsTo(QuanNhan, { foreignKey: 'quan_nhan_id', as: 'quanNhan' });
 
+// HoSoCongHien relationships
+HoSoCongHien.belongsTo(QuanNhan, { foreignKey: 'quan_nhan_id', as: 'quanNhan' });
+
 // HoSoHangNam relationships
 HoSoHangNam.belongsTo(QuanNhan, { foreignKey: 'quan_nhan_id', as: 'quanNhan' });
 
 // ThongBao relationships
 ThongBao.belongsTo(TaiKhoan, { foreignKey: 'nguoi_nhan_id', as: 'nguoiNhan' });
 
-// TheoDoiKhenThuongDonVi relationships
-TheoDoiKhenThuongDonVi.belongsTo(CoQuanDonVi, {
+// HoSoDonViHangNam relationships (chỉ có quan hệ với đơn vị, không có workflow)
+HoSoDonViHangNam.belongsTo(CoQuanDonVi, {
   foreignKey: 'co_quan_don_vi_id',
   as: 'coQuanDonVi',
 });
-TheoDoiKhenThuongDonVi.belongsTo(DonViTrucThuoc, {
+HoSoDonViHangNam.belongsTo(DonViTrucThuoc, {
   foreignKey: 'don_vi_truc_thuoc_id',
   as: 'donViTrucThuoc',
 });
-TheoDoiKhenThuongDonVi.belongsTo(CoQuanDonVi, {
-  foreignKey: 'co_quan_don_vi_cha_id',
-  as: 'coQuanDonViCha',
+
+// DanhHieuDonViHangNam relationships (có workflow: người tạo, người duyệt)
+DanhHieuDonViHangNam.belongsTo(CoQuanDonVi, {
+  foreignKey: 'co_quan_don_vi_id',
+  as: 'coQuanDonVi',
 });
-TheoDoiKhenThuongDonVi.belongsTo(TaiKhoan, {
+DanhHieuDonViHangNam.belongsTo(DonViTrucThuoc, {
+  foreignKey: 'don_vi_truc_thuoc_id',
+  as: 'donViTrucThuoc',
+});
+DanhHieuDonViHangNam.belongsTo(TaiKhoan, {
   foreignKey: 'nguoi_tao_id',
   as: 'nguoiTao',
 });
-TheoDoiKhenThuongDonVi.belongsTo(TaiKhoan, {
+DanhHieuDonViHangNam.belongsTo(TaiKhoan, {
   foreignKey: 'nguoi_duyet_id',
   as: 'nguoiDuyet',
 });
-TaiKhoan.hasMany(TheoDoiKhenThuongDonVi, {
+TaiKhoan.hasMany(DanhHieuDonViHangNam, {
   foreignKey: 'nguoi_tao_id',
-  as: 'theoDoiKhenThuongTao',
+  as: 'danhHieuDonViHangNamTao',
 });
-TaiKhoan.hasMany(TheoDoiKhenThuongDonVi, {
+TaiKhoan.hasMany(DanhHieuDonViHangNam, {
   foreignKey: 'nguoi_duyet_id',
-  as: 'theoDoiKhenThuongDuyet',
+  as: 'danhHieuDonViHangNamDuyet',
 });
 
 // ============================================
@@ -186,6 +206,8 @@ module.exports.LichSuChucVu = LichSuChucVu;
 module.exports.ThanhTichKhoaHoc = ThanhTichKhoaHoc;
 module.exports.DanhHieuHangNam = DanhHieuHangNam;
 module.exports.HoSoNienHan = HoSoNienHan;
+module.exports.HoSoCongHien = HoSoCongHien;
 module.exports.HoSoHangNam = HoSoHangNam;
 module.exports.ThongBao = ThongBao;
-module.exports.TheoDoiKhenThuongDonVi = TheoDoiKhenThuongDonVi;
+module.exports.HoSoDonViHangNam = HoSoDonViHangNam;
+module.exports.DanhHieuDonViHangNam = DanhHieuDonViHangNam;

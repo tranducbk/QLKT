@@ -14,6 +14,7 @@ interface Personnel {
   id: string;
   ho_ten: string;
   cccd: string;
+  ngay_sinh?: string | null;
   cap_bac?: string;
   ngay_nhap_ngu?: string | Date | null;
   ngay_xuat_ngu?: string | Date | null;
@@ -273,7 +274,6 @@ export default function Step3SetTitlesNienHan({
       }
 
       // Kiểm tra thứ tự hạng (phải nhận từ thấp lên cao)
-      const personnelRecord = personnel.find(p => p.id === id);
       if (personnelRecord) {
         const serviceProfile = serviceProfilesMap[id];
         const hasHangBa = serviceProfile?.hccsvv_hang_ba_status === 'DA_NHAN';
@@ -380,6 +380,15 @@ export default function Step3SetTitlesNienHan({
           </div>
         );
       },
+    },
+    {
+      title: 'Ngày sinh',
+      dataIndex: 'ngay_sinh',
+      key: 'ngay_sinh',
+      width: 140,
+      align: 'center',
+      render: (date: string | undefined | null) =>
+        date ? new Date(date).toLocaleDateString() : '-',
     },
     {
       title: 'Cấp bậc / Chức vụ',
@@ -526,8 +535,8 @@ export default function Step3SetTitlesNienHan({
               <strong>{personnel.length}</strong> quân nhân)
             </p>
             <p>
-              2. <strong>Yêu cầu thời gian:</strong> Hạng Ba: 10 năm, Hạng Nhì: 15 năm, Hạng Nhất: 20
-              năm
+              2. <strong>Yêu cầu thời gian:</strong> Hạng Ba: 10 năm, Hạng Nhì: 15 năm, Hạng Nhất:
+              20 năm
             </p>
             <p>
               3. <strong>Lưu ý:</strong> Phải nhận từ thấp lên cao: Hạng Ba → Hạng Nhì → Hạng Nhất

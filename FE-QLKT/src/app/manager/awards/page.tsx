@@ -264,35 +264,8 @@ export default function ManagerAwardsPage() {
       width: 110,
       align: 'center',
       render: (thanhTichList: ThanhTichKhoaHoc[]) => {
-        if (!thanhTichList || thanhTichList.length === 0) {
-          return <Text type="secondary">-</Text>;
-        }
-
-        const content = (
-          <div style={{ maxWidth: 400 }}>
-            {thanhTichList.map((tt, index) => (
-              <div key={tt.id} style={{ marginBottom: index < thanhTichList.length - 1 ? 12 : 0 }}>
-                <div>
-                  <Tag color={tt.loai === 'NCKH' ? 'blue' : 'green'}>{tt.loai}</Tag>
-                  {tt.status === 'APPROVED' ? (
-                    <Tag color="success">Đã duyệt</Tag>
-                  ) : (
-                    <Tag color="warning">Chờ duyệt</Tag>
-                  )}
-                </div>
-                <Text style={{ fontSize: 12 }}>{tt.mo_ta}</Text>
-              </div>
-            ))}
-          </div>
-        );
-
-        return (
-          <Popover content={content} title="Thành tích khoa học" trigger="hover">
-            <Tag color="cyan" style={{ cursor: 'pointer' }}>
-              {thanhTichList.length}
-            </Tag>
-          </Popover>
-        );
+        const count = thanhTichList && Array.isArray(thanhTichList) ? thanhTichList.length : 0;
+        return <Text style={{ fontSize: '14px', fontWeight: 500 }}>{count}</Text>;
       },
     },
   ];

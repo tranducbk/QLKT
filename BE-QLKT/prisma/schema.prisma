@@ -22,8 +22,8 @@ model CoQuanDonVi {
   DonViTrucThuoc         DonViTrucThuoc[]
   QuanNhan               QuanNhan[]
   BangDeXuat             BangDeXuat[]
-  TheoDoiKhenThuongDonVi TheoDoiKhenThuongDonVi[]
-  TheoDoiKhenThuongDonViCha TheoDoiKhenThuongDonVi[] @relation("CoQuanDonViCha")
+  DanhHieuDonViHangNam   DanhHieuDonViHangNam[]
+  HoSoDonViHangNam       HoSoDonViHangNam[]
   KhenThuongDotXuat       KhenThuongDotXuat[]
 
   @@map("co_quan_don_vi")
@@ -44,7 +44,8 @@ model DonViTrucThuoc {
   ChucVu                   ChucVu[]
   QuanNhan                 QuanNhan[]
   BangDeXuat               BangDeXuat[]
-  TheoDoiKhenThuongDonVi   TheoDoiKhenThuongDonVi[]
+  DanhHieuDonViHangNam     DanhHieuDonViHangNam[]
+  HoSoDonViHangNam         HoSoDonViHangNam[]
   KhenThuongDotXuat         KhenThuongDotXuat[]
 
   @@map("don_vi_truc_thuoc")
@@ -111,6 +112,7 @@ model QuanNhan {
   HuanChuongQuanKyQuyetThang HuanChuongQuanKyQuyetThang?
   KyNiemChuongVSNXDQDNDVN KyNiemChuongVSNXDQDNDVN?
   HoSoNienHan       HoSoNienHan?
+  HoSoCongHien      HoSoCongHien?
   HoSoHangNam       HoSoHangNam?
 
   @@map("quan_nhan")
@@ -133,8 +135,6 @@ model TaiKhoan {
   DeXuatDaGui            BangDeXuat[]             @relation("NguoiDeXuat")
   DeXuatDaDuyet          BangDeXuat[]             @relation("NguoiDuyet")
   ThongBao               ThongBao[] @relation("NguoiNhan") // Thông báo nhận được
-  TheoDoiKhenThuongTao   TheoDoiKhenThuongDonVi[] @relation("TheoDoiKhenThuongTao")
-  TheoDoiKhenThuongDuyet TheoDoiKhenThuongDonVi[] @relation("TheoDoiKhenThuongDuyet")
 
   @@map("tai_khoan")
 }
@@ -304,7 +304,7 @@ model KhenThuongDotXuat {
   @@map("khen_thuong_dot_xuat")
 }
 
-// 14. Bảng Hồ sơ Niên hạn (OUTPUT)
+// 14. Bảng Hồ sơ Niên hạn (OUTPUT - chỉ cho HCCSVV)
 model HoSoNienHan {
   id           String @id @default(cuid()) @db.VarChar(30)
   quan_nhan_id String @unique @db.VarChar(30)
@@ -317,12 +317,6 @@ model HoSoNienHan {
   hccsvv_hang_nhat_status String    @default("CHUA_DU") @db.VarChar(20)
   hccsvv_hang_nhat_ngay   DateTime? @db.Date
 
-  // Huân chương Bảo vệ Tổ quốc (HCBVTQ - Cống hiến) - DEPRECATED: Dùng bảng KhenThuongCongHien
-  hcbvtq_total_months     Int    @default(0)
-  hcbvtq_hang_ba_status   String @default("CHUA_DU") @db.VarChar(20)
-  hcbvtq_hang_nhi_status  String @default("CHUA_DU") @db.VarChar(20)
-  hcbvtq_hang_nhat_status String @default("CHUA_DU") @db.VarChar(20)
-
   goi_y     String?  @db.Text
   createdAt DateTime @default(now()) @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @db.Timestamptz(6)
@@ -331,6 +325,30 @@ model HoSoNienHan {
   QuanNhan QuanNhan @relation(fields: [quan_nhan_id], references: [id], onDelete: Cascade)
 
   @@map("ho_so_nien_han")
+}
+
+// 14b. Bảng Hồ sơ Cống hiến (OUTPUT - cho HCBVTQ)
+model HoSoCongHien {
+  id           String @id @default(cuid()) @db.VarChar(30)
+  quan_nhan_id String @unique @db.VarChar(30)
+
+  // Huân chương Bảo vệ Tổ quốc (HCBVTQ - Cống hiến)
+  hcbvtq_total_months     Int    @default(0)
+  hcbvtq_hang_ba_status   String @default("CHUA_DU") @db.VarChar(20) // CHUA_DU, DU_DIEU_KIEN, DA_NHAN
+  hcbvtq_hang_ba_ngay     DateTime? @db.Date
+  hcbvtq_hang_nhi_status  String @default("CHUA_DU") @db.VarChar(20)
+  hcbvtq_hang_nhi_ngay    DateTime? @db.Date
+  hcbvtq_hang_nhat_status String @default("CHUA_DU") @db.VarChar(20)
+  hcbvtq_hang_nhat_ngay   DateTime? @db.Date
+
+  goi_y     String?  @db.Text
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+
+  // Relations
+  QuanNhan QuanNhan @relation(fields: [quan_nhan_id], references: [id], onDelete: Cascade)
+
+  @@map("ho_so_cong_hien")
 }
 
 // 10. Bảng Hồ sơ Hằng năm (OUTPUT)
@@ -434,47 +452,67 @@ model BangDeXuat {
   @@map("bang_de_xuat")
 }
 
-// 15. Bảng Theo dõi Khen thưởng Đơn vị
-model TheoDoiKhenThuongDonVi {
+// 15. Bảng Hồ Sơ Đơn Vị Hằng Năm
+model HoSoDonViHangNam {
   id                        String    @id @default(cuid()) @db.VarChar(30)
-  co_quan_don_vi_id         String?   @db.VarChar(30) // ID cơ quan đơn vị được khen thưởng (nullable)
-  don_vi_truc_thuoc_id      String?   @db.VarChar(30) // ID đơn vị trực thuộc được khen thưởng (nullable)
-  nam                       Int // Năm khen thưởng (chỉ hằng năm)
-  danh_hieu                 String?   @db.VarChar(50) // Danh hiệu: ĐVQT, ĐVTT, BKBQP, BKTTCP
-  ten_don_vi                String?   @db.VarChar(255) // Tên đơn vị (lưu để dễ query)
-  ma_don_vi                 String?   @db.VarChar(50) // Mã đơn vị (lưu để dễ query)
-  co_quan_don_vi_cha_id     String?   @db.VarChar(30) // ID cơ quan đơn vị cha (null nếu là đơn vị cha)
-  so_quyet_dinh             String?   @db.VarChar(100) // Số quyết định khen thưởng (nếu đã có)
-  ten_file_pdf              String?   @db.VarChar(255) // Tên file PDF quyết định (nếu có)
-  // Theo dõi điều kiện khen thưởng cấp trên dựa theo số năm liên tục
-  so_nam_lien_tuc           Int       @default(0) // Số năm đạt tiêu chí liên tục đến năm hiện tại
-  du_dieu_kien_bk_tong_cuc  Boolean   @default(false) // Đủ điều kiện 3 năm (đề xuất/đạt Bằng khen Tổng cục)
-  du_dieu_kien_bk_thu_tuong Boolean   @default(false) // Đủ điều kiện 5 năm (đề xuất/đạt Bằng khen Thủ tướng)
-  goi_y                     String?   @db.Text // Gợi ý nếu đủ điều kiện nhưng chưa nhận
-  // Quy trình phê duyệt: Manager đề xuất, Admin duyệt
-  status                    String    @default("PENDING") @db.VarChar(20) // PENDING, APPROVED, REJECTED
-  nguoi_tao_id              String    @db.VarChar(30) // ID người tạo (Admin phê duyệt)
-  nguoi_duyet_id            String?   @db.VarChar(30) // ID Admin duyệt
-  ngay_duyet                DateTime? @db.Timestamptz(6)
-  ghi_chu                   String?   @db.Text // Ghi chú bổ sung
+  co_quan_don_vi_id         String?   @db.VarChar(30)
+  don_vi_truc_thuoc_id      String?   @db.VarChar(30)
+  nam                       Int
+  tong_dvqt                 Int       @default(0)
+  tong_dvqt_json            Json?     // Lưu chi tiết tong DVQT dạng JSON
+  dvqt_lien_tuc             Int       @default(0)
+  du_dieu_kien_bk_tong_cuc  Boolean   @default(false)
+  du_dieu_kien_bk_thu_tuong Boolean   @default(false)
+  goi_y                     String?   @db.Text
   createdAt                 DateTime  @default(now()) @db.Timestamptz(6)
   updatedAt                 DateTime  @updatedAt @db.Timestamptz(6)
 
   // Relations
-  CoQuanDonVi        CoQuanDonVi?        @relation(fields: [co_quan_don_vi_id], references: [id], onDelete: Cascade)
-  DonViTrucThuoc     DonViTrucThuoc?     @relation(fields: [don_vi_truc_thuoc_id], references: [id], onDelete: Cascade)
-  CoQuanDonViCha     CoQuanDonVi?        @relation("CoQuanDonViCha", fields: [co_quan_don_vi_cha_id], references: [id], onDelete: SetNull)
-  NguoiTao           TaiKhoan            @relation("TheoDoiKhenThuongTao", fields: [nguoi_tao_id], references: [id], onDelete: Cascade)
-  NguoiDuyet         TaiKhoan?           @relation("TheoDoiKhenThuongDuyet", fields: [nguoi_duyet_id], references: [id], onDelete: SetNull)
+  CoQuanDonVi        CoQuanDonVi?    @relation(fields: [co_quan_don_vi_id], references: [id], onDelete: Cascade)
+  DonViTrucThuoc     DonViTrucThuoc? @relation(fields: [don_vi_truc_thuoc_id], references: [id], onDelete: Cascade)
 
   @@unique([co_quan_don_vi_id, nam], name: "unique_co_quan_don_vi_nam")
   @@unique([don_vi_truc_thuoc_id, nam], name: "unique_don_vi_truc_thuoc_nam")
   @@index([co_quan_don_vi_id, nam])
   @@index([don_vi_truc_thuoc_id, nam])
-  @@map("theo_doi_khen_thuong_don_vi")
+  @@map("ho_so_don_vi_hang_nam")
 }
 
-// 16. Bảng File Quyết định
+// 17. Bảng Danh Hiệu Đơn Vị Hằng Năm
+model DanhHieuDonViHangNam {
+  id                      String   @id @default(cuid()) @db.VarChar(30)
+  co_quan_don_vi_id       String?  @db.VarChar(30)
+  don_vi_truc_thuoc_id    String?  @db.VarChar(30)
+  nam                     Int
+  danh_hieu               String?  @db.VarChar(50)
+  so_quyet_dinh           String?  @db.VarChar(100)
+  file_quyet_dinh         String?  @db.VarChar(255)
+  nhan_bkbqp              Boolean  @default(false)
+  so_quyet_dinh_bkbqp     String?  @db.VarChar(100)
+  file_quyet_dinh_bkbqp   String?  @db.VarChar(500) // Path to PDF file BKBQP
+  nhan_bkttcp             Boolean  @default(false)
+  so_quyet_dinh_bkttcp    String?  @db.VarChar(100)
+  file_quyet_dinh_bkttcp  String?  @db.VarChar(500) // Path to PDF file CSTDTQ
+  status                  String    @default("PENDING") @db.VarChar(20)
+  nguoi_tao_id            String    @db.VarChar(30)
+  nguoi_duyet_id          String?   @db.VarChar(30)
+  ngay_duyet              DateTime? @db.Timestamptz(6)
+  ghi_chu                 String?   @db.Text
+  createdAt               DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt               DateTime @updatedAt @db.Timestamptz(6)
+
+  // Relations
+  CoQuanDonVi        CoQuanDonVi?    @relation(fields: [co_quan_don_vi_id], references: [id], onDelete: Cascade)
+  DonViTrucThuoc     DonViTrucThuoc? @relation(fields: [don_vi_truc_thuoc_id], references: [id], onDelete: Cascade)
+
+  @@unique([co_quan_don_vi_id, nam], name: "unique_co_quan_don_vi_nam_dh")
+  @@unique([don_vi_truc_thuoc_id, nam], name: "unique_don_vi_truc_thuoc_nam_dh")
+  @@index([co_quan_don_vi_id, nam])
+  @@index([don_vi_truc_thuoc_id, nam])
+  @@map("danh_hieu_don_vi_hang_nam")
+}
+
+// 18. Bảng File Quyết định
 model FileQuyetDinh {
   id               String   @id @default(uuid()) @db.Uuid
   so_quyet_dinh    String   @unique @db.VarChar(100) // Số quyết định (unique)

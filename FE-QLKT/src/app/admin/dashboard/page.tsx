@@ -49,21 +49,16 @@ export default function AdminDashboard() {
     const fetchStats = async () => {
       try {
         setLoading(true);
-        const [personnelRes, unitsRes, positionsRes, statisticsRes] = await Promise.all([
-          apiClient.getPersonnel({ page: 1, limit: 1 }),
-          apiClient.getUnits(),
-          apiClient.getPositions(),
-          apiClient.getAdminDashboardStatistics(),
-        ]);
-
-        setStats({
-          totalPersonnel: personnelRes?.data?.pagination?.total || 0,
-          totalUnits: Array.isArray(unitsRes?.data) ? unitsRes.data.length : 0,
-          totalPositions: Array.isArray(positionsRes?.data) ? positionsRes.data.length : 0,
-          pendingApprovals: 0,
-        });
+        const statisticsRes = await apiClient.getAdminDashboardStatistics();
 
         if (statisticsRes.success && statisticsRes.data) {
+          setStats({
+            totalPersonnel: statisticsRes.data.totalPersonnel || 0,
+            totalUnits: statisticsRes.data.totalUnits || 0,
+            totalPositions: statisticsRes.data.totalPositions || 0,
+            pendingApprovals: statisticsRes.data.pendingApprovals || 0,
+          });
+
           setChartData({
             scientificAchievementsByType: statisticsRes.data.scientificAchievementsByType || [],
             proposalsByType: statisticsRes.data.proposalsByType || [],
@@ -86,36 +81,44 @@ export default function AdminDashboard() {
       title: 'Tổng số Quân nhân',
       value: stats.totalPersonnel,
       icon: TeamOutlined,
-      iconColor: 'text-blue-600 dark:text-blue-400',
+      iconColor: theme === 'dark' ? 'text-blue-400' : 'text-blue-600',
       bgColor:
-        'bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/20',
+        theme === 'dark'
+          ? 'bg-gradient-to-br from-blue-900/30 to-blue-800/20'
+          : 'bg-gradient-to-br from-blue-50 to-blue-100',
       link: '/admin/personnel',
     },
     {
       title: 'Tổng số Đơn vị',
       value: stats.totalUnits,
       icon: ApartmentOutlined,
-      iconColor: 'text-green-600 dark:text-green-400',
+      iconColor: theme === 'dark' ? 'text-green-400' : 'text-green-600',
       bgColor:
-        'bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/30 dark:to-green-800/20',
+        theme === 'dark'
+          ? 'bg-gradient-to-br from-green-900/30 to-green-800/20'
+          : 'bg-gradient-to-br from-green-50 to-green-100',
       link: '/admin/categories',
     },
     {
       title: 'Tổng số Chức vụ',
       value: stats.totalPositions,
       icon: FileTextOutlined,
-      iconColor: 'text-purple-600 dark:text-purple-400',
+      iconColor: theme === 'dark' ? 'text-purple-400' : 'text-purple-600',
       bgColor:
-        'bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/30 dark:to-purple-800/20',
+        theme === 'dark'
+          ? 'bg-gradient-to-br from-purple-900/30 to-purple-800/20'
+          : 'bg-gradient-to-br from-purple-50 to-purple-100',
       link: '/admin/positions',
     },
     {
       title: 'Thành tích chờ duyệt',
       value: stats.pendingApprovals,
       icon: CheckCircleOutlined,
-      iconColor: 'text-orange-600 dark:text-orange-400',
+      iconColor: theme === 'dark' ? 'text-orange-400' : 'text-orange-600',
       bgColor:
-        'bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/30 dark:to-orange-800/20',
+        theme === 'dark'
+          ? 'bg-gradient-to-br from-orange-900/30 to-orange-800/20'
+          : 'bg-gradient-to-br from-orange-50 to-orange-100',
       link: '#',
     },
   ];

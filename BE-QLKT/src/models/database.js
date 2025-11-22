@@ -11,6 +11,10 @@ const sequelize = new Sequelize(process.env.DATABASE_URL, {
     idle: 10000,
   },
   dialectOptions: {
+    ssl: {
+      require: true,
+      rejectUnauthorized: false,
+    },
     timezone: '+07:00',
   },
   timezone: '+07:00',

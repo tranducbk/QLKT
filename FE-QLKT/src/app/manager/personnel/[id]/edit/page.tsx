@@ -274,7 +274,6 @@ export default function ManagerPersonnelEditPage() {
                   message.error('Vui lòng kiểm tra lại các trường bắt buộc');
                 }}
                 autoComplete="off"
-                requiredMark="optional"
               >
                 {/* Thông tin cơ bản */}
                 <Title level={5} className="!mb-4 !mt-0 border-b pb-2">
@@ -323,16 +322,6 @@ export default function ManagerPersonnelEditPage() {
                     <Select placeholder="Chọn giới tính" disabled={loading} size="large" allowClear={false}>
                       <Select.Option value="NAM">Nam</Select.Option>
                       <Select.Option value="NU">Nữ</Select.Option>
-                    </Select>
-                  </Form.Item>
-
-                  <Form.Item name="cap_bac" label="Cấp bậc" required={false}>
-                    <Select placeholder="Chọn cấp bậc" disabled={loading} size="large" allowClear>
-                      {MILITARY_RANKS.map(rank => (
-                        <Select.Option key={rank} value={rank}>
-                          {rank}
-                        </Select.Option>
-                      ))}
                     </Select>
                   </Form.Item>
 

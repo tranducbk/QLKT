@@ -770,7 +770,7 @@ export const apiClient = {
       return {
         success: true,
         data: res.data?.data || res.data,
-        pagination: res.data?.pagination
+        pagination: res.data?.pagination,
       };
     } catch (e: any) {
       return { success: false, message: e?.response?.data?.message || e.message };
@@ -842,11 +842,24 @@ export const apiClient = {
     try {
       const params: any = { don_vi_id: donViId, limit: 1000 }; // Lấy tất cả lịch sử
       if (year) params.year = year;
-      const res = await axiosInstance.get('/api/awards/units/annual', { params });
+      // New dedicated endpoint that returns an array of records for the unit
+      const res = await axiosInstance.get('/api/awards/units/annual/history', { params });
       return {
         success: true,
-        data: res.data?.data?.items || res.data?.data || res.data || [],
+        data: res.data?.data || res.data || [],
       };
+    } catch (e: any) {
+      return { success: false, message: e?.response?.data?.message || e.message };
+    }
+  },
+
+  async getUnitAnnualProfile(donViId: string, year?: number): Promise<ApiResponse> {
+    try {
+      const url = year
+        ? `/api/awards/units/annual/profile/${donViId}?year=${year}`
+        : `/api/awards/units/annual/profile/${donViId}`;
+      const res = await axiosInstance.get(url);
+      return { success: true, data: res.data?.data || res.data };
     } catch (e: any) {
       return { success: false, message: e?.response?.data?.message || e.message };
     }

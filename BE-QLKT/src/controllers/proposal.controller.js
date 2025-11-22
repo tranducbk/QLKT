@@ -226,6 +226,7 @@ class ProposalController {
         data_danh_hieu: JSON.parse(req.body.data_danh_hieu || '[]'),
         data_thanh_tich: JSON.parse(req.body.data_thanh_tich || '[]'),
         data_nien_han: JSON.parse(req.body.data_nien_han || '[]'),
+        data_cong_hien: JSON.parse(req.body.data_cong_hien || '[]'),
       };
 
       // Lấy số quyết định cho từng loại đề xuất
@@ -589,11 +590,11 @@ class ProposalController {
 
         await prisma.systemLog.create({
           data: {
-            actor_id: userId,
+            nguoi_thuc_hien_id: userId,
             actor_role: userRole,
             action: 'DELETE',
             resource: 'proposals',
-            resource_id: id,
+            tai_nguyen_id: id,
             description: `Xóa đề xuất khen thưởng ID ${id} - Đơn vị: ${result.proposal.don_vi}`,
             payload: {
               proposal_id: id,
@@ -673,6 +674,41 @@ class ProposalController {
       });
     } catch (error) {
       console.error('Check duplicate award error:', error);
+      return res.status(500).json({
+        success: false,
+        message: error.message || 'Lỗi khi kiểm tra đề xuất trùng',
+      });
+    }
+  }
+
+  /**
+   * GET /api/proposals/check-duplicate-unit
+   * Kiểm tra xem đơn vị đã có đề xuất cùng năm và cùng danh hiệu chưa
+   */
+  async checkDuplicateUnitAward(req, res) {
+    try {
+      const { don_vi_id, nam, danh_hieu, proposal_type } = req.query;
+
+      if (!don_vi_id || !nam || !danh_hieu || !proposal_type) {
+        return res.status(400).json({
+          success: false,
+          message: 'Thiếu thông tin: don_vi_id, nam, danh_hieu, proposal_type',
+        });
+      }
+
+      const result = await proposalService.checkDuplicateUnitAward(
+        don_vi_id,
+        parseInt(nam),
+        danh_hieu,
+        proposal_type
+      );
+
+      return res.status(200).json({
+        success: true,
+        data: result,
+      });
+    } catch (error) {
+      console.error('Check duplicate unit award error:', error);
       return res.status(500).json({
         success: false,
         message: error.message || 'Lỗi khi kiểm tra đề xuất trùng',

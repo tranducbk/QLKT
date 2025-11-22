@@ -14,13 +14,20 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<Theme>('light');
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     const stored = (localStorage.getItem('theme') as Theme) || 'light';
     setThemeState(stored);
     document.documentElement.classList.toggle('dark', stored === 'dark');
-    document.documentElement.classList.add('theme-loaded');
+    setMounted(true);
   }, []);
+
+  useEffect(() => {
+    if (mounted) {
+      document.documentElement.classList.toggle('dark', theme === 'dark');
+    }
+  }, [theme, mounted]);
 
   const setTheme = (t: Theme) => {
     setThemeState(t);
@@ -41,6 +48,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     }),
     [theme]
   );
+
+  // Tránh hydration mismatch bằng cách không render cho đến khi mounted
+  if (!mounted) {
+    return null;
+  }
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }

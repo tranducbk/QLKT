@@ -3,6 +3,7 @@ const ExcelJS = require('exceljs');
 const fs = require('fs').promises;
 const path = require('path');
 const profileService = require('./profile.service');
+const unitAnnualAwardService = require('./unitAnnualAward.service');
 
 // Dynamic import for uuid (ES Module) - load once and cache
 let uuidv4;
@@ -1847,20 +1848,99 @@ class ProposalService {
       ]);
 
       return {
-        proposals: proposals.map(p => ({
-          id: p.id,
-          loai_de_xuat: p.loai_de_xuat,
-          nam: p.nam,
-          don_vi: (p.DonViTrucThuoc || p.CoQuanDonVi)?.ten_don_vi || '-',
-          nguoi_de_xuat: p.NguoiDeXuat.QuanNhan?.ho_ten || p.NguoiDeXuat.username,
-          status: p.status,
-          so_danh_hieu: Array.isArray(p.data_danh_hieu) ? p.data_danh_hieu.length : 0,
-          so_thanh_tich: Array.isArray(p.data_thanh_tich) ? p.data_thanh_tich.length : 0,
-          nguoi_duyet: p.NguoiDuyet?.QuanNhan?.ho_ten || null,
-          ngay_duyet: p.ngay_duyet,
-          ghi_chu: p.ghi_chu,
-          createdAt: p.createdAt,
-        })),
+        proposals: proposals.map(p => {
+          // Parse data_nien_han nếu là string (cho tương thích với dữ liệu cũ)
+          let dataNienHan = p.data_nien_han;
+          if (typeof dataNienHan === 'string') {
+            try {
+              dataNienHan = JSON.parse(dataNienHan);
+            } catch (e) {
+              dataNienHan = [];
+            }
+          }
+          if (!Array.isArray(dataNienHan)) {
+            dataNienHan = dataNienHan ? [dataNienHan] : [];
+          }
+
+          // Xử lý đặc biệt cho HC_QKQT và KNC_VSNXD_QDNDVN
+          // Nếu data_nien_han rỗng nhưng có data_danh_hieu, dùng data_danh_hieu (cho các proposal cũ)
+          let soNienHan = dataNienHan.length;
+          if (
+            (p.loai_de_xuat === 'HC_QKQT' || p.loai_de_xuat === 'KNC_VSNXD_QDNDVN') &&
+            soNienHan === 0
+          ) {
+            // Parse data_danh_hieu nếu là string
+            let dataDanhHieu = p.data_danh_hieu;
+            if (typeof dataDanhHieu === 'string') {
+              try {
+                dataDanhHieu = JSON.parse(dataDanhHieu);
+              } catch (e) {
+                dataDanhHieu = [];
+              }
+            }
+            if (!Array.isArray(dataDanhHieu)) {
+              dataDanhHieu = dataDanhHieu ? [dataDanhHieu] : [];
+            }
+            // Nếu có dữ liệu trong data_danh_hieu, dùng nó
+            if (dataDanhHieu.length > 0) {
+              soNienHan = dataDanhHieu.length;
+            }
+          }
+
+          // Parse các field khác nếu là string
+          let dataDanhHieu = p.data_danh_hieu;
+          if (typeof dataDanhHieu === 'string') {
+            try {
+              dataDanhHieu = JSON.parse(dataDanhHieu);
+            } catch (e) {
+              dataDanhHieu = [];
+            }
+          }
+          if (!Array.isArray(dataDanhHieu)) {
+            dataDanhHieu = dataDanhHieu ? [dataDanhHieu] : [];
+          }
+
+          let dataThanhTich = p.data_thanh_tich;
+          if (typeof dataThanhTich === 'string') {
+            try {
+              dataThanhTich = JSON.parse(dataThanhTich);
+            } catch (e) {
+              dataThanhTich = [];
+            }
+          }
+          if (!Array.isArray(dataThanhTich)) {
+            dataThanhTich = dataThanhTich ? [dataThanhTich] : [];
+          }
+
+          let dataCongHien = p.data_cong_hien;
+          if (typeof dataCongHien === 'string') {
+            try {
+              dataCongHien = JSON.parse(dataCongHien);
+            } catch (e) {
+              dataCongHien = [];
+            }
+          }
+          if (!Array.isArray(dataCongHien)) {
+            dataCongHien = dataCongHien ? [dataCongHien] : [];
+          }
+
+          return {
+            id: p.id,
+            loai_de_xuat: p.loai_de_xuat,
+            nam: p.nam,
+            don_vi: (p.DonViTrucThuoc || p.CoQuanDonVi)?.ten_don_vi || '-',
+            nguoi_de_xuat: p.NguoiDeXuat.QuanNhan?.ho_ten || p.NguoiDeXuat.username,
+            status: p.status,
+            so_danh_hieu: dataDanhHieu.length,
+            so_thanh_tich: dataThanhTich.length,
+            so_nien_han: soNienHan,
+            so_cong_hien: dataCongHien.length,
+            nguoi_duyet: p.NguoiDuyet?.QuanNhan?.ho_ten || null,
+            ngay_duyet: p.ngay_duyet,
+            ghi_chu: p.ghi_chu,
+            createdAt: p.createdAt,
+          };
+        }),
         pagination: {
           total,
           page: parseInt(page),
@@ -2198,6 +2278,47 @@ class ProposalService {
 
             return enrichedItem;
           });
+
+          // Enrich dataCongHien nếu thiếu thông tin
+          if (dataCongHien.length > 0) {
+            dataCongHien = dataCongHien.map(item => {
+              const personnel = personnelMap[item.personnel_id];
+              const enrichedItem = {
+                ...item,
+                ho_ten: item.ho_ten || personnel?.ho_ten || '',
+                nam: item.nam || proposal.createdAt?.getFullYear() || new Date().getFullYear(),
+                // Chỉ lấy từ dataJSON, không lấy từ personnel hiện tại (đề xuất có thể từ quá khứ)
+                cap_bac: item.cap_bac !== undefined && item.cap_bac !== null ? item.cap_bac : null,
+                chuc_vu: item.chuc_vu !== undefined && item.chuc_vu !== null ? item.chuc_vu : null,
+              };
+
+              // Thêm thông tin đơn vị nếu chưa có (theo cấu trúc mới)
+              // Luôn lưu cả hai nếu quân nhân có dữ liệu
+              if (!item.co_quan_don_vi && personnel?.CoQuanDonVi) {
+                enrichedItem.co_quan_don_vi = {
+                  id: personnel.CoQuanDonVi.id,
+                  ten_co_quan_don_vi: personnel.CoQuanDonVi.ten_don_vi,
+                  ma_co_quan_don_vi: personnel.CoQuanDonVi.ma_don_vi,
+                };
+              }
+              if (!item.don_vi_truc_thuoc && personnel?.DonViTrucThuoc) {
+                enrichedItem.don_vi_truc_thuoc = {
+                  id: personnel.DonViTrucThuoc.id,
+                  ten_don_vi: personnel.DonViTrucThuoc.ten_don_vi,
+                  ma_don_vi: personnel.DonViTrucThuoc.ma_don_vi,
+                  co_quan_don_vi: personnel.DonViTrucThuoc.CoQuanDonVi
+                    ? {
+                        id: personnel.DonViTrucThuoc.CoQuanDonVi.id,
+                        ten_don_vi_truc: personnel.DonViTrucThuoc.CoQuanDonVi.ten_don_vi,
+                        ma_don_vi: personnel.DonViTrucThuoc.CoQuanDonVi.ma_don_vi,
+                      }
+                    : null,
+                };
+              }
+
+              return enrichedItem;
+            });
+          }
         }
       }
 
@@ -2349,47 +2470,6 @@ class ProposalService {
             }
           }
         }
-      }
-
-      // Enrich dataCongHien nếu thiếu thông tin
-      if (dataCongHien.length > 0) {
-        dataCongHien = dataCongHien.map(item => {
-          const personnel = personnelMap[item.personnel_id];
-          const enrichedItem = {
-            ...item,
-            ho_ten: item.ho_ten || personnel?.ho_ten || '',
-            nam: item.nam || proposal.createdAt?.getFullYear() || new Date().getFullYear(),
-            // Chỉ lấy từ dataJSON, không lấy từ personnel hiện tại (đề xuất có thể từ quá khứ)
-            cap_bac: item.cap_bac !== undefined && item.cap_bac !== null ? item.cap_bac : null,
-            chuc_vu: item.chuc_vu !== undefined && item.chuc_vu !== null ? item.chuc_vu : null,
-          };
-
-          // Thêm thông tin đơn vị nếu chưa có (theo cấu trúc mới)
-          // Luôn lưu cả hai nếu quân nhân có dữ liệu
-          if (!item.co_quan_don_vi && personnel?.CoQuanDonVi) {
-            enrichedItem.co_quan_don_vi = {
-              id: personnel.CoQuanDonVi.id,
-              ten_co_quan_don_vi: personnel.CoQuanDonVi.ten_don_vi,
-              ma_co_quan_don_vi: personnel.CoQuanDonVi.ma_don_vi,
-            };
-          }
-          if (!item.don_vi_truc_thuoc && personnel?.DonViTrucThuoc) {
-            enrichedItem.don_vi_truc_thuoc = {
-              id: personnel.DonViTrucThuoc.id,
-              ten_don_vi: personnel.DonViTrucThuoc.ten_don_vi,
-              ma_don_vi: personnel.DonViTrucThuoc.ma_don_vi,
-              co_quan_don_vi: personnel.DonViTrucThuoc.CoQuanDonVi
-                ? {
-                    id: personnel.DonViTrucThuoc.CoQuanDonVi.id,
-                    ten_don_vi_truc: personnel.DonViTrucThuoc.CoQuanDonVi.ten_don_vi,
-                    ma_don_vi: personnel.DonViTrucThuoc.CoQuanDonVi.ma_don_vi,
-                  }
-                : null,
-            };
-          }
-
-          return enrichedItem;
-        });
       }
 
       // Nếu proposal đã được approve, enrich với thông tin file PDF từ database cho dataCongHien
@@ -2584,8 +2664,8 @@ class ProposalService {
       }
 
       // Kiểm tra cống hiến (CONG_HIEN)
-      if (proposalType === 'CONG_HIEN' && nienHanData && nienHanData.length > 0) {
-        for (const item of nienHanData) {
+      if (proposalType === 'CONG_HIEN' && congHienData && congHienData.length > 0) {
+        for (const item of congHienData) {
           if (item.personnel_id && item.danh_hieu) {
             const checkResult = await this.checkDuplicateAward(
               item.personnel_id,
@@ -2616,6 +2696,7 @@ class ProposalService {
       let importedDanhHieu = 0;
       let importedThanhTich = 0;
       let importedNienHan = 0;
+      let importedCongHien = 0;
       const errors = [];
       const affectedPersonnelIds = new Set(); // Track quân nhân bị ảnh hưởng
 
@@ -2755,9 +2836,9 @@ class ProposalService {
       };
 
       // ============================================
-      // IMPORT DANH HIỆU HẰNG NĂM
+      // IMPORT DANH HIỆU ĐƠN VỊ HẰNG NĂM
       // ============================================
-      // Với đề xuất DON_VI_HANG_NAM, lưu vào bảng TheoDoiKhenThuongDonVi
+      // Với đề xuất DON_VI_HANG_NAM, lưu vào bảng `danh_hieu_don_vi_hang_nam` và cập nhật `ho_so_don_vi_hang_nam`
       if (proposal.loai_de_xuat === 'DON_VI_HANG_NAM') {
         for (const item of danhHieuData) {
           try {
@@ -2777,19 +2858,25 @@ class ProposalService {
             const donViTrucThuocId =
               item.don_vi_type === 'DON_VI_TRUC_THUOC' ? item.don_vi_id : null;
 
-            // Lấy số quyết định và file từ item (đã được Admin thêm vào)
-            const soQuyetDinh = item.so_quyet_dinh || null;
-            const fileQuyetDinh = item.file_quyet_dinh || null;
+            // Lấy số quyết định và file từ mapping theo danh hiệu
+            const decisionInfo = decisionMapping[item.danh_hieu] || {};
+            const soQuyetDinh = decisionInfo.so_quyet_dinh || null;
+            const fileQuyetDinh = decisionInfo.file_pdf || null;
 
-            // Lấy thông tin đơn vị cha (null nếu là đơn vị cha)
-            const coQuanDonViChaId =
-              item.don_vi_type === 'DON_VI_TRUC_THUOC' && item.co_quan_don_vi_cha?.id
-                ? item.co_quan_don_vi_cha.id
-                : null;
+            // Lấy thông tin bằng khen đặc biệt (nếu có)
+            const nhanBKBQP = item.nhan_bkbqp || false;
+            const soQuyetDinhBKBQP = nhanBKBQP ? specialDecisionMapping.BKBQP?.so_quyet_dinh : null;
+            const fileQuyetDinhBKBQP = nhanBKBQP ? specialDecisionMapping.BKBQP?.file_pdf : null;
 
-            // Upsert vào bảng TheoDoiKhenThuongDonVi
-            // Tìm bản ghi hiện có theo (co_quan_don_vi_id hoặc don_vi_truc_thuoc_id) và nam
+            const nhanBKTTCP = item.nhan_bkttcp || false;
+            const soQuyetDinhBKTTCP = nhanBKTTCP
+              ? specialDecisionMapping.CSTDTQ?.so_quyet_dinh
+              : null;
+            const fileQuyetDinhBKTTCP = nhanBKTTCP ? specialDecisionMapping.CSTDTQ?.file_pdf : null;
+
             const namValue = typeof item.nam === 'string' ? parseInt(item.nam, 10) : item.nam;
+
+            // Tìm bản ghi DanhHieuDonViHangNam hiện tại
             const whereCondition = {
               nam: namValue,
               OR: [
@@ -2798,110 +2885,135 @@ class ProposalService {
               ],
             };
 
-            const existingRecord = await prisma.theoDoiKhenThuongDonVi.findFirst({
+            const existingAward = await prisma.danhHieuDonViHangNam.findFirst({
               where: whereCondition,
             });
 
-            let savedRecord;
-            if (existingRecord) {
-              // Cập nhật bản ghi hiện có
-              savedRecord = await prisma.theoDoiKhenThuongDonVi.update({
-                where: { id: existingRecord.id },
+            let savedAward;
+            if (existingAward) {
+              savedAward = await prisma.danhHieuDonViHangNam.update({
+                where: { id: existingAward.id },
                 data: {
                   danh_hieu: item.danh_hieu,
-                  ten_don_vi: item.ten_don_vi || null,
-                  ma_don_vi: item.ma_don_vi || null,
-                  co_quan_don_vi_cha_id: coQuanDonViChaId,
                   so_quyet_dinh: soQuyetDinh,
-                  ten_file_pdf: fileQuyetDinh,
+                  file_quyet_dinh: fileQuyetDinh,
+                  nhan_bkbqp: nhanBKBQP,
+                  so_quyet_dinh_bkbqp: soQuyetDinhBKBQP,
+                  file_quyet_dinh_bkbqp: fileQuyetDinhBKBQP,
+                  nhan_bkttcp: nhanBKTTCP,
+                  so_quyet_dinh_bkttcp: soQuyetDinhBKTTCP,
+                  file_quyet_dinh_bkttcp: fileQuyetDinhBKTTCP,
                   status: 'APPROVED',
                   nguoi_duyet_id: adminId,
                   ngay_duyet: new Date(),
+                  ghi_chu: item.ghi_chu || null,
                 },
               });
             } else {
-              // Tạo bản ghi mới
-              savedRecord = await prisma.theoDoiKhenThuongDonVi.create({
+              savedAward = await prisma.danhHieuDonViHangNam.create({
                 data: {
-                  co_quan_don_vi_id: coQuanDonViId,
-                  don_vi_truc_thuoc_id: donViTrucThuocId,
+                  ...(coQuanDonViId && {
+                    CoQuanDonVi: { connect: { id: coQuanDonViId } },
+                  }),
+                  ...(donViTrucThuocId && {
+                    DonViTrucThuoc: { connect: { id: donViTrucThuocId } },
+                  }),
                   nam: namValue,
                   danh_hieu: item.danh_hieu,
-                  ten_don_vi: item.ten_don_vi || null,
-                  ma_don_vi: item.ma_don_vi || null,
-                  co_quan_don_vi_cha_id: coQuanDonViChaId,
                   so_quyet_dinh: soQuyetDinh,
-                  ten_file_pdf: fileQuyetDinh,
+                  file_quyet_dinh: fileQuyetDinh,
+                  nhan_bkbqp: nhanBKBQP,
+                  so_quyet_dinh_bkbqp: soQuyetDinhBKBQP,
+                  file_quyet_dinh_bkbqp: fileQuyetDinhBKBQP,
+                  nhan_bkttcp: nhanBKTTCP,
+                  so_quyet_dinh_bkttcp: soQuyetDinhBKTTCP,
+                  file_quyet_dinh_bkttcp: fileQuyetDinhBKTTCP,
                   status: 'APPROVED',
                   nguoi_tao_id: adminId,
                   nguoi_duyet_id: adminId,
                   ngay_duyet: new Date(),
+                  ghi_chu: item.ghi_chu || null,
                 },
               });
             }
 
-            // Tính toán so_nam_lien_tuc và các flag
-            // Query lại tất cả records của đơn vị này từ năm hiện tại trở về trước (bao gồm cả bản ghi vừa lưu)
-            const whereConditionForYears = {
-              nam: { lte: namValue },
-              OR: [
-                ...(coQuanDonViId ? [{ co_quan_don_vi_id: coQuanDonViId }] : []),
-                ...(donViTrucThuocId ? [{ don_vi_truc_thuoc_id: donViTrucThuocId }] : []),
-              ],
-            };
-
-            const allRecords = await prisma.theoDoiKhenThuongDonVi.findMany({
-              where: whereConditionForYears,
+            // Tính toán số năm liên tục DVQT và tổng số lần đạt DVQT
+            const donViId = coQuanDonViId || donViTrucThuocId;
+            const allAwardRecords = await prisma.danhHieuDonViHangNam.findMany({
+              where: {
+                nam: { lte: namValue },
+                status: 'APPROVED',
+                OR: [
+                  ...(coQuanDonViId ? [{ co_quan_don_vi_id: coQuanDonViId }] : []),
+                  ...(donViTrucThuocId ? [{ don_vi_truc_thuoc_id: donViTrucThuocId }] : []),
+                ],
+              },
               orderBy: { nam: 'desc' },
               select: { nam: true, danh_hieu: true },
             });
 
-            // Tính số năm liên tục từ năm hiện tại trở về trước
-            // Có danh hiệu = có danh_hieu không null và không rỗng
-            let soNamLienTuc = 0;
+            // Tính số năm liên tục
+            let dvqtLienTuc = 0;
             let currentYear = namValue;
-
-            // Tạo map để dễ tra cứu
             const recordsByYear = {};
-            for (const r of allRecords) {
-              if (!recordsByYear[r.nam]) {
-                recordsByYear[r.nam] = [];
-              }
+            for (const r of allAwardRecords) {
+              if (!recordsByYear[r.nam]) recordsByYear[r.nam] = [];
               recordsByYear[r.nam].push(r);
             }
 
-            // Đếm từ năm hiện tại trở về trước
             while (currentYear > 0) {
               const yearRecords = recordsByYear[currentYear] || [];
-              // Kiểm tra xem năm này có danh hiệu không
               const hasAward = yearRecords.some(r => r.danh_hieu && r.danh_hieu.trim() !== '');
-
               if (hasAward) {
-                soNamLienTuc++;
+                dvqtLienTuc++;
                 currentYear--;
-              } else {
-                // Nếu năm này không có danh hiệu, dừng lại
-                break;
-              }
+              } else break;
             }
 
-            // Tính các flag và gợi ý (chỉ khi chính xác bằng 3 hoặc 5)
-            const du3 = soNamLienTuc === 3;
-            const du5 = soNamLienTuc === 5;
+            // Tính tổng số lần đạt DVQT
+            const validRecords = allAwardRecords.filter(
+              r => r.danh_hieu && r.danh_hieu.trim() !== ''
+            );
+            const tongDVQT = validRecords.length;
+            const tongDVQTJson = validRecords.map(r => ({ nam: r.nam, danh_hieu: r.danh_hieu }));
+
+            const du3 = dvqtLienTuc >= 3;
+            const du5 = dvqtLienTuc >= 5;
             let goi_y = null;
             if (!soQuyetDinh) {
-              if (du5) {
-                goi_y = 'Đủ điều kiện đề xuất Bằng khen Thủ tướng Chính phủ (5 năm liên tục).';
-              } else if (du3) {
-                goi_y = 'Đủ điều kiện đề xuất Bằng khen Tổng cục (3 năm liên tục).';
-              }
+              if (du5)
+                goi_y = 'Đủ điều kiện đề xuất Bằng khen Thủ tướng Chính phủ (5 năm liên tục DVQT).';
+              else if (du3)
+                goi_y = 'Đủ điều kiện đề xuất Bằng khen Tổng cục (3 năm liên tục DVQT).';
             }
 
-            // Cập nhật lại các trường tính toán
-            await prisma.theoDoiKhenThuongDonVi.update({
-              where: { id: savedRecord.id },
-              data: {
-                so_nam_lien_tuc: soNamLienTuc,
+            // Cập nhật hoặc tạo HoSoDonViHangNam
+            const hoSoWhereCondition = coQuanDonViId
+              ? { unique_co_quan_don_vi_nam: { co_quan_don_vi_id: coQuanDonViId, nam: namValue } }
+              : {
+                  unique_don_vi_truc_thuoc_nam: {
+                    don_vi_truc_thuoc_id: donViTrucThuocId,
+                    nam: namValue,
+                  },
+                };
+
+            await prisma.hoSoDonViHangNam.upsert({
+              where: hoSoWhereCondition,
+              update: {
+                tong_dvqt: tongDVQT,
+                tong_dvqt_json: tongDVQTJson,
+                dvqt_lien_tuc: dvqtLienTuc,
+                du_dieu_kien_bk_tong_cuc: du3,
+                du_dieu_kien_bk_thu_tuong: du5,
+                goi_y: goi_y,
+              },
+              create: {
+                co_quan_don_vi_id: coQuanDonViId,
+                don_vi_truc_thuoc_id: donViTrucThuocId,
+                nam: namValue,
+                tong_dvqt: tongDVQT,
+                tong_dvqt_json: tongDVQTJson,
+                dvqt_lien_tuc: dvqtLienTuc,
                 du_dieu_kien_bk_tong_cuc: du3,
                 du_dieu_kien_bk_thu_tuong: du5,
                 goi_y: goi_y,
@@ -2986,7 +3098,7 @@ class ProposalService {
                     thoi_gian_nhom_0_9_1_0: thoiGianNhom0_9_1_0,
                   },
                 });
-                importedDanhHieu++;
+                importedCongHien++;
                 affectedPersonnelIds.add(quanNhan.id);
               } else {
                 // Hạng mới thấp hơn hoặc bằng, bỏ qua
@@ -3009,7 +3121,7 @@ class ProposalService {
                   thoi_gian_nhom_0_9_1_0: thoiGianNhom0_9_1_0,
                 },
               });
-              importedDanhHieu++;
+              importedCongHien++;
               affectedPersonnelIds.add(quanNhan.id);
             }
           } catch (error) {
@@ -3771,7 +3883,12 @@ class ProposalService {
       });
 
       // ============================================
-      // TÍNH TOÁN LẠI HỒ SƠ HẰNG NĂM CHO CÁC QUÂN NHÂN BỊ ẢNH HƯỞNG
+      // TÍNH TOÁN LẠI HỒ SƠ CHO CÁC QUÂN NHÂN/ĐƠN VỊ BỊ ẢNH HƯỞNG
+      // - Nếu là CA_NHAN_HANG_NAM: gọi recalculateAnnualProfile (tính hồ sơ hằng năm cá nhân)
+      // - Nếu là DON_VI_HANG_NAM: gọi recalculateAnnualUnit (tính hồ sơ hằng năm đơn vị)
+      // - Nếu là NIEN_HAN: gọi recalculateTenureProfile (chỉ tính niên hạn HCCSVV)
+      // - Nếu là CONG_HIEN: gọi recalculateContributionProfile (chỉ tính cống hiến HCBVTQ)
+      // - Các loại khác: gọi recalculateAnnualProfile (tính toàn bộ hồ sơ hằng năm)
       // Đảm bảo tất cả dữ liệu đã được commit trước khi recalculate
       // ============================================
       let recalculateSuccess = 0;
@@ -3781,33 +3898,90 @@ class ProposalService {
       // Prisma tự động commit sau mỗi operation, nhưng để chắc chắn
       await new Promise(resolve => setTimeout(resolve, 100));
 
-      // Log để debug
-      console.log(
-        `📊 Bắt đầu recalculate hồ sơ hằng năm cho ${affectedPersonnelIds.size} quân nhân (loại đề xuất: ${proposal.loai_de_xuat})`
-      );
-      console.log(
-        `📋 Danh sách quân nhân cần recalculate: ${Array.from(affectedPersonnelIds).join(', ')}`
-      );
+      // Xử lý riêng cho đề xuất đơn vị hằng năm
+      if (proposal.loai_de_xuat === 'DON_VI_HANG_NAM') {
+        console.log(`📊 Bắt đầu recalculate hồ sơ đơn vị hằng năm (năm: ${proposal.nam})`);
 
-      if (affectedPersonnelIds.size === 0) {
-        console.warn(
-          `⚠️ Cảnh báo: Không có quân nhân nào trong affectedPersonnelIds để recalculate!`
+        // Thu thập danh sách đơn vị bị ảnh hưởng từ danhHieuData
+        const affectedUnits = new Set();
+        for (const item of danhHieuData) {
+          if (item.don_vi_id) {
+            affectedUnits.add(item.don_vi_id);
+          }
+        }
+
+        console.log(
+          `📋 Danh sách ${affectedUnits.size} đơn vị cần recalculate: ${Array.from(
+            affectedUnits
+          ).join(', ')}`
         );
-      }
 
-      for (const personnelId of affectedPersonnelIds) {
-        try {
-          console.log(`🔄 Đang recalculate hồ sơ cho quân nhân ID: ${personnelId}...`);
-          await profileService.recalculateAnnualProfile(personnelId);
-          recalculateSuccess++;
-          console.log(`✅ Đã recalculate hồ sơ cho quân nhân ID: ${personnelId}`);
-        } catch (recalcError) {
-          recalculateErrors++;
-          console.error(
-            `❌ Lỗi tính toán hồ sơ cho quân nhân ID ${personnelId}:`,
-            recalcError.message
+        for (const donViId of affectedUnits) {
+          try {
+            console.log(`🔄 Đang recalculate hồ sơ đơn vị ID: ${donViId}, năm: ${proposal.nam}...`);
+
+            // Gọi recalculateAnnualUnit với đơn vị ID và năm
+            await unitAnnualAwardService.recalculateAnnualUnit(donViId, proposal.nam);
+
+            recalculateSuccess++;
+            console.log(`✅ Đã recalculate hồ sơ đơn vị ID: ${donViId}`);
+          } catch (recalcError) {
+            recalculateErrors++;
+            console.error(`❌ Lỗi tính toán hồ sơ cho đơn vị ID ${donViId}:`, recalcError.message);
+            console.error(`❌ Stack trace:`, recalcError.stack);
+          }
+        }
+      } else {
+        // Xử lý cho các đề xuất cá nhân
+        const recalculateType =
+          proposal.loai_de_xuat === 'NIEN_HAN'
+            ? 'hồ sơ niên hạn (HCCSVV)'
+            : proposal.loai_de_xuat === 'CONG_HIEN'
+            ? 'hồ sơ cống hiến (HCBVTQ)'
+            : 'hồ sơ hằng năm';
+
+        // Log để debug
+        console.log(
+          `📊 Bắt đầu recalculate ${recalculateType} cho ${affectedPersonnelIds.size} quân nhân (loại đề xuất: ${proposal.loai_de_xuat})`
+        );
+        console.log(
+          `📋 Danh sách quân nhân cần recalculate: ${Array.from(affectedPersonnelIds).join(', ')}`
+        );
+
+        if (affectedPersonnelIds.size === 0) {
+          console.warn(
+            `⚠️ Cảnh báo: Không có quân nhân nào trong affectedPersonnelIds để recalculate!`
           );
-          console.error(`❌ Stack trace:`, recalcError.stack);
+        }
+
+        for (const personnelId of affectedPersonnelIds) {
+          try {
+            console.log(
+              `🔄 Đang recalculate ${recalculateType} cho quân nhân ID: ${personnelId}...`
+            );
+
+            // Gọi hàm recalculate tương ứng dựa trên loại đề xuất
+            if (proposal.loai_de_xuat === 'NIEN_HAN') {
+              // Chỉ tính toán lại hồ sơ niên hạn (HCCSVV)
+              await profileService.recalculateTenureProfile(personnelId);
+            } else if (proposal.loai_de_xuat === 'CONG_HIEN') {
+              // Chỉ tính toán lại hồ sơ cống hiến (HCBVTQ)
+              await profileService.recalculateContributionProfile(personnelId);
+            } else {
+              // Chỉ tính toán lại hồ sơ hằng năm
+              await profileService.recalculateAnnualProfile(personnelId);
+            }
+
+            recalculateSuccess++;
+            console.log(`✅ Đã recalculate ${recalculateType} cho quân nhân ID: ${personnelId}`);
+          } catch (recalcError) {
+            recalculateErrors++;
+            console.error(
+              `❌ Lỗi tính toán hồ sơ cho quân nhân ID ${personnelId}:`,
+              recalcError.message
+            );
+            console.error(`❌ Stack trace:`, recalcError.stack);
+          }
         }
       }
 
@@ -3824,9 +3998,11 @@ class ProposalService {
           imported_danh_hieu: importedDanhHieu,
           imported_thanh_tich: importedThanhTich,
           imported_nien_han: importedNienHan,
+          imported_cong_hien: importedCongHien,
           total_danh_hieu: danhHieuData.length,
           total_thanh_tich: thanhTichData.length,
           total_nien_han: nienHanData.length,
+          total_cong_hien: congHienData.length,
           errors: errors.length > 0 ? errors : null,
           recalculated_profiles: recalculateSuccess,
           recalculate_errors: recalculateErrors,
@@ -4609,8 +4785,8 @@ class ProposalService {
         },
       });
 
-      // 5. Thống kê TheoDoiKhenThuongDonVi (Đơn vị Hằng năm)
-      const donViHangNamCount = await prisma.theoDoiKhenThuongDonVi.count({
+      // 5. Thống kê DanhHieuDonViHangNam (Đơn vị Hằng năm)
+      const donViHangNamCount = await prisma.danhHieuDonViHangNam.count({
         where: {
           danh_hieu: {
             not: null,
@@ -4778,6 +4954,49 @@ class ProposalService {
       return { exists: false };
     } catch (error) {
       console.error('Check duplicate award error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Kiểm tra xem đơn vị đã có đề xuất trùng với năm và danh hiệu chưa
+   * @param {string} donViId - ID đơn vị
+   * @param {number} nam - Năm
+   * @param {string} danhHieu - Danh hiệu (ĐVQT, ĐVTT, BKBQP, BKTTCP)
+   * @param {string} proposalType - Loại đề xuất (DON_VI_HANG_NAM)
+   * @returns {Promise<Object>} - { exists: boolean, message?: string }
+   */
+  async checkDuplicateUnitAward(donViId, nam, danhHieu, proposalType) {
+    try {
+      const { prisma } = require('../models');
+
+      // DON_VI_HANG_NAM: Kiểm tra trong DanhHieuDonViHangNam
+      if (proposalType === 'DON_VI_HANG_NAM') {
+        const existing = await prisma.danhHieuDonViHangNam.findFirst({
+          where: {
+            nam: parseInt(nam),
+            danh_hieu: danhHieu,
+            OR: [{ co_quan_don_vi_id: donViId }, { don_vi_truc_thuoc_id: donViId }],
+          },
+          include: {
+            CoQuanDonVi: { select: { ten_don_vi: true } },
+            DonViTrucThuoc: { select: { ten_don_vi: true } },
+          },
+        });
+
+        if (existing) {
+          const tenDonVi =
+            existing.CoQuanDonVi?.ten_don_vi || existing.DonViTrucThuoc?.ten_don_vi || 'Đơn vị';
+          return {
+            exists: true,
+            message: `${tenDonVi} đã có danh hiệu ${danhHieu} cho năm ${nam}`,
+          };
+        }
+      }
+
+      return { exists: false };
+    } catch (error) {
+      console.error('Check duplicate unit award error:', error);
       throw error;
     }
   }

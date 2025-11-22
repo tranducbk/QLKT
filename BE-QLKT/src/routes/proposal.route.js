@@ -79,6 +79,18 @@ router.get(
 );
 
 /**
+ * @route   GET /api/proposals/check-duplicate-unit
+ * @desc    Kiểm tra xem đơn vị đã có đề xuất cùng năm và cùng danh hiệu chưa
+ * @access  MANAGER, ADMIN
+ */
+router.get(
+  '/check-duplicate-unit',
+  verifyToken,
+  checkRole(['MANAGER', 'ADMIN']),
+  proposalController.checkDuplicateUnitAward
+);
+
+/**
  * @route   GET /api/proposals
  * @desc    Lấy danh sách đề xuất
  * @access  MANAGER, ADMIN
